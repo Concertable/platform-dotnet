@@ -1,4 +1,4 @@
-namespace Concertable.Messaging.AzureServiceBus.UnitTests;
+namespace Concertable.Messaging.UnitTests;
 
 public class MessageTypeRegistryTests
 {

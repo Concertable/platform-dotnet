@@ -24,6 +24,7 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="Concertable.Messaging" />
+    <Using Include="Concertable.Messaging.Application" />
     <Using Include="Concertable.Messaging.AzureServiceBus" />
   </ItemGroup>
 
