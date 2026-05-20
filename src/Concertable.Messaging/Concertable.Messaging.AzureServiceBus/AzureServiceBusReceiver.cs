@@ -70,13 +70,18 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
         try
         {
             var @event = serializer.Deserialize(args.Message.Body, eventType);
+            var envelope = new MessageEnvelope(
+                Guid.Parse(args.Message.MessageId),
+                args.Message.ApplicationProperties.GetValueOrDefault("MessageType")?.ToString() ?? eventType.FullName!,
+                args.Message.EnqueuedTime,
+                args.Message.CorrelationId);
             using var scope = scopeFactory.CreateScope();
             var handlerType = typeof(IIntegrationEventHandler<>).MakeGenericType(eventType);
             var method = handlerType.GetMethod(nameof(IIntegrationEventHandler<IIntegrationEvent>.HandleAsync))!;
             foreach (var handler in scope.ServiceProvider.GetServices(handlerType))
             {
                 if (handler is null) continue;
-                await (Task)method.Invoke(handler, [@event, args.CancellationToken])!;
+                await (Task)method.Invoke(handler, [@event, envelope, args.CancellationToken])!;
             }
             await args.CompleteMessageAsync(args.Message);
         }
@@ -93,6 +98,11 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
         try
         {
             var command = serializer.Deserialize(args.Message.Body, commandType);
+            var envelope = new MessageEnvelope(
+                Guid.Parse(args.Message.MessageId),
+                args.Message.ApplicationProperties.GetValueOrDefault("MessageType")?.ToString() ?? commandType.FullName!,
+                args.Message.EnqueuedTime,
+                args.Message.CorrelationId);
             using var scope = scopeFactory.CreateScope();
             var handlerType = typeof(IIntegrationCommandHandler<>).MakeGenericType(commandType);
             var handlers = scope.ServiceProvider.GetServices(handlerType).Where(h => h is not null).ToList();
@@ -104,7 +114,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
                     $"Multiple handlers registered for command {commandType.FullName}. Commands require exactly one handler.");
 
             var method = handlerType.GetMethod(nameof(IIntegrationCommandHandler<IIntegrationCommand>.HandleAsync))!;
-            await (Task)method.Invoke(handlers[0], [command, args.CancellationToken])!;
+            await (Task)method.Invoke(handlers[0], [command, envelope, args.CancellationToken])!;
             await args.CompleteMessageAsync(args.Message);
         }
         catch (Exception ex)

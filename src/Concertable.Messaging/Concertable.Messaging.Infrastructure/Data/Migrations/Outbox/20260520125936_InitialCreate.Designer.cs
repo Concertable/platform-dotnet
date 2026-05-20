@@ -9,10 +9,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Concertable.Messaging.Infrastructure.Data.Migrations
+namespace Concertable.Messaging.Infrastructure.Data.Migrations.Outbox
 {
     [DbContext(typeof(OutboxDbContext))]
-    [Migration("20260520111040_InitialCreate")]
+    [Migration("20260520125936_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

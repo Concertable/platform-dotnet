@@ -16,7 +16,7 @@ public class AzureServiceBusOptionsTests
         var topic = options.TopicNameFor(typeof(FakeIntegrationEvent));
 
         // Assert
-        Assert.Equal("event.fakeintegrationevent", topic);
+        Assert.Equal("event-fakeintegrationevent", topic);
     }
 
     [Fact]
@@ -33,7 +33,7 @@ public class AzureServiceBusOptionsTests
         var queue = options.QueueNameFor(typeof(FakeIntegrationCommand));
 
         // Assert
-        Assert.Equal("command.fakeintegrationcommand", queue);
+        Assert.Equal("command-fakeintegrationcommand", queue);
     }
 
     [Fact]

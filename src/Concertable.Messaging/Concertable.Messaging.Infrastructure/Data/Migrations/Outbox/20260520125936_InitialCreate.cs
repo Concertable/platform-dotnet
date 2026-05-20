@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Concertable.Messaging.Infrastructure.Data.Migrations
+namespace Concertable.Messaging.Infrastructure.Data.Migrations.Outbox
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
