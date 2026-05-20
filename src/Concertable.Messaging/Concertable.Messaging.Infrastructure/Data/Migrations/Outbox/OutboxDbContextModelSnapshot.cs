@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace Concertable.Messaging.Infrastructure.Data.Migrations
+namespace Concertable.Messaging.Infrastructure.Data.Migrations.Outbox
 {
     [DbContext(typeof(OutboxDbContext))]
     partial class OutboxDbContextModelSnapshot : ModelSnapshot

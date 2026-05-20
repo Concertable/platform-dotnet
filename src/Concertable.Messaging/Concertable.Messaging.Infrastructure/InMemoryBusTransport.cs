@@ -1,3 +1,4 @@
+using Concertable.Messaging.Application;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Concertable.Messaging.Infrastructure;
@@ -16,7 +17,7 @@ internal sealed class InMemoryBusTransport : IBusTransport
     {
         var handlers = serviceProvider.GetServices<IIntegrationEventHandler<TEvent>>();
         foreach (var handler in handlers)
-            await handler.HandleAsync(@event, ct);
+            await handler.HandleAsync(@event, envelope, ct);
     }
 
     public async Task SendAsync<TCommand>(TCommand command, MessageEnvelope envelope, CancellationToken ct = default)
@@ -25,6 +26,6 @@ internal sealed class InMemoryBusTransport : IBusTransport
         var handler = serviceProvider.GetService<IIntegrationCommandHandler<TCommand>>()
             ?? throw new InvalidOperationException(
                 $"No handler registered for command {typeof(TCommand).FullName}. Commands require exactly one handler.");
-        await handler.HandleAsync(command, ct);
+        await handler.HandleAsync(command, envelope, ct);
     }
 }

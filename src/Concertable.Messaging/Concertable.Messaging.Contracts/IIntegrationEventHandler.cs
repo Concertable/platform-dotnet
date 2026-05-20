@@ -2,5 +2,5 @@ namespace Concertable.Messaging;
 
 public interface IIntegrationEventHandler<TEvent> where TEvent : IIntegrationEvent
 {
-    Task HandleAsync(TEvent @event, CancellationToken ct = default);
+    Task HandleAsync(TEvent @event, MessageEnvelope envelope, CancellationToken ct = default);
 }

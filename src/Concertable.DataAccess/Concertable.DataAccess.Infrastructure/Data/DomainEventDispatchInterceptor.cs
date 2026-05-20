@@ -21,6 +21,7 @@ public class DomainEventDispatchInterceptor(
         foreach (var entry in eventData.Context.ChangeTracker.Entries<IEventRaiser>())
             entry.Entity.ClearDomainEvents();
 
+        var previous = outboxContextAccessor.Current;
         outboxContextAccessor.Current = eventData.Context;
         try
         {
@@ -28,7 +29,7 @@ public class DomainEventDispatchInterceptor(
         }
         finally
         {
-            outboxContextAccessor.Current = null;
+            outboxContextAccessor.Current = previous;
         }
 
         return await base.SavingChangesAsync(eventData, result, cancellationToken);
