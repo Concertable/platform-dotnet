@@ -1,4 +1,4 @@
-namespace Concertable.Messaging.AzureServiceBus;
+namespace Concertable.Messaging.Application;
 
 public static class EventRegistrationExtensions
 {

@@ -1,4 +1,4 @@
-namespace Concertable.Messaging.AzureServiceBus;
+namespace Concertable.Messaging.Application;
 
 public sealed class MessageTypeRegistry
 {
@@ -12,8 +12,8 @@ public sealed class MessageTypeRegistry
     public Type ResolveCommand(string messageType) => commands[messageType];
 
     public void RegisterEvent<TEvent>() where TEvent : IIntegrationEvent =>
-        events[typeof(TEvent).FullName!] = typeof(TEvent);
+        events[MessageEnvelope.TypeNameFor(typeof(TEvent))] = typeof(TEvent);
 
     public void RegisterCommand<TCommand>() where TCommand : IIntegrationCommand =>
-        commands[typeof(TCommand).FullName!] = typeof(TCommand);
+        commands[MessageEnvelope.TypeNameFor(typeof(TCommand))] = typeof(TCommand);
 }

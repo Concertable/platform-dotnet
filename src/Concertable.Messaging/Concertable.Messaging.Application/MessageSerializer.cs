@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Concertable.Messaging.AzureServiceBus;
+namespace Concertable.Messaging.Application;
 
 public sealed class MessageSerializer
 {

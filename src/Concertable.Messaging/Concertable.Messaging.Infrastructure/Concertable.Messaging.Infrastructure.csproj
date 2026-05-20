@@ -19,4 +19,8 @@
     <ProjectReference Include="..\Concertable.Messaging.Contracts\Concertable.Messaging.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Concertable.Messaging.UnitTests" />
+  </ItemGroup>
+
 </Project>

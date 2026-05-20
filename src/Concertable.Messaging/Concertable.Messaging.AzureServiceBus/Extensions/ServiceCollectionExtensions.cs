@@ -1,4 +1,5 @@
 using Azure.Messaging.ServiceBus;
+using Concertable.Messaging.Application;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 

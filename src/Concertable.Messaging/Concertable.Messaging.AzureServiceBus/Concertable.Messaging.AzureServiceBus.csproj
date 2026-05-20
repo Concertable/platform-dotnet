@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Concertable.Messaging.Contracts\Concertable.Messaging.Contracts.csproj" />
+    <ProjectReference Include="..\Concertable.Messaging.Application\Concertable.Messaging.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

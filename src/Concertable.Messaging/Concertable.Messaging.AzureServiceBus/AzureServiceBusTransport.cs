@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Azure.Messaging.ServiceBus;
+using Concertable.Messaging.Application;
 using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.AzureServiceBus;

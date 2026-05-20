@@ -1,0 +1,87 @@
+using Concertable.Messaging.Application;
+using Concertable.Messaging.Domain;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace Concertable.Messaging.Infrastructure.Outbox;
+
+internal sealed class OutboxDispatcher<TContext> : BackgroundService where TContext : DbContext
+{
+    private readonly IServiceScopeFactory scopeFactory;
+    private readonly OutboxOptions options;
+    private readonly TimeProvider timeProvider;
+    private readonly ILogger<OutboxDispatcher<TContext>> logger;
+
+    public OutboxDispatcher(
+        IServiceScopeFactory scopeFactory,
+        IOptions<OutboxOptions> options,
+        TimeProvider timeProvider,
+        ILogger<OutboxDispatcher<TContext>> logger)
+    {
+        this.scopeFactory = scopeFactory;
+        this.options = options.Value;
+        this.timeProvider = timeProvider;
+        this.logger = logger;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await DrainOnceAsync(stoppingToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "Outbox drain failed");
+            }
+            try { await Task.Delay(options.PollInterval, timeProvider, stoppingToken); }
+            catch (OperationCanceledException) { }
+        }
+    }
+
+    private async Task DrainOnceAsync(CancellationToken ct)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var store = scope.ServiceProvider.GetRequiredService<IOutboxStore>();
+        var transport = scope.ServiceProvider.GetRequiredService<IBusTransport>();
+        var registry = scope.ServiceProvider.GetRequiredService<MessageTypeRegistry>();
+        var serializer = scope.ServiceProvider.GetRequiredService<MessageSerializer>();
+
+        var pending = await store.GetPendingAsync(options.BatchSize, ct);
+        if (pending.Count == 0) return;
+
+        foreach (var row in pending)
+        {
+            try
+            {
+                var type = row.Kind == MessageKind.Event
+                    ? registry.ResolveEvent(row.MessageType)
+                    : registry.ResolveCommand(row.MessageType);
+                var instance = serializer.Deserialize(BinaryData.FromString(row.Payload), type);
+                var envelope = new MessageEnvelope(
+                    MessageId: row.Id,
+                    MessageType: row.MessageType,
+                    OccurredAtUtc: row.OccurredAtUtc,
+                    CorrelationId: row.CorrelationId);
+
+                var methodName = row.Kind == MessageKind.Event ? nameof(IBusTransport.PublishAsync) : nameof(IBusTransport.SendAsync);
+                var method = typeof(IBusTransport).GetMethod(methodName)!.MakeGenericMethod(type);
+                await (Task)method.Invoke(transport, [instance, envelope, ct])!;
+
+                row.MarkDispatched(timeProvider.GetUtcNow());
+            }
+            catch (Exception ex)
+            {
+                row.RecordFailure(ex.Message, options.MaxAttempts);
+                logger.LogError(ex, "Outbox dispatch failed for {MessageType} {MessageId}", row.MessageType, row.Id);
+            }
+        }
+
+        await store.SaveChangesAsync(ct);
+    }
+}
