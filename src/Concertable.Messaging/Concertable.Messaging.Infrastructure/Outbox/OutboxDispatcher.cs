@@ -1,6 +1,5 @@
 using Concertable.Messaging.Application;
 using Concertable.Messaging.Domain;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -8,18 +7,18 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.Infrastructure.Outbox;
 
-internal sealed class OutboxDispatcher<TContext> : BackgroundService where TContext : DbContext
+internal sealed class OutboxDispatcher : BackgroundService
 {
     private readonly IServiceScopeFactory scopeFactory;
     private readonly OutboxOptions options;
     private readonly TimeProvider timeProvider;
-    private readonly ILogger<OutboxDispatcher<TContext>> logger;
+    private readonly ILogger<OutboxDispatcher> logger;
 
     public OutboxDispatcher(
         IServiceScopeFactory scopeFactory,
         IOptions<OutboxOptions> options,
         TimeProvider timeProvider,
-        ILogger<OutboxDispatcher<TContext>> logger)
+        ILogger<OutboxDispatcher> logger)
     {
         this.scopeFactory = scopeFactory;
         this.options = options.Value;
@@ -47,12 +46,12 @@ internal sealed class OutboxDispatcher<TContext> : BackgroundService where TCont
     private async Task DrainOnceAsync(CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
-        var store = scope.ServiceProvider.GetRequiredService<IOutboxStore>();
+        var reader = scope.ServiceProvider.GetRequiredService<IOutboxReader>();
         var transport = scope.ServiceProvider.GetRequiredService<IBusTransport>();
         var registry = scope.ServiceProvider.GetRequiredService<MessageTypeRegistry>();
         var serializer = scope.ServiceProvider.GetRequiredService<MessageSerializer>();
 
-        var pending = await store.GetPendingAsync(options.BatchSize, ct);
+        var pending = await reader.GetPendingAsync(options.BatchSize, ct);
         if (pending.Count == 0) return;
 
         foreach (var row in pending)
@@ -69,7 +68,9 @@ internal sealed class OutboxDispatcher<TContext> : BackgroundService where TCont
                     OccurredAtUtc: row.OccurredAtUtc,
                     CorrelationId: row.CorrelationId);
 
-                var methodName = row.Kind == MessageKind.Event ? nameof(IBusTransport.PublishAsync) : nameof(IBusTransport.SendAsync);
+                var methodName = row.Kind == MessageKind.Event
+                    ? nameof(IBusTransport.PublishAsync)
+                    : nameof(IBusTransport.SendAsync);
                 var method = typeof(IBusTransport).GetMethod(methodName)!.MakeGenericMethod(type);
                 await (Task)method.Invoke(transport, [instance, envelope, ct])!;
 
@@ -82,6 +83,6 @@ internal sealed class OutboxDispatcher<TContext> : BackgroundService where TCont
             }
         }
 
-        await store.SaveChangesAsync(ct);
+        await reader.SaveChangesAsync(ct);
     }
 }

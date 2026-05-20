@@ -12,19 +12,20 @@ public class OutboxDispatcherTests
 {
     private static readonly DateTimeOffset Base = new(2026, 5, 20, 12, 0, 0, TimeSpan.Zero);
 
-    private sealed class TestDbContext : DbContext
-    {
-        public TestDbContext(DbContextOptions<TestDbContext> options) : base(options) { }
+    private static OutboxDbContext NewContext(string dbName) =>
+        new(new DbContextOptionsBuilder<OutboxDbContext>().UseInMemoryDatabase(dbName).Options,
+            Options.Create(new OutboxOptions()));
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<OutboxMessageEntity>(b =>
-            {
-                b.HasKey(m => m.Id);
-                b.Property(m => m.MessageType).IsRequired();
-                b.Property(m => m.Payload).IsRequired();
-            });
-        }
+    private static ServiceProvider BuildProvider(string dbName, IBusTransport transport, MessageTypeRegistry registry)
+    {
+        var services = new ServiceCollection();
+        services.AddDbContext<OutboxDbContext>(o => o.UseInMemoryDatabase(dbName));
+        services.AddSingleton<IOptions<OutboxOptions>>(Options.Create(new OutboxOptions()));
+        services.AddScoped<IOutboxReader, OutboxReader>();
+        services.AddSingleton(transport);
+        services.AddSingleton(registry);
+        services.AddSingleton(new MessageSerializer());
+        return services.BuildServiceProvider();
     }
 
     [Fact]
@@ -38,26 +39,17 @@ public class OutboxDispatcherTests
 
         await using (var seed = NewContext(dbName))
         {
-            var store = new OutboxStore<TestDbContext>(seed);
             var payload = new MessageSerializer().Serialize(new FakeIntegrationEvent(Guid.NewGuid(), "concert", 1)).ToString();
-            var row = OutboxMessageEntity.Create(typeof(FakeIntegrationEvent), payload, Base, MessageKind.Event);
-            await store.AddAsync(row);
-            await store.SaveChangesAsync();
+            seed.Add(OutboxMessageEntity.Create(typeof(FakeIntegrationEvent), payload, Base, MessageKind.Event));
+            await seed.SaveChangesAsync();
         }
 
-        var services = new ServiceCollection();
-        services.AddDbContext<TestDbContext>(o => o.UseInMemoryDatabase(dbName));
-        services.AddScoped<IOutboxStore, OutboxStore<TestDbContext>>();
-        services.AddSingleton(transport.Object);
-        services.AddSingleton(registry);
-        services.AddSingleton(new MessageSerializer());
-        var provider = services.BuildServiceProvider();
-
-        var dispatcher = new OutboxDispatcher<TestDbContext>(
+        var provider = BuildProvider(dbName, transport.Object, registry);
+        var dispatcher = new OutboxDispatcher(
             provider.GetRequiredService<IServiceScopeFactory>(),
             Options.Create(new OutboxOptions { MaxAttempts = 3 }),
             new FakeTimeProvider(Base.AddSeconds(10)),
-            NullLogger<OutboxDispatcher<TestDbContext>>.Instance);
+            NullLogger<OutboxDispatcher>.Instance);
 
         // Act
         await InvokeDrainAsync(dispatcher);
@@ -69,8 +61,7 @@ public class OutboxDispatcherTests
             It.IsAny<CancellationToken>()), Times.Once);
 
         await using var probe = NewContext(dbName);
-        var rows = await probe.Set<OutboxMessageEntity>().ToListAsync();
-        var stored = Assert.Single(rows);
+        var stored = Assert.Single(await probe.Set<OutboxMessageEntity>().ToListAsync());
         Assert.Equal(OutboxStatus.Dispatched, stored.Status);
         Assert.Equal(Base.AddSeconds(10), stored.DispatchedAtUtc);
     }
@@ -88,26 +79,17 @@ public class OutboxDispatcherTests
 
         await using (var seed = NewContext(dbName))
         {
-            var store = new OutboxStore<TestDbContext>(seed);
             var payload = new MessageSerializer().Serialize(new FakeIntegrationEvent(Guid.NewGuid(), "concert", 1)).ToString();
-            var row = OutboxMessageEntity.Create(typeof(FakeIntegrationEvent), payload, Base, MessageKind.Event);
-            await store.AddAsync(row);
-            await store.SaveChangesAsync();
+            seed.Add(OutboxMessageEntity.Create(typeof(FakeIntegrationEvent), payload, Base, MessageKind.Event));
+            await seed.SaveChangesAsync();
         }
 
-        var services = new ServiceCollection();
-        services.AddDbContext<TestDbContext>(o => o.UseInMemoryDatabase(dbName));
-        services.AddScoped<IOutboxStore, OutboxStore<TestDbContext>>();
-        services.AddSingleton(transport.Object);
-        services.AddSingleton(registry);
-        services.AddSingleton(new MessageSerializer());
-        var provider = services.BuildServiceProvider();
-
-        var dispatcher = new OutboxDispatcher<TestDbContext>(
+        var provider = BuildProvider(dbName, transport.Object, registry);
+        var dispatcher = new OutboxDispatcher(
             provider.GetRequiredService<IServiceScopeFactory>(),
             Options.Create(new OutboxOptions { MaxAttempts = 3 }),
             new FakeTimeProvider(Base),
-            NullLogger<OutboxDispatcher<TestDbContext>>.Instance);
+            NullLogger<OutboxDispatcher>.Instance);
 
         // Act
         await InvokeDrainAsync(dispatcher);
@@ -120,12 +102,9 @@ public class OutboxDispatcherTests
         Assert.Equal("broker down", stored.LastError);
     }
 
-    private static TestDbContext NewContext(string dbName) =>
-        new(new DbContextOptionsBuilder<TestDbContext>().UseInMemoryDatabase(dbName).Options);
-
-    private static Task InvokeDrainAsync(OutboxDispatcher<TestDbContext> dispatcher)
+    private static Task InvokeDrainAsync(OutboxDispatcher dispatcher)
     {
-        var method = typeof(OutboxDispatcher<TestDbContext>).GetMethod(
+        var method = typeof(OutboxDispatcher).GetMethod(
             "DrainOnceAsync",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
         return (Task)method.Invoke(dispatcher, [CancellationToken.None])!;

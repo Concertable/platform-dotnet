@@ -4,19 +4,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Messaging.Infrastructure.Outbox;
 
-internal sealed class OutboxStore<TContext> : IOutboxStore where TContext : DbContext
+internal sealed class OutboxReader : IOutboxReader
 {
-    private readonly TContext context;
+    private readonly OutboxDbContext context;
 
-    public OutboxStore(TContext context)
+    public OutboxReader(OutboxDbContext context)
     {
         this.context = context;
-    }
-
-    public Task AddAsync(OutboxMessageEntity message, CancellationToken ct = default)
-    {
-        context.Set<OutboxMessageEntity>().Add(message);
-        return Task.CompletedTask;
     }
 
     public async Task<IReadOnlyList<OutboxMessageEntity>> GetPendingAsync(int batchSize, CancellationToken ct = default) =>

@@ -1,13 +1,16 @@
+using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Shared;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Concertable.DataAccess.Infrastructure;
 
-public class DomainEventDispatchInterceptor(IDomainEventDispatcher dispatcher) : SaveChangesInterceptor
+public class DomainEventDispatchInterceptor(
+    IDomainEventDispatcher dispatcher,
+    IOutboxContextAccessor outboxContextAccessor) : SaveChangesInterceptor
 {
     private List<IDomainEvent> _pendingEvents = [];
 
-    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
@@ -18,7 +21,17 @@ public class DomainEventDispatchInterceptor(IDomainEventDispatcher dispatcher) :
         foreach (var entry in eventData.Context.ChangeTracker.Entries<IEventRaiser>())
             entry.Entity.ClearDomainEvents();
 
-        return base.SavingChangesAsync(eventData, result, cancellationToken);
+        outboxContextAccessor.Current = eventData.Context;
+        try
+        {
+            await dispatcher.DispatchPreCommitAsync(_pendingEvents, cancellationToken);
+        }
+        finally
+        {
+            outboxContextAccessor.Current = null;
+        }
+
+        return await base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
     public override async ValueTask<int> SavedChangesAsync(

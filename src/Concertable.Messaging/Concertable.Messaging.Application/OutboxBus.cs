@@ -4,13 +4,13 @@ namespace Concertable.Messaging.Application;
 
 internal sealed class OutboxBus : IBus
 {
-    private readonly IOutboxStore store;
+    private readonly IOutboxWriter writer;
     private readonly MessageSerializer serializer;
     private readonly TimeProvider timeProvider;
 
-    public OutboxBus(IOutboxStore store, MessageSerializer serializer, TimeProvider timeProvider)
+    public OutboxBus(IOutboxWriter writer, MessageSerializer serializer, TimeProvider timeProvider)
     {
-        this.store = store;
+        this.writer = writer;
         this.serializer = serializer;
         this.timeProvider = timeProvider;
     }
@@ -27,6 +27,6 @@ internal sealed class OutboxBus : IBus
     {
         var payload = serializer.Serialize(message).ToString();
         var row = OutboxMessageEntity.Create(messageType, payload, timeProvider.GetUtcNow(), kind);
-        return store.AddAsync(row, ct);
+        return writer.AddAsync(row, ct);
     }
 }
