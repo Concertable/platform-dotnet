@@ -8,17 +8,22 @@ namespace Concertable.Messaging.Infrastructure.Extensions;
 
 public static class OutboxServiceCollectionExtensions
 {
-    public static IServiceCollection AddOutbox<TContext>(
+    public static IServiceCollection AddOutbox(
         this IServiceCollection services,
-        Action<OutboxOptions>? configure = null)
-        where TContext : DbContext
+        Action<DbContextOptionsBuilder> configureDb,
+        Action<OutboxOptions>? configure = null,
+        bool runDispatcher = true)
     {
         if (configure is not null) services.Configure(configure);
         else services.AddOptions<OutboxOptions>();
 
-        services.AddScoped<IOutboxStore, OutboxStore<TContext>>();
+        services.AddDbContext<OutboxDbContext>(configureDb);
+        services.AddScoped<IOutboxContextAccessor, OutboxContextAccessor>();
+        services.AddScoped<IOutboxWriter, OutboxWriter>();
+        services.AddScoped<IOutboxReader, OutboxReader>();
         services.AddScoped<IBus, OutboxBus>();
-        services.AddHostedService<OutboxDispatcher<TContext>>();
+        if (runDispatcher) services.AddHostedService<OutboxDispatcher>();
+        services.TryAddSingleton<MessageSerializer>();
         services.TryAddSingleton(TimeProvider.System);
 
         return services;
