@@ -6,7 +6,7 @@ namespace Concertable.DataAccess.Infrastructure;
 
 public class DomainEventDispatchInterceptor(
     IDomainEventDispatcher dispatcher,
-    IOutboxContextAccessor outboxContextAccessor) : SaveChangesInterceptor
+    IDbContextAccessor contextAccessor) : SaveChangesInterceptor
 {
     private List<IDomainEvent> _pendingEvents = [];
 
@@ -21,15 +21,15 @@ public class DomainEventDispatchInterceptor(
         foreach (var entry in eventData.Context.ChangeTracker.Entries<IEventRaiser>())
             entry.Entity.ClearDomainEvents();
 
-        var previous = outboxContextAccessor.Current;
-        outboxContextAccessor.Current = eventData.Context;
+        var previous = contextAccessor.Context;
+        contextAccessor.Context = eventData.Context;
         try
         {
             await dispatcher.DispatchPreCommitAsync(_pendingEvents, cancellationToken);
         }
         finally
         {
-            outboxContextAccessor.Current = previous;
+            contextAccessor.Context = previous;
         }
 
         return await base.SavingChangesAsync(eventData, result, cancellationToken);

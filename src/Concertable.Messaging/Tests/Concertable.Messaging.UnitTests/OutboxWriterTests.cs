@@ -31,7 +31,7 @@ public class OutboxWriterTests
         // Arrange
         var dbName = Guid.NewGuid().ToString();
         await using var context = NewContext(dbName);
-        var writer = new OutboxWriter(new OutboxContextAccessor { Current = context });
+        var writer = new OutboxWriter(new DbContextAccessor { Context = context });
         var row = OutboxMessageEntity.Create(typeof(FakeIntegrationEvent), "{}", Base, MessageKind.Event);
 
         // Act
@@ -51,7 +51,7 @@ public class OutboxWriterTests
     public async Task AddAsync_Throws_WhenNoContextIsCurrent()
     {
         // Arrange
-        var writer = new OutboxWriter(new OutboxContextAccessor());
+        var writer = new OutboxWriter(new DbContextAccessor());
         var row = OutboxMessageEntity.Create(typeof(FakeIntegrationEvent), "{}", Base, MessageKind.Event);
 
         // Act + Assert
