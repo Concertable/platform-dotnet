@@ -28,4 +28,14 @@ public static class OutboxServiceCollectionExtensions
 
         return services;
     }
+
+    public static IServiceCollection AddInProcessEventDispatch(this IServiceCollection services)
+    {
+        services.AddScoped<OutboxBus>();
+        services.AddScoped<IBus>(sp => new LocalDispatchingBus(
+            sp.GetRequiredService<OutboxBus>(),
+            sp,
+            sp.GetRequiredService<TimeProvider>()));
+        return services;
+    }
 }
