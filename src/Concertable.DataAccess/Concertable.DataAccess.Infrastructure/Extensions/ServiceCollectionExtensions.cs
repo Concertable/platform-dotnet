@@ -12,7 +12,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddDbContext<ReadDbContext>(opt =>
             opt.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection"),
+                configuration.GetConnectionString("B2BDb"),
                 sqlOpt => sqlOpt.UseNetTopologySuite()));
         services.AddScoped<IReadDbContext, ReadDbContext>();
 
