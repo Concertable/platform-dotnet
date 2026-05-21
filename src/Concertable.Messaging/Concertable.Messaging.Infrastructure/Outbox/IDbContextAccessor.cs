@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Messaging.Infrastructure.Outbox;
 
-public interface IOutboxContextAccessor
+public interface IDbContextAccessor
 {
-    DbContext? Current { get; set; }
+    DbContext? Context { get; set; }
 }

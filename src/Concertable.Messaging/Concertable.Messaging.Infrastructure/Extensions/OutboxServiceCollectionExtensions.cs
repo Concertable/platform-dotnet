@@ -18,7 +18,7 @@ public static class OutboxServiceCollectionExtensions
         else services.AddOptions<OutboxOptions>();
 
         services.AddDbContext<OutboxDbContext>(configureDb);
-        services.AddScoped<IOutboxContextAccessor, OutboxContextAccessor>();
+        services.AddScoped<IDbContextAccessor, DbContextAccessor>();
         services.AddScoped<IOutboxWriter, OutboxWriter>();
         services.AddScoped<IOutboxReader, OutboxReader>();
         services.AddScoped<IBus, OutboxBus>();
