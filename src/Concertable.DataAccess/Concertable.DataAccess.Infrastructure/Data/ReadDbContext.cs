@@ -1,4 +1,4 @@
-﻿using Concertable.Contract.Domain;
+using Concertable.Contract.Domain;
 using Concertable.Customer.Domain;
 using Concertable.DataAccess;
 using Concertable.Conversations.Domain;
@@ -7,11 +7,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.DataAccess.Infrastructure;
 
-internal class ReadDbContext(
-    DbContextOptions<ReadDbContext> options,
-    IEnumerable<IEntityTypeConfigurationProvider> providers)
-    : DbContextBase(options), IReadDbContext
+internal class ReadDbContext : DbContextBase, IReadDbContext
 {
+    private readonly IEnumerable<IEntityTypeConfigurationProvider> providers;
+
+    public ReadDbContext(
+        DbContextOptions<ReadDbContext> options,
+        IEnumerable<IEntityTypeConfigurationProvider> providers)
+        : base(options)
+    {
+        this.providers = providers;
+    }
+
     public ReadDbContext() : this(new DbContextOptionsBuilder<ReadDbContext>().Options, []) { }
 
     public IQueryable<UserEntity> Users => Set<UserEntity>().AsNoTracking();
