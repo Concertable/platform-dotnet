@@ -35,7 +35,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        foreach (var eventType in registry.RegisteredEventTypes)
+        foreach (var eventType in registry.SubscribedEventTypes)
         {
             var topic = options.TopicNameFor(eventType);
             var processor = client.CreateProcessor(topic, options.ServiceName);

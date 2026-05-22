@@ -2,10 +2,17 @@ namespace Concertable.Messaging.Application;
 
 public static class EventRegistrationExtensions
 {
-    public static MessageTypeRegistry SubscribeTo<TEvent>(this MessageTypeRegistry registry)
+    public static MessageTypeRegistry Publishes<TEvent>(this MessageTypeRegistry registry)
         where TEvent : IIntegrationEvent
     {
         registry.RegisterEvent<TEvent>();
+        return registry;
+    }
+
+    public static MessageTypeRegistry SubscribeTo<TEvent>(this MessageTypeRegistry registry)
+        where TEvent : IIntegrationEvent
+    {
+        registry.RegisterSubscription<TEvent>();
         return registry;
     }
 
