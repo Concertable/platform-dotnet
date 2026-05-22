@@ -17,6 +17,12 @@ public static class Extensions
 {
     public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
     {
+        builder.ConfigureContainer(new DefaultServiceProviderFactory(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        }));
+
         builder.ConfigureOpenTelemetry();
 
         builder.AddDefaultHealthChecks();

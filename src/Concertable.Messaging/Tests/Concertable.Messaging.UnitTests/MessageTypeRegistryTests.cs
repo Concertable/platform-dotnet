@@ -31,19 +31,33 @@ public class MessageTypeRegistryTests
     }
 
     [Fact]
-    public void RegisteredEventTypes_AfterMultipleRegistrations_ContainsAllEvents()
+    public void RegisterSubscription_AfterMultipleRegistrations_ContainsAllSubscribedEvents()
+    {
+        // Arrange
+        var registry = new MessageTypeRegistry();
+
+        // Act
+        registry.RegisterSubscription<FakeIntegrationEvent>();
+        registry.RegisterSubscription<OtherFakeEvent>();
+
+        // Assert
+        Assert.Contains(typeof(FakeIntegrationEvent), registry.SubscribedEventTypes);
+        Assert.Contains(typeof(OtherFakeEvent), registry.SubscribedEventTypes);
+        Assert.Equal(2, registry.SubscribedEventTypes.Count());
+    }
+
+    [Fact]
+    public void RegisterEvent_MakesEventResolvableWithoutMarkingItSubscribed()
     {
         // Arrange
         var registry = new MessageTypeRegistry();
 
         // Act
         registry.RegisterEvent<FakeIntegrationEvent>();
-        registry.RegisterEvent<OtherFakeEvent>();
 
         // Assert
-        Assert.Contains(typeof(FakeIntegrationEvent), registry.RegisteredEventTypes);
-        Assert.Contains(typeof(OtherFakeEvent), registry.RegisteredEventTypes);
-        Assert.Equal(2, registry.RegisteredEventTypes.Count());
+        Assert.Equal(typeof(FakeIntegrationEvent), registry.ResolveEvent(typeof(FakeIntegrationEvent).FullName!));
+        Assert.Empty(registry.SubscribedEventTypes);
     }
 
     [Fact]
@@ -72,16 +86,16 @@ public class MessageTypeRegistryTests
     }
 
     [Fact]
-    public void RegisterEvent_WhenCalledTwice_LastWriteWins()
+    public void RegisterSubscription_WhenCalledTwice_DeduplicatesSubscribedEvent()
     {
         // Arrange
         var registry = new MessageTypeRegistry();
 
         // Act
-        registry.RegisterEvent<FakeIntegrationEvent>();
-        registry.RegisterEvent<FakeIntegrationEvent>();
+        registry.RegisterSubscription<FakeIntegrationEvent>();
+        registry.RegisterSubscription<FakeIntegrationEvent>();
 
         // Assert
-        Assert.Single(registry.RegisteredEventTypes);
+        Assert.Single(registry.SubscribedEventTypes);
     }
 }
