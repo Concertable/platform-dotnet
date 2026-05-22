@@ -8,24 +8,26 @@ public class DomainEventDispatchInterceptor(
     IDomainEventDispatcher dispatcher,
     IDbContextAccessor contextAccessor) : SaveChangesInterceptor
 {
-    private List<IDomainEvent> _pendingEvents = [];
+    private readonly Stack<List<IDomainEvent>> pendingEventsStack = new();
 
     public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        _pendingEvents = eventData.Context!.ChangeTracker.Entries<IEventRaiser>()
+        var pendingEvents = eventData.Context!.ChangeTracker.Entries<IEventRaiser>()
             .SelectMany(e => e.Entity.DomainEvents).ToList();
 
         foreach (var entry in eventData.Context.ChangeTracker.Entries<IEventRaiser>())
             entry.Entity.ClearDomainEvents();
 
+        pendingEventsStack.Push(pendingEvents);
+
         var previous = contextAccessor.Context;
         contextAccessor.Context = eventData.Context;
         try
         {
-            await dispatcher.DispatchPreCommitAsync(_pendingEvents, cancellationToken);
+            await dispatcher.DispatchPreCommitAsync(pendingEvents, cancellationToken);
         }
         finally
         {
@@ -40,8 +42,8 @@ public class DomainEventDispatchInterceptor(
         int result,
         CancellationToken cancellationToken = default)
     {
-        await dispatcher.DispatchAsync(_pendingEvents, cancellationToken);
-        _pendingEvents = [];
+        var pendingEvents = pendingEventsStack.Pop();
+        await dispatcher.DispatchAsync(pendingEvents, cancellationToken);
 
         return await base.SavedChangesAsync(eventData, result, cancellationToken);
     }
