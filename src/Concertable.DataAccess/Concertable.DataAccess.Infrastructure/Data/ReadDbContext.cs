@@ -50,6 +50,7 @@ internal class ReadDbContext : DbContextBase, IReadDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
         foreach (var provider in providers)
             provider.Configure(modelBuilder);
     }
