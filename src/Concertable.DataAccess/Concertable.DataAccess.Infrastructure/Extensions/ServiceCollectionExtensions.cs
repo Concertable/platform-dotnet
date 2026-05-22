@@ -1,21 +1,13 @@
 using Concertable.DataAccess.Infrastructure.Specifications;
 using Concertable.DataAccess.Specifications;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Concertable.DataAccess.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddReadDbContext(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddDataAccessSpecifications(this IServiceCollection services)
     {
-        services.AddDbContext<ReadDbContext>(opt =>
-            opt.UseSqlServer(
-                configuration.GetConnectionString("B2BDb"),
-                sqlOpt => sqlOpt.UseNetTopologySuite()));
-        services.AddScoped<IReadDbContext, ReadDbContext>();
-
         services.AddScoped(typeof(IUpcomingSpecification<>), typeof(UpcomingSpecification<>));
         services.AddScoped(typeof(IDateRangeSpecification<>), typeof(DateRangeSpecification<>));
         return services;
