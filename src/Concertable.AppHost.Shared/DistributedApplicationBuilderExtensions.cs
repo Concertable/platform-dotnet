@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 
 public static class DistributedApplicationBuilderExtensions
 {
-    public static IResourceBuilder<SqlServerServerResource> AddSqlServer(
+    public static IResourceBuilder<SqlServerServerResource> AddSqlServerContainer(
         this IDistributedApplicationBuilder builder,
         string dataVolumeName = "concertable-sql-data")
     {
