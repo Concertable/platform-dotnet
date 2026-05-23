@@ -41,27 +41,32 @@ public static class DistributedApplicationBuilderExtensions
             if (b2b) reviewSubmitted.AddServiceBusSubscription("b2b-review-submitted", "concertable-b2b");
         }
 
-        // Published by B2B, consumed by search
-        if (b2b || search)
+        // Published by B2B, consumed by search + customer
+        if (b2b || search || customer)
         {
             var artistChanged = asb.AddServiceBusTopic("event-artistchangedevent");
             if (search) artistChanged.AddServiceBusSubscription("search-artist-changed", "concertable-search");
+            if (customer) artistChanged.AddServiceBusSubscription("customer-artist-changed", "concertable-customer");
 
             var venueChanged = asb.AddServiceBusTopic("event-venuechangedevent");
             if (search) venueChanged.AddServiceBusSubscription("search-venue-changed", "concertable-search");
+            if (customer) venueChanged.AddServiceBusSubscription("customer-venue-changed", "concertable-customer");
         }
 
-        // Published by customer (after review), consumed by search
+        // Published by customer (after review), consumed by search + customer (own projections)
         if (customer || search)
         {
             var artistRating = asb.AddServiceBusTopic("event-artistratingupdatedevent");
             if (search) artistRating.AddServiceBusSubscription("search-artist-rating-updated", "concertable-search");
+            if (customer) artistRating.AddServiceBusSubscription("customer-artist-rating-updated", "concertable-customer");
 
             var venueRating = asb.AddServiceBusTopic("event-venueratingupdatedevent");
             if (search) venueRating.AddServiceBusSubscription("search-venue-rating-updated", "concertable-search");
+            if (customer) venueRating.AddServiceBusSubscription("customer-venue-rating-updated", "concertable-customer");
 
             var concertRating = asb.AddServiceBusTopic("event-concertratingupdatedevent");
             if (search) concertRating.AddServiceBusSubscription("search-concert-rating-updated", "concertable-search");
+            if (customer) concertRating.AddServiceBusSubscription("customer-concert-rating-updated", "concertable-customer");
         }
 
         // Published by auth, consumed by b2b + customer + payment
@@ -272,11 +277,27 @@ public static class DistributedApplicationBuilderExtensions
         IResourceBuilder<ProjectResource> auth,
         string surface,
         int port) =>
-        builder.AddNpmApp(surface, $"../../app/web/{surface}", "dev")
+        builder.AddNpmApp(surface, RepoPath(builder, "app", "web", surface), "dev")
                .WithHttpsEndpoint(port: port, isProxied: false)
                .WithReference(backend)
                .WithReference(auth)
                .WaitFor(backend);
+
+    private static string RepoPath(IDistributedApplicationBuilder builder, params string[] segments)
+    {
+        var root = AncestorsAndSelf(builder.AppHostDirectory)
+            .FirstOrDefault(d => Directory.Exists(Path.Combine(d, "app")))
+            ?? throw new InvalidOperationException(
+                $"Could not locate repo root (no 'app' directory found walking up from '{builder.AppHostDirectory}'.");
+
+        return Path.Combine([root, .. segments]);
+    }
+
+    private static IEnumerable<string> AncestorsAndSelf(string path)
+    {
+        for (var dir = new DirectoryInfo(path); dir is not null; dir = dir.Parent)
+            yield return dir.FullName;
+    }
 
     public static void AddMobile(
         this IDistributedApplicationBuilder builder,
@@ -354,7 +375,7 @@ public static class DistributedApplicationBuilderExtensions
         string surface)
     {
         var apiEnvKey = $"services__{api.Resource.Name.Replace('-', '_')}__https__0";
-        var mobile = builder.AddNpmApp($"mobile-{surface}", $"../../app/mobile/{surface}", "start:ci")
+        var mobile = builder.AddNpmApp($"mobile-{surface}", RepoPath(builder, "app", "mobile", surface), "start:ci")
                .WithEnvironment("REACT_NATIVE_PACKAGER_HOSTNAME", lanIp)
                .WithReference(api, tunnel)
                .WithReference(auth, tunnel)
@@ -373,7 +394,7 @@ public static class DistributedApplicationBuilderExtensions
             displayName: "Clear Metro Cache",
             executeCommand: async ctx =>
             {
-                var mobileDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "app", "mobile", surface));
+                var mobileDir = RepoPath(builder, "app", "mobile", surface);
                 File.WriteAllText(Path.Combine(mobileDir, ".metro-clear"), "");
 
                 var commands = ctx.ServiceProvider.GetRequiredService<ResourceCommandService>();
