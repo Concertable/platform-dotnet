@@ -5,7 +5,7 @@ public class InboxMessageEntityTests
     private static readonly DateTimeOffset Now = new(2026, 5, 20, 12, 0, 0, TimeSpan.Zero);
     private static readonly Guid MessageId = Guid.Parse("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
     private const string ConsumerName = "SomeProjectionHandler";
-    private const string MessageType = "Concertable.Venue.Contracts.Events.VenueChangedEvent";
+    private const string MessageType = "Concertable.B2B.Venue.Contracts.Events.VenueChangedEvent";
 
     [Fact]
     public void Create_SetsAllProperties()
