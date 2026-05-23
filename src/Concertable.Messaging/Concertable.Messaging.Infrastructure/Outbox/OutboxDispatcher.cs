@@ -1,6 +1,7 @@
 using Concertable.Messaging.Application;
 using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Domain;
+using Concertable.Messaging.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -37,7 +38,7 @@ internal sealed class OutboxDispatcher : BackgroundService
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                logger.LogError(ex, "Outbox drain failed");
+                logger.OutboxDrainFailed(ex);
             }
             try { await Task.Delay(options.PollInterval, timeProvider, stoppingToken); }
             catch (OperationCanceledException) { }
@@ -80,7 +81,7 @@ internal sealed class OutboxDispatcher : BackgroundService
             catch (Exception ex)
             {
                 row.RecordFailure(ex.Message, options.MaxAttempts);
-                logger.LogError(ex, "Outbox dispatch failed for {MessageType} {MessageId}", row.MessageType, row.Id);
+                logger.OutboxDispatchFailed(row.MessageType, row.Id, ex);
             }
         }
 
