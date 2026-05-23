@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace Concertable.DataAccess.Infrastructure;
+namespace Concertable.DataAccess.Infrastructure.Data;
 
 public interface IEntityTypeConfigurationProvider
 {

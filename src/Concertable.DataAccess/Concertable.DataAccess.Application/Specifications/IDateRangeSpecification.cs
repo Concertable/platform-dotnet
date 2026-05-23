@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
-using Concertable.Shared;
+using Concertable.Kernel;
 
-namespace Concertable.DataAccess.Specifications;
+namespace Concertable.DataAccess.Application.Specifications;
 
 public interface IDateRangeSpecification<TEntity> where TEntity : class, IHasDateRange
 {

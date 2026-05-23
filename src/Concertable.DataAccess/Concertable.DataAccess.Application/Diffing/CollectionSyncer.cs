@@ -1,7 +1,7 @@
-using Concertable.DataAccess;
-using Concertable.Shared;
+using Concertable.DataAccess.Application;
+using Concertable.Kernel;
 
-namespace Concertable.DataAccess.Diffing;
+namespace Concertable.DataAccess.Application.Diffing;
 
 public abstract class CollectionSyncer<TEntity, TDto>
     : ICollectionSyncer<TEntity, TDto>

@@ -1,3 +1,4 @@
+using Concertable.Messaging.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Concertable.Messaging.Infrastructure.Extensions;

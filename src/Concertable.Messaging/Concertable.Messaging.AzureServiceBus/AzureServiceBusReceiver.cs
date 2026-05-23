@@ -1,5 +1,7 @@
 using Azure.Messaging.ServiceBus;
 using Concertable.Messaging.Application;
+using Concertable.Messaging.AzureServiceBus.Options;
+using Concertable.Messaging.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

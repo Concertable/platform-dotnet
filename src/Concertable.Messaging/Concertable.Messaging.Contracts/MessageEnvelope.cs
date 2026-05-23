@@ -1,4 +1,4 @@
-namespace Concertable.Messaging;
+namespace Concertable.Messaging.Contracts;
 
 public sealed record MessageEnvelope(
     Guid MessageId,

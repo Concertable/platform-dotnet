@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
-using Concertable.DataAccess.Specifications;
-using Concertable.Shared;
 using Concertable.DataAccess.Infrastructure.Expressions;
+using Concertable.DataAccess.Application.Specifications;
+using Concertable.Kernel;
 
 namespace Concertable.DataAccess.Infrastructure.Specifications;
 

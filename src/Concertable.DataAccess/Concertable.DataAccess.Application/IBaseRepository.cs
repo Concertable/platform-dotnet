@@ -1,4 +1,4 @@
-namespace Concertable.DataAccess;
+namespace Concertable.DataAccess.Application;
 
 public interface IBaseRepository<TEntity> where TEntity : class
 {

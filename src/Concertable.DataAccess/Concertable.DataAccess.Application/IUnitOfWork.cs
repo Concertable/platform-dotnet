@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Concertable.DataAccess;
+namespace Concertable.DataAccess.Application;
 
 public interface IUnitOfWork<TContext>
 {

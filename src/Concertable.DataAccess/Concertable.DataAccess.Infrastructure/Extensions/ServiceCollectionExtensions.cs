@@ -1,5 +1,5 @@
+using Concertable.DataAccess.Application.Specifications;
 using Concertable.DataAccess.Infrastructure.Specifications;
-using Concertable.DataAccess.Specifications;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Concertable.DataAccess.Infrastructure.Extensions;

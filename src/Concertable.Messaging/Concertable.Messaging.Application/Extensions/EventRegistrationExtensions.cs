@@ -1,4 +1,6 @@
-namespace Concertable.Messaging.Application;
+using Concertable.Messaging.Contracts;
+
+namespace Concertable.Messaging.Application.Extensions;
 
 public static class EventRegistrationExtensions
 {

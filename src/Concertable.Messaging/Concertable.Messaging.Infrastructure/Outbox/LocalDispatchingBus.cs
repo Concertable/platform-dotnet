@@ -1,4 +1,5 @@
 using Concertable.Messaging.Application;
+using Concertable.Messaging.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Concertable.Messaging.Infrastructure.Outbox;

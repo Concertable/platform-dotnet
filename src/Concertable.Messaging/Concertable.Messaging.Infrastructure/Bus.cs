@@ -1,3 +1,5 @@
+using Concertable.Messaging.Contracts;
+
 namespace Concertable.Messaging.Infrastructure;
 
 internal sealed class Bus : IBus

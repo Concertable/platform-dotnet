@@ -1,3 +1,5 @@
+using Concertable.Messaging.Contracts;
+
 namespace Concertable.Messaging.Application;
 
 public sealed class MessageTypeRegistry

@@ -1,9 +1,9 @@
-using Concertable.Shared.Infrastructure.Identity;
-using Concertable.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Concertable.Kernel;
+using Concertable.Kernel.Identity;
 
-namespace Concertable.DataAccess.Infrastructure;
+namespace Concertable.DataAccess.Infrastructure.Data;
 
 public class AuditInterceptor(ICurrentUser currentUser) : SaveChangesInterceptor
 {
