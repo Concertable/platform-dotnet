@@ -9,6 +9,7 @@ public abstract class CollectionSyncer<TEntity, TDto>
     where TDto : ISyncRequest
 {
     private readonly IBaseRepository<TEntity> repo;
+
     protected CollectionSyncer(IBaseRepository<TEntity> repo) => this.repo = repo;
 
     public async Task SyncAsync(
