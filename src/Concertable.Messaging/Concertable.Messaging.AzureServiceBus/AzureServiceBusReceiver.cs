@@ -89,8 +89,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed processing event {MessageType}",
-                args.Message.ApplicationProperties.GetValueOrDefault("MessageType"));
+            logger.FailedProcessingEvent(args.Message.ApplicationProperties.GetValueOrDefault("MessageType"), ex);
             await args.AbandonMessageAsync(args.Message);
         }
     }
@@ -121,17 +120,14 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed processing command {MessageType}",
-                args.Message.ApplicationProperties.GetValueOrDefault("MessageType"));
+            logger.FailedProcessingCommand(args.Message.ApplicationProperties.GetValueOrDefault("MessageType"), ex);
             await args.AbandonMessageAsync(args.Message);
         }
     }
 
     private Task HandleErrorAsync(ProcessErrorEventArgs args)
     {
-        logger.LogError(args.Exception,
-            "Service Bus processor error on {EntityPath} ({Source})",
-            args.EntityPath, args.ErrorSource);
+        logger.ServiceBusProcessorError(args.EntityPath, args.ErrorSource, args.Exception);
         return Task.CompletedTask;
     }
 }
