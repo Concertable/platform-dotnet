@@ -1,13 +1,9 @@
-using System.Linq.Expressions;
 using Concertable.Kernel;
+using Concertable.Kernel.Specifications;
 
 namespace Concertable.DataAccess.Application.Specifications;
 
-public interface IUpcomingSpecification<TEntity> where TEntity : class, IHasDateRange
+public interface IUpcomingSpecification<TEntity> : IExpressionSpecification<TEntity>
+    where TEntity : class, IHasDateRange
 {
-    IQueryable<TEntity> Apply(IQueryable<TEntity> query);
-
-    IQueryable<TParent> ApplyExpression<TParent>(
-        IQueryable<TParent> query,
-        Expression<Func<TParent, TEntity>> navigation);
 }
