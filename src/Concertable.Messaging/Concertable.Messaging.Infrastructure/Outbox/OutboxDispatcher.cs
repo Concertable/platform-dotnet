@@ -1,4 +1,5 @@
 using Concertable.Messaging.Application;
+using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Domain;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

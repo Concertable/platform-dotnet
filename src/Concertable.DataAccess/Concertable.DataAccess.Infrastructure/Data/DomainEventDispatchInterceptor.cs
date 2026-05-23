@@ -1,8 +1,8 @@
+using Concertable.Kernel;
 using Concertable.Messaging.Infrastructure.Outbox;
-using Concertable.Shared;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace Concertable.DataAccess.Infrastructure;
+namespace Concertable.DataAccess.Infrastructure.Data;
 
 public class DomainEventDispatchInterceptor(
     IDomainEventDispatcher dispatcher,

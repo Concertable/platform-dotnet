@@ -1,4 +1,4 @@
-namespace Concertable.Messaging.AzureServiceBus;
+namespace Concertable.Messaging.AzureServiceBus.Options;
 
 public sealed class AzureServiceBusOptions
 {

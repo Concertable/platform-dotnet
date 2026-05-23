@@ -1,3 +1,5 @@
+using Concertable.Messaging.Contracts;
+
 namespace Concertable.Messaging.UnitTests;
 
 public sealed record FakeIntegrationEvent(Guid Id, string Name, int Count) : IIntegrationEvent;

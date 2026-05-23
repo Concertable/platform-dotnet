@@ -1,4 +1,5 @@
-using Concertable.Shared;
+using Concertable.Kernel;
+using Concertable.Messaging.Contracts;
 
 namespace Concertable.Messaging.Domain;
 

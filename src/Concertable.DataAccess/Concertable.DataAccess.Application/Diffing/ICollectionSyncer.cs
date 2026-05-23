@@ -1,6 +1,6 @@
-using Concertable.Shared;
+using Concertable.Kernel;
 
-namespace Concertable.DataAccess.Diffing;
+namespace Concertable.DataAccess.Application.Diffing;
 
 public interface ICollectionSyncer<TEntity, TDto>
     where TEntity : class, IIdEntity

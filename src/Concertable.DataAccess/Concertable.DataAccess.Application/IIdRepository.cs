@@ -1,6 +1,6 @@
-using Concertable.Shared;
+using Concertable.Kernel;
 
-namespace Concertable.DataAccess;
+namespace Concertable.DataAccess.Application;
 
 public interface IIdRepository<TEntity> : IBaseRepository<TEntity> where TEntity : class, IIdEntity
 {

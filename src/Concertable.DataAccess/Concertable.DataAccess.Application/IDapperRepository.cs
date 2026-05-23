@@ -1,6 +1,6 @@
 using System.Data;
 
-namespace Concertable.DataAccess;
+namespace Concertable.DataAccess.Application;
 
 public interface IDapperRepository
 {

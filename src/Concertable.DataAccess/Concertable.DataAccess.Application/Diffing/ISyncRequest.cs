@@ -1,4 +1,4 @@
-namespace Concertable.DataAccess.Diffing;
+namespace Concertable.DataAccess.Application.Diffing;
 
 public interface ISyncRequest
 {

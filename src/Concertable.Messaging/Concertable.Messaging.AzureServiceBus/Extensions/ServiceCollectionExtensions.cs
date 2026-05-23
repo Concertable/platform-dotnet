@@ -1,9 +1,11 @@
 using Azure.Messaging.ServiceBus;
 using Concertable.Messaging.Application;
+using Concertable.Messaging.AzureServiceBus.Options;
+using Concertable.Messaging.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Concertable.Messaging.AzureServiceBus;
+namespace Concertable.Messaging.AzureServiceBus.Extensions;
 
 public static class ServiceCollectionExtensions
 {

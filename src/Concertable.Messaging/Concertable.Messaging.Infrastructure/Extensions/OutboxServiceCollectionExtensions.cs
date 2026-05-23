@@ -1,4 +1,5 @@
 using Concertable.Messaging.Application;
+using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
