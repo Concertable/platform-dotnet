@@ -1,3 +1,4 @@
+using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,4 +26,11 @@ public abstract class DbContextBase(DbContextOptions options) : DbContext(option
             b.Property(m => m.ReceivedAt).IsRequired();
         });
     }
+
+    public Task<bool> IsInboxMessageProcessedAsync(Guid messageId, string consumerName, CancellationToken ct = default)
+        => Set<InboxMessageEntity>().AnyAsync(m => m.MessageId == messageId && m.ConsumerName == consumerName, ct);
+
+    public void AddInboxMessage(MessageEnvelope envelope, string consumerName)
+        => Set<InboxMessageEntity>().Add(
+            InboxMessageEntity.Create(envelope.MessageId, consumerName, envelope.MessageType, DateTimeOffset.UtcNow));
 }
