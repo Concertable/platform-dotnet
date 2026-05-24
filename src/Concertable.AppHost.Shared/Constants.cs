@@ -18,6 +18,7 @@ public static class AppHostConstants
         public const string B2BWeb = "https://localhost:7086";
         public const string CustomerWeb = "https://localhost:7090";
         public const string SearchWeb = "https://localhost:7087";
+        public const string PaymentWeb = "https://localhost:7088";
         public const string Auth = "https://localhost:7083";
         public const string CustomerSpa = "https://localhost:5174";
         public const string VenueSpa = "https://localhost:5175";
