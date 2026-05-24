@@ -151,8 +151,7 @@ public static class DistributedApplicationBuilderExtensions
                       .WaitFor(paymentWeb)
                       .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
                       .WithEnvironment("ServiceAuth__ClientId", "concertable-b2b")
-                      .WithEnvironment("ServiceAuth__ClientSecret", b2bSecret ?? "")
-                      .AddSecrets(builder, "Stripe:SecretKey");
+                      .WithOptionalEnvironment("ServiceAuth__ClientSecret", b2bSecret);
     }
 
     public static IResourceBuilder<AzureFunctionsProjectResource> AddWorkers<TProject>(
@@ -185,7 +184,7 @@ public static class DistributedApplicationBuilderExtensions
                       .WaitFor(paymentWeb)
                       .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
                       .WithEnvironment("ServiceAuth__ClientId", "concertable-customer")
-                      .WithEnvironment("ServiceAuth__ClientSecret", customerSecret ?? "");
+                      .WithOptionalEnvironment("ServiceAuth__ClientSecret", customerSecret);
     }
 
     public static IResourceBuilder<ProjectResource> AddSearchWeb<TProject>(
@@ -474,6 +473,16 @@ public static class DistributedApplicationBuilderExtensions
         await foreach (var batch in logs.WatchAsync(resource).WithCancellation(ct))
             foreach (var line in batch)
                 yield return line;
+    }
+
+    private static IResourceBuilder<ProjectResource> WithOptionalEnvironment(
+        this IResourceBuilder<ProjectResource> resource,
+        string name,
+        string? value)
+    {
+        if (!string.IsNullOrEmpty(value))
+            resource = resource.WithEnvironment(name, value);
+        return resource;
     }
 
     private static IResourceBuilder<ProjectResource> AddSecrets(
