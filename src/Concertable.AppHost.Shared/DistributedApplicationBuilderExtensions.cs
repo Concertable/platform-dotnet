@@ -104,7 +104,7 @@ public static class DistributedApplicationBuilderExtensions
         IResourceBuilder<AzureServiceBusResource> asb)
         where TProject : IProjectMetadata, new()
     {
-        var auth = builder.AddProject<TProject>("auth")
+        var auth = builder.AddProject<TProject>(AppHostConstants.ResourceNames.Auth)
                           .WithReference(authDb)
                           .WaitFor(authDb)
                           .WithReference(b2bDb)
@@ -138,7 +138,7 @@ public static class DistributedApplicationBuilderExtensions
         where TProject : IProjectMetadata, new()
     {
         var b2bSecret = builder.Configuration["ServiceAuth:B2BClientSecret"];
-        return builder.AddProject<TProject>("api")
+        return builder.AddProject<TProject>(AppHostConstants.ResourceNames.B2BWeb)
                       .WithReference(sql)
                       .WaitFor(sql)
                       .WithReference(auth)
@@ -160,7 +160,7 @@ public static class DistributedApplicationBuilderExtensions
         IResourceBuilder<SqlServerDatabaseResource> sql)
         where TProject : IProjectMetadata, new()
     {
-        return builder.AddAzureFunctionsProject<TProject>("workers")
+        return builder.AddAzureFunctionsProject<TProject>(AppHostConstants.ResourceNames.Workers)
                       .WithReference(sql)
                       .WaitFor(sql);
     }
@@ -174,7 +174,7 @@ public static class DistributedApplicationBuilderExtensions
         where TProject : IProjectMetadata, new()
     {
         var customerSecret = builder.Configuration["ServiceAuth:CustomerClientSecret"];
-        return builder.AddProject<TProject>("customer-web")
+        return builder.AddProject<TProject>(AppHostConstants.ResourceNames.CustomerWeb)
                       .WithReference(auth)
                       .WaitFor(auth)
                       .WithReference(customerDb)
@@ -194,7 +194,7 @@ public static class DistributedApplicationBuilderExtensions
         IResourceBuilder<SqlServerDatabaseResource> searchDb)
         where TProject : IProjectMetadata, new()
     {
-        return builder.AddProject<TProject>("search-web")
+        return builder.AddProject<TProject>(AppHostConstants.ResourceNames.SearchWeb)
                       .WithReference(auth)
                       .WaitFor(auth)
                       .WithReference(searchDb)
@@ -208,7 +208,7 @@ public static class DistributedApplicationBuilderExtensions
         IResourceBuilder<AzureServiceBusResource> asb)
         where TProject : IProjectMetadata, new()
     {
-        return builder.AddProject<TProject>("search-workers")
+        return builder.AddProject<TProject>(AppHostConstants.ResourceNames.SearchWorkers)
                       .WithReference(searchDb)
                       .WaitFor(searchDb)
                       .WithReference(asb)
@@ -222,7 +222,7 @@ public static class DistributedApplicationBuilderExtensions
         IResourceBuilder<AzureServiceBusResource> asb)
         where TProject : IProjectMetadata, new()
     {
-        return builder.AddProject<TProject>("payment-web")
+        return builder.AddProject<TProject>(AppHostConstants.ResourceNames.PaymentWeb)
                       .WithReference(paymentDb)
                       .WaitFor(paymentDb)
                       .WithReference(auth)
@@ -239,7 +239,7 @@ public static class DistributedApplicationBuilderExtensions
         IResourceBuilder<AzureServiceBusResource> asb)
         where TProject : IProjectMetadata, new()
     {
-        return builder.AddProject<TProject>("payment-workers")
+        return builder.AddProject<TProject>(AppHostConstants.ResourceNames.PaymentWorkers)
                       .WithReference(paymentDb)
                       .WaitFor(paymentDb)
                       .WithReference(asb)
