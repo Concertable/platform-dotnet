@@ -250,8 +250,11 @@ public static class DistributedApplicationBuilderExtensions
     public static IResourceBuilder<NodeAppResource> AddCustomerSpa(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> backend,
+        IResourceBuilder<ProjectResource> customerWeb,
         IResourceBuilder<ProjectResource> auth) =>
-        AddSpaSurface(builder, backend, auth, "customer", 5174);
+        AddSpaSurface(builder, backend, auth, "customer", 5174)
+            .WithReference(customerWeb)
+            .WaitFor(customerWeb);
 
     public static IResourceBuilder<NodeAppResource> AddVenueSpa(
         this IDistributedApplicationBuilder builder,
