@@ -34,11 +34,19 @@ public static class DistributedApplicationBuilderExtensions
             if (customer) concertChanged.AddServiceBusSubscription("customer-concert-changed", "concertable-customer");
         }
 
-        // Published by customer, consumed by b2b
+        // Published by B2B, consumed by customer
+        if (b2b || customer)
+        {
+            var concertPosted = asb.AddServiceBusTopic("event-concertpostedevent");
+            if (customer) concertPosted.AddServiceBusSubscription("customer-concert-posted", "concertable-customer");
+        }
+
+        // Published by customer, consumed by b2b + customer (self)
         if (customer || b2b)
         {
-            var reviewSubmitted = asb.AddServiceBusTopic("event-reviewsubmittedevent");
+            var reviewSubmitted = asb.AddServiceBusTopic("event-customerreviewsubmittedevent");
             if (b2b) reviewSubmitted.AddServiceBusSubscription("b2b-review-submitted", "concertable-b2b");
+            if (customer) reviewSubmitted.AddServiceBusSubscription("customer-review-submitted", "concertable-customer");
         }
 
         // Published by B2B, consumed by search + customer
@@ -408,7 +416,7 @@ public static class DistributedApplicationBuilderExtensions
         return mobile;
     }
 
-    public static void AddStripeCli(this IDistributedApplicationBuilder builder, IResourceBuilder<ProjectResource> api)
+    public static void AddStripeCli(this IDistributedApplicationBuilder builder, IResourceBuilder<ProjectResource> paymentWeb)
     {
         var secretKey = builder.Configuration["Stripe:SecretKey"];
         if (string.IsNullOrEmpty(secretKey))
@@ -421,7 +429,7 @@ public static class DistributedApplicationBuilderExtensions
                 command: "stripe",
                 workingDirectory: ".",
                 "listen", "--api-key", secretKey,
-                "--forward-to", "https://localhost:7086/api/webhook",
+                "--forward-to", "https://localhost:7088/api/webhook",
                 "--skip-verify");
             return;
         }
@@ -431,7 +439,7 @@ public static class DistributedApplicationBuilderExtensions
         var stripeCli = builder.AddContainer("stripe-cli", "stripe/stripe-cli")
                .WithVolume("stripe-cli-config", "/root/.config/stripe")
                .WithArgs("listen", "--api-key", secretKey, "--forward-to",
-                   ReferenceExpression.Create($"{api.GetEndpoint("http")}/api/webhook"));
+                   ReferenceExpression.Create($"{paymentWeb.GetEndpoint("http")}/api/webhook"));
 
         builder.Eventing.Subscribe<BeforeStartEvent>((evt, ct) =>
         {
@@ -458,7 +466,7 @@ public static class DistributedApplicationBuilderExtensions
             return Task.CompletedTask;
         });
 
-        api.WithEnvironment(async ctx =>
+        paymentWeb.WithEnvironment(async ctx =>
         {
             ctx.EnvironmentVariables["Stripe__WebhookSecret"] =
                 await webhookSecret.Task.WaitAsync(TimeSpan.FromSeconds(60));
