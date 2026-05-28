@@ -18,84 +18,12 @@ public static class DistributedApplicationBuilderExtensions
     }
 
     public static IResourceBuilder<AzureServiceBusResource> AddServiceBus(
-        this IDistributedApplicationBuilder builder,
-        bool b2b = false,
-        bool customer = false,
-        bool search = false,
-        bool payment = false)
+        this IDistributedApplicationBuilder builder)
     {
-        var asb = builder.AddAzureServiceBus("asb");
-
-        // Published by B2B, consumed by search + customer
-        if (b2b || search || customer)
-        {
-            var concertChanged = asb.AddServiceBusTopic("event-concertchangedevent");
-            if (search) concertChanged.AddServiceBusSubscription("search-concert-changed", "concertable-search");
-            if (customer) concertChanged.AddServiceBusSubscription("customer-concert-changed", "concertable-customer");
-        }
-
-        // Published by B2B, consumed by customer
-        if (b2b || customer)
-        {
-            var concertPosted = asb.AddServiceBusTopic("event-concertpostedevent");
-            if (customer) concertPosted.AddServiceBusSubscription("customer-concert-posted", "concertable-customer");
-        }
-
-        // Published by customer, consumed by b2b + customer (self)
-        if (customer || b2b)
-        {
-            var reviewSubmitted = asb.AddServiceBusTopic("event-customerreviewsubmittedevent");
-            if (b2b) reviewSubmitted.AddServiceBusSubscription("b2b-review-submitted", "concertable-b2b");
-            if (customer) reviewSubmitted.AddServiceBusSubscription("customer-review-submitted", "concertable-customer");
-        }
-
-        // Published by B2B, consumed by search + customer
-        if (b2b || search || customer)
-        {
-            var artistChanged = asb.AddServiceBusTopic("event-artistchangedevent");
-            if (search) artistChanged.AddServiceBusSubscription("search-artist-changed", "concertable-search");
-            if (customer) artistChanged.AddServiceBusSubscription("customer-artist-changed", "concertable-customer");
-
-            var venueChanged = asb.AddServiceBusTopic("event-venuechangedevent");
-            if (search) venueChanged.AddServiceBusSubscription("search-venue-changed", "concertable-search");
-            if (customer) venueChanged.AddServiceBusSubscription("customer-venue-changed", "concertable-customer");
-        }
-
-        // Published by customer (after review), consumed by search + customer (own projections)
-        if (customer || search)
-        {
-            var artistRating = asb.AddServiceBusTopic("event-artistratingupdatedevent");
-            if (search) artistRating.AddServiceBusSubscription("search-artist-rating-updated", "concertable-search");
-            if (customer) artistRating.AddServiceBusSubscription("customer-artist-rating-updated", "concertable-customer");
-
-            var venueRating = asb.AddServiceBusTopic("event-venueratingupdatedevent");
-            if (search) venueRating.AddServiceBusSubscription("search-venue-rating-updated", "concertable-search");
-            if (customer) venueRating.AddServiceBusSubscription("customer-venue-rating-updated", "concertable-customer");
-
-            var concertRating = asb.AddServiceBusTopic("event-concertratingupdatedevent");
-            if (search) concertRating.AddServiceBusSubscription("search-concert-rating-updated", "concertable-search");
-            if (customer) concertRating.AddServiceBusSubscription("customer-concert-rating-updated", "concertable-customer");
-        }
-
-        // Published by auth, consumed by b2b + customer + payment
-        var credentialRegistered = asb.AddServiceBusTopic("event-credentialregisteredevent");
-        if (b2b) credentialRegistered.AddServiceBusSubscription("b2b-credential-registered", "concertable-b2b");
-        if (customer) credentialRegistered.AddServiceBusSubscription("customer-credential-registered", "concertable-customer");
-        if (payment) credentialRegistered.AddServiceBusSubscription("payment-credential-registered", "concertable-payment");
-
-        // Published by payment, consumed by b2b + customer + payment
-        var paymentSucceeded = asb.AddServiceBusTopic("event-paymentsucceededevent");
-        if (b2b) paymentSucceeded.AddServiceBusSubscription("b2b-payment-succeeded", "concertable-b2b");
-        if (customer) paymentSucceeded.AddServiceBusSubscription("customer-payment-succeeded", "concertable-customer");
-        if (payment) paymentSucceeded.AddServiceBusSubscription("payment-payment-succeeded", "concertable-payment");
-
-        var paymentFailed = asb.AddServiceBusTopic("event-paymentfailedevent");
-        if (b2b) paymentFailed.AddServiceBusSubscription("b2b-payment-failed", "concertable-b2b");
-        if (customer) paymentFailed.AddServiceBusSubscription("customer-payment-failed", "concertable-customer");
-        if (payment) paymentFailed.AddServiceBusSubscription("payment-payment-failed", "concertable-payment");
-
-        return asb.RunAsEmulator();
+        return builder.AddAzureServiceBus("asb").RunAsEmulator();
     }
+
+    public static AsbTopology Topology(this IResourceBuilder<AzureServiceBusResource> asb) => new(asb);
 
     public static (IResourceBuilder<AzureStorageResource> storage, IResourceBuilder<AzureBlobStorageResource> blobs) AddAzureStorage(this IDistributedApplicationBuilder builder)
     {
@@ -164,12 +92,18 @@ public static class DistributedApplicationBuilderExtensions
 
     public static IResourceBuilder<AzureFunctionsProjectResource> AddWorkers<TProject>(
         this IDistributedApplicationBuilder builder,
-        IResourceBuilder<SqlServerDatabaseResource> sql)
+        IResourceBuilder<SqlServerDatabaseResource> sql,
+        IResourceBuilder<ProjectResource>? paymentWeb = null)
         where TProject : IProjectMetadata, new()
     {
-        return builder.AddAzureFunctionsProject<TProject>(AppHostConstants.ResourceNames.Workers)
-                      .WithReference(sql)
-                      .WaitFor(sql);
+        var workers = builder.AddAzureFunctionsProject<TProject>(AppHostConstants.ResourceNames.Workers)
+                             .WithReference(sql)
+                             .WaitFor(sql);
+
+        if (paymentWeb is not null)
+            workers = workers.WithReference(paymentWeb).WaitFor(paymentWeb);
+
+        return workers;
     }
 
     public static IResourceBuilder<ProjectResource> AddCustomerWeb<TProject>(

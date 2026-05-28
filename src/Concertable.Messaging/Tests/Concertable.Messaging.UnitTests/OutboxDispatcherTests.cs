@@ -27,6 +27,7 @@ public class OutboxDispatcherTests
         services.AddSingleton(transport);
         services.AddSingleton(registry);
         services.AddSingleton(new MessageSerializer());
+        services.AddSingleton<TimeProvider>(new FakeTimeProvider(Base));
         return services.BuildServiceProvider();
     }
 
