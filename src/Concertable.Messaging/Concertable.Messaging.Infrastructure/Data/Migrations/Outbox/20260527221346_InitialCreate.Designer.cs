@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Messaging.Infrastructure.Data.Migrations.Outbox
 {
     [DbContext(typeof(OutboxDbContext))]
-    [Migration("20260525215407_InitialCreate")]
+    [Migration("20260527221346_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -48,6 +48,9 @@ namespace Concertable.Messaging.Infrastructure.Data.Migrations.Outbox
                     b.Property<string>("MessageType")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTimeOffset?>("NextRetryAtUtc")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset>("OccurredAtUtc")
                         .HasColumnType("datetimeoffset");

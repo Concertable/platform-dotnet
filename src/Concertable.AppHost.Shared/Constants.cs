@@ -1,5 +1,14 @@
 public static class AppHostConstants
 {
+    public static class Databases
+    {
+        public const string Auth = "AuthDb";
+        public const string B2B = "B2BDb";
+        public const string Customer = "CustomerDb";
+        public const string Search = "SearchDb";
+        public const string Payment = "PaymentDb";
+    }
+
     public static class ResourceNames
     {
         public const string B2BWeb = "b2b-web";

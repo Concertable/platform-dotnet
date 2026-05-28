@@ -15,7 +15,7 @@ public sealed class MessageTypeRegistry
     public Type ResolveCommand(string messageType) => commands[messageType];
 
     public void RegisterEvent<TEvent>() where TEvent : IIntegrationEvent =>
-        events[MessageEnvelope.TypeNameFor(typeof(TEvent))] = typeof(TEvent);
+        events[MessageTypeAttribute.Resolve(typeof(TEvent))] = typeof(TEvent);
 
     public void RegisterSubscription<TEvent>() where TEvent : IIntegrationEvent
     {
@@ -24,5 +24,5 @@ public sealed class MessageTypeRegistry
     }
 
     public void RegisterCommand<TCommand>() where TCommand : IIntegrationCommand =>
-        commands[MessageEnvelope.TypeNameFor(typeof(TCommand))] = typeof(TCommand);
+        commands[MessageTypeAttribute.Resolve(typeof(TCommand))] = typeof(TCommand);
 }

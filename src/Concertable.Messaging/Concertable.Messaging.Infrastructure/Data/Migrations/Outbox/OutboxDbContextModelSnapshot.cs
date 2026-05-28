@@ -46,6 +46,9 @@ namespace Concertable.Messaging.Infrastructure.Data.Migrations.Outbox
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<DateTimeOffset?>("NextRetryAtUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<DateTimeOffset>("OccurredAtUtc")
                         .HasColumnType("datetimeoffset");
 

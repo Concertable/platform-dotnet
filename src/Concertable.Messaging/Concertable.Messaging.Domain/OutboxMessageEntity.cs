@@ -17,6 +17,7 @@ public class OutboxMessageEntity : IGuidEntity
     public DateTimeOffset? DispatchedAtUtc { get; private set; }
     public int Attempts { get; private set; }
     public string? LastError { get; private set; }
+    public DateTimeOffset? NextRetryAtUtc { get; private set; }
 
     public static OutboxMessageEntity Create(
         Type messageType,
@@ -30,7 +31,7 @@ public class OutboxMessageEntity : IGuidEntity
         return new OutboxMessageEntity
         {
             Id = Guid.NewGuid(),
-            MessageType = MessageEnvelope.TypeNameFor(messageType),
+            MessageType = MessageTypeAttribute.Resolve(messageType),
             Payload = payload,
             OccurredAtUtc = occurredAtUtc,
             Kind = kind,
@@ -49,7 +50,7 @@ public class OutboxMessageEntity : IGuidEntity
         LastError = null;
     }
 
-    public void RecordFailure(string error, int maxAttempts)
+    public void RecordFailure(string error, int maxAttempts, DateTimeOffset now)
     {
         if (Status is OutboxStatus.Dispatched)
             throw new DomainException("Cannot record failure on a dispatched message.");
@@ -57,6 +58,9 @@ public class OutboxMessageEntity : IGuidEntity
             throw new DomainException("Error is required.");
         Attempts++;
         LastError = error;
-        if (Attempts >= maxAttempts) Status = OutboxStatus.DeadLettered;
+        if (Attempts >= maxAttempts)
+            Status = OutboxStatus.DeadLettered;
+        else
+            NextRetryAtUtc = now.AddSeconds(Math.Min(Math.Pow(2, Attempts - 1), 300));
     }
 }

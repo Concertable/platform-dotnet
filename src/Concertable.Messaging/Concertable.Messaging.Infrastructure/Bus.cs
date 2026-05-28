@@ -23,6 +23,6 @@ internal sealed class Bus : IBus
 
     private MessageEnvelope BuildEnvelope(Type messageType) =>
         new(MessageId: Guid.NewGuid(),
-            MessageType: MessageEnvelope.TypeNameFor(messageType),
+            MessageType: MessageTypeAttribute.Resolve(messageType),
             OccurredAtUtc: timeProvider.GetUtcNow());
 }

@@ -2,38 +2,38 @@ using Concertable.Messaging.Contracts;
 
 namespace Concertable.Messaging.UnitTests;
 
-public class MessageEnvelopeTests
+public class MessageTypeAttributeTests
 {
     [Fact]
-    public void TypeNameFor_OnConcreteType_ReturnsFullName()
+    public void Resolve_OnDecoratedType_ReturnsAttributeName()
     {
         // Arrange
         var type = typeof(FakeIntegrationEvent);
 
         // Act
-        var name = MessageEnvelope.TypeNameFor(type);
+        var name = MessageTypeAttribute.Resolve(type);
 
         // Assert
-        Assert.Equal(type.FullName, name);
+        Assert.Equal("concertable.messaging.fake-integration-event.v1", name);
     }
 
     [Fact]
-    public void TypeNameFor_OnNullType_ThrowsArgumentNullException()
+    public void Resolve_OnNullType_ThrowsArgumentNullException()
     {
         // Arrange
         Type? type = null;
 
         // Act + Assert
-        Assert.Throws<ArgumentNullException>(() => MessageEnvelope.TypeNameFor(type!));
+        Assert.Throws<ArgumentNullException>(() => MessageTypeAttribute.Resolve(type!));
     }
 
     [Fact]
-    public void TypeNameFor_OnOpenGeneric_ThrowsArgumentException()
+    public void Resolve_OnTypeMissingAttribute_ThrowsInvalidOperationException()
     {
         // Arrange
-        var openGeneric = typeof(List<>).GetGenericArguments()[0];
+        var type = typeof(object);
 
         // Act + Assert
-        Assert.Throws<ArgumentException>(() => MessageEnvelope.TypeNameFor(openGeneric));
+        Assert.Throws<InvalidOperationException>(() => MessageTypeAttribute.Resolve(type));
     }
 }

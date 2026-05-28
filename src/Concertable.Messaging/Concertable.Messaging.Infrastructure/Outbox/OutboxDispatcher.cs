@@ -80,7 +80,7 @@ internal sealed class OutboxDispatcher : BackgroundService
             }
             catch (Exception ex)
             {
-                row.RecordFailure(ex.Message, options.MaxAttempts);
+                row.RecordFailure(ex.Message, options.MaxAttempts, timeProvider.GetUtcNow());
                 logger.OutboxDispatchFailed(row.MessageType, row.Id, ex);
             }
         }

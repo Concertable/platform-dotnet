@@ -28,7 +28,8 @@ namespace Concertable.Messaging.Infrastructure.Data.Migrations.Outbox
                     Status = table.Column<int>(type: "int", nullable: false),
                     DispatchedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
                     Attempts = table.Column<int>(type: "int", nullable: false),
-                    LastError = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    LastError = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NextRetryAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
                 },
                 constraints: table =>
                 {
