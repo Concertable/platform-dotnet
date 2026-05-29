@@ -6,7 +6,7 @@ namespace Concertable.DataAccess.Infrastructure.Data;
 
 public class DomainEventDispatchInterceptor(
     IDomainEventDispatcher dispatcher,
-    IDbContextAccessor contextAccessor) : SaveChangesInterceptor
+    IDbContextAccessor contextAccessor) : SaveChangesInterceptor, IDomainEventDispatchInterceptor
 {
     private readonly Stack<List<IDomainEvent>> pendingEventsStack = new();
 
