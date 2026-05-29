@@ -45,6 +45,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
             processor.ProcessErrorAsync += HandleErrorAsync;
             processors.Add(processor);
             await processor.StartProcessingAsync(stoppingToken);
+            logger.EventProcessorStarted(topic, options.ServiceName);
         }
 
         foreach (var commandType in registry.RegisteredCommandTypes)
@@ -55,6 +56,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
             processor.ProcessErrorAsync += HandleErrorAsync;
             processors.Add(processor);
             await processor.StartProcessingAsync(stoppingToken);
+            logger.CommandProcessorStarted(queue);
         }
 
         try
@@ -71,6 +73,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
     {
         try
         {
+            logger.MessageReceived(args.Message.ApplicationProperties.GetValueOrDefault("MessageType"), args.EntityPath);
             var @event = serializer.Deserialize(args.Message.Body, eventType);
             var envelope = new MessageEnvelope(
                 Guid.Parse(args.Message.MessageId),
