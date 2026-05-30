@@ -18,10 +18,8 @@ public static class DistributedApplicationBuilderExtensions
     }
 
     public static IResourceBuilder<AzureServiceBusResource> AddServiceBus(
-        this IDistributedApplicationBuilder builder)
-    {
-        return builder.AddAzureServiceBus("asb").RunAsEmulator();
-    }
+        this IDistributedApplicationBuilder builder) =>
+        builder.AddAzureServiceBus("asb").RunAsEmulator();
 
     public static AsbTopology Topology(this IResourceBuilder<AzureServiceBusResource> asb) => new(asb);
 
@@ -152,6 +150,16 @@ public static class DistributedApplicationBuilderExtensions
         return builder.AddProject<TProject>(AppHostConstants.ResourceNames.SearchWorkers)
                       .WithReference(searchDb)
                       .WaitFor(searchDb)
+                      .WithReference(asb)
+                      .WaitFor(asb);
+    }
+
+    public static IResourceBuilder<ProjectResource> AddB2BSeedingSimulator<TProject>(
+        this IDistributedApplicationBuilder builder,
+        IResourceBuilder<AzureServiceBusResource> asb)
+        where TProject : IProjectMetadata, new()
+    {
+        return builder.AddProject<TProject>(AppHostConstants.ResourceNames.B2BSeedingSimulator)
                       .WithReference(asb)
                       .WaitFor(asb);
     }

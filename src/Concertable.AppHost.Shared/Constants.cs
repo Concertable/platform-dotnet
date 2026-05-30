@@ -20,6 +20,7 @@ public static class AppHostConstants
         public const string PaymentWorkers = "payment-workers";
         public const string Workers = "workers";
         public const string StripeCli = "stripe-cli";
+        public const string B2BSeedingSimulator = "b2b-seeding-simulator";
     }
 
     public static class Ports
