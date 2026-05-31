@@ -7,13 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Concertable.B2B\Modules\User\Concertable.B2B.User.Domain\Concertable.B2B.User.Domain.csproj" />
-    <ProjectReference Include="..\..\Concertable.B2B\Modules\Artist\Concertable.B2B.Artist.Domain\Concertable.B2B.Artist.Domain.csproj" />
-    <ProjectReference Include="..\..\Concertable.B2B\Modules\Venue\Concertable.B2B.Venue.Domain\Concertable.B2B.Venue.Domain.csproj" />
-    <ProjectReference Include="..\..\Concertable.B2B\Modules\Concert\Concertable.B2B.Concert.Domain\Concertable.B2B.Concert.Domain.csproj" />
-    <ProjectReference Include="..\..\Concertable.B2B\Modules\Contract\Concertable.B2B.Contract.Domain\Concertable.B2B.Contract.Domain.csproj" />
-    <ProjectReference Include="..\..\Concertable.Payment\Concertable.Payment.Domain\Concertable.Payment.Domain.csproj" />
-<ProjectReference Include="..\..\Concertable.B2B\Modules\Conversations\Concertable.B2B.Conversations.Domain\Concertable.B2B.Conversations.Domain.csproj" />
     <ProjectReference Include="..\..\Shared\Concertable.Kernel\Concertable.Kernel.csproj" />
   </ItemGroup>
 
