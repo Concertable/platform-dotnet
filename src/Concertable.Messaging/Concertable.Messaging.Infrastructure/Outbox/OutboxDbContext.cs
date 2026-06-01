@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.Infrastructure.Outbox;
 
-public class OutboxDbContext : DbContext
+public sealed class OutboxDbContext : DbContext
 {
     private readonly IOptions<OutboxOptions> options;
 

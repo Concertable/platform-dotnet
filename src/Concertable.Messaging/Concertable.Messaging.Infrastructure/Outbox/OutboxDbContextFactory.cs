@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.Infrastructure.Outbox;
 
-internal class OutboxDbContextFactory : IDesignTimeDbContextFactory<OutboxDbContext>
+internal sealed class OutboxDbContextFactory : IDesignTimeDbContextFactory<OutboxDbContext>
 {
     public OutboxDbContext CreateDbContext(string[] args)
     {

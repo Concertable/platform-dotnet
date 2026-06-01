@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.AzureServiceBus.UnitTests;
 
-public class AzureServiceBusTransportTests
+public sealed class AzureServiceBusTransportTests
 {
     private readonly AzureServiceBusOptions options = new()
     {

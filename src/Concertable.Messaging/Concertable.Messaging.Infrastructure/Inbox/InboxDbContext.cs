@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Messaging.Infrastructure.Inbox;
 
-public class InboxDbContext : DbContext
+public sealed class InboxDbContext : DbContext
 {
     public InboxDbContext(DbContextOptions<InboxDbContext> dbContextOptions)
         : base(dbContextOptions) { }

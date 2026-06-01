@@ -1,6 +1,6 @@
 namespace Concertable.Messaging.AzureServiceBus.UnitTests;
 
-public class AzureServiceBusOptionsTests
+public sealed class AzureServiceBusOptionsTests
 {
     [Fact]
     public void TopicNameFor_WithDefaultPrefix_PrependsEventPrefixAndLowercases()

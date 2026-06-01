@@ -1,6 +1,6 @@
 namespace Concertable.Messaging.UnitTests;
 
-public class MessageSerializerTests
+public sealed class MessageSerializerTests
 {
     private readonly MessageSerializer sut = new();
 

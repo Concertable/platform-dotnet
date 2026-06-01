@@ -1,6 +1,6 @@
 namespace Concertable.Messaging.Domain;
 
-public class InboxMessageEntity
+public sealed class InboxMessageEntity
 {
     private InboxMessageEntity() { }
 

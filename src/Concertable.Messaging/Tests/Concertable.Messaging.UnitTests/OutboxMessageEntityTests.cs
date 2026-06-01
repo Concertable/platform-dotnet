@@ -2,7 +2,7 @@ using Concertable.Kernel;
 
 namespace Concertable.Messaging.UnitTests;
 
-public class OutboxMessageEntityTests
+public sealed class OutboxMessageEntityTests
 {
     private static readonly DateTimeOffset Now = new(2026, 5, 20, 12, 0, 0, TimeSpan.Zero);
 

@@ -3,7 +3,7 @@ using Moq;
 
 namespace Concertable.Messaging.UnitTests;
 
-public class OutboxBusTests
+public sealed class OutboxBusTests
 {
     private static readonly DateTimeOffset Now = new(2026, 5, 20, 12, 0, 0, TimeSpan.Zero);
 
