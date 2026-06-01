@@ -8,7 +8,7 @@ internal class InboxMessageEntityConfiguration : IEntityTypeConfiguration<InboxM
 {
     public void Configure(EntityTypeBuilder<InboxMessageEntity> builder)
     {
-        builder.ToTable(Schema.Inbox, Schema.Name);
+        builder.ToTable(Schema.Tables.Inbox, Schema.Name);
         builder.HasKey(m => new { m.MessageId, m.ConsumerName });
         builder.Property(m => m.MessageId).ValueGeneratedNever();
         builder.Property(m => m.ConsumerName).IsRequired().HasMaxLength(256);
