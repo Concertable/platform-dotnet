@@ -11,6 +11,9 @@ public abstract class BaseRepository<TEntity, TContext>(TContext context)
 {
     protected readonly TContext context = context;
 
+    public virtual async Task<IEnumerable<TEntity>> GetAllAsync() =>
+        await context.Set<TEntity>().ToListAsync();
+
     public async Task<TEntity> AddAsync(TEntity entity)
     {
         await context.Set<TEntity>().AddAsync(entity);
@@ -23,9 +26,6 @@ public abstract class BaseRepository<TEntity, TContext>(TContext context)
         return entities;
     }
 
-    public async Task<IEnumerable<TEntity>> GetAllAsync() =>
-        await context.Set<TEntity>().ToListAsync();
-
     public void Update(TEntity entity) => context.Set<TEntity>().Update(entity);
 
     public void Remove(TEntity entity) => context.Set<TEntity>().Remove(entity);
@@ -33,26 +33,31 @@ public abstract class BaseRepository<TEntity, TContext>(TContext context)
     public Task SaveChangesAsync() => context.SaveChangesAsync();
 }
 
-public abstract class GuidRepository<TEntity, TContext>(TContext context)
-    : BaseRepository<TEntity, TContext>(context), IGuidRepository<TEntity>
-    where TEntity : class, IGuidEntity
+public abstract class ReadRepository<TEntity, TContext, TKey>(TContext context)
+    : IReadRepository<TEntity, TKey>
+    where TEntity : class, IEntity<TKey>
     where TContext : DbContextBase
 {
-    public Task<TEntity?> GetByIdAsync(Guid id) =>
+    protected readonly TContext context = context;
+
+    public virtual async Task<IEnumerable<TEntity>> GetAllAsync() =>
+        await context.Set<TEntity>().ToListAsync();
+
+    public virtual Task<TEntity?> GetByIdAsync(TKey id) =>
         context.Set<TEntity>().FindAsync(id).AsTask();
 
-    public bool Exists(Guid id) =>
-        context.Set<TEntity>().Any(e => e.Id == id);
+    public bool Exists(TKey id) =>
+        context.Set<TEntity>().Any(e => e.Id!.Equals(id));
 }
 
-public abstract class Repository<TEntity, TContext>(TContext context)
-    : BaseRepository<TEntity, TContext>(context), IIdRepository<TEntity>
-    where TEntity : class, IIdEntity
+public abstract class Repository<TEntity, TContext, TKey>(TContext context)
+    : BaseRepository<TEntity, TContext>(context), IRepository<TEntity, TKey>
+    where TEntity : class, IEntity<TKey>
     where TContext : DbContextBase
 {
-    public Task<TEntity?> GetByIdAsync(int id) =>
+    public virtual Task<TEntity?> GetByIdAsync(TKey id) =>
         context.Set<TEntity>().FindAsync(id).AsTask();
 
-    public bool Exists(int id) =>
-        context.Set<TEntity>().Any(e => e.Id == id);
+    public bool Exists(TKey id) =>
+        context.Set<TEntity>().Any(e => e.Id!.Equals(id));
 }
