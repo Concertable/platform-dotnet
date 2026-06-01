@@ -71,15 +71,29 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
 
     private async Task HandleEventAsync(ProcessMessageEventArgs args, Type eventType)
     {
+        var messageType = args.Message.ApplicationProperties.GetValueOrDefault("MessageType");
+        logger.MessageReceived(messageType, args.EntityPath);
+
+        object @event;
+        MessageEnvelope envelope;
         try
         {
-            logger.MessageReceived(args.Message.ApplicationProperties.GetValueOrDefault("MessageType"), args.EntityPath);
-            var @event = serializer.Deserialize(args.Message.Body, eventType);
-            var envelope = new MessageEnvelope(
+            @event = serializer.Deserialize(args.Message.Body, eventType);
+            envelope = new MessageEnvelope(
                 Guid.Parse(args.Message.MessageId),
-                args.Message.ApplicationProperties.GetValueOrDefault("MessageType")?.ToString() ?? eventType.FullName!,
+                messageType?.ToString() ?? eventType.FullName!,
                 args.Message.EnqueuedTime,
                 args.Message.CorrelationId);
+        }
+        catch (Exception ex)
+        {
+            logger.DeadLetteringEvent(messageType, ex);
+            await args.DeadLetterMessageAsync(args.Message, "DeserializationFailed", ex.Message);
+            return;
+        }
+
+        try
+        {
             using var scope = scopeFactory.CreateScope();
             var handlerType = typeof(IIntegrationEventHandler<>).MakeGenericType(eventType);
             var method = handlerType.GetMethod(nameof(IIntegrationEventHandler<IIntegrationEvent>.HandleAsync))!;
@@ -92,21 +106,35 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
         }
         catch (Exception ex)
         {
-            logger.FailedProcessingEvent(args.Message.ApplicationProperties.GetValueOrDefault("MessageType"), ex);
+            logger.FailedProcessingEvent(messageType, ex);
             await args.AbandonMessageAsync(args.Message);
         }
     }
 
     private async Task HandleCommandAsync(ProcessMessageEventArgs args, Type commandType)
     {
+        var messageType = args.Message.ApplicationProperties.GetValueOrDefault("MessageType");
+
+        object command;
+        MessageEnvelope envelope;
         try
         {
-            var command = serializer.Deserialize(args.Message.Body, commandType);
-            var envelope = new MessageEnvelope(
+            command = serializer.Deserialize(args.Message.Body, commandType);
+            envelope = new MessageEnvelope(
                 Guid.Parse(args.Message.MessageId),
-                args.Message.ApplicationProperties.GetValueOrDefault("MessageType")?.ToString() ?? commandType.FullName!,
+                messageType?.ToString() ?? commandType.FullName!,
                 args.Message.EnqueuedTime,
                 args.Message.CorrelationId);
+        }
+        catch (Exception ex)
+        {
+            logger.DeadLetteringCommand(messageType, ex);
+            await args.DeadLetterMessageAsync(args.Message, "DeserializationFailed", ex.Message);
+            return;
+        }
+
+        try
+        {
             using var scope = scopeFactory.CreateScope();
             var handlerType = typeof(IIntegrationCommandHandler<>).MakeGenericType(commandType);
             var handlers = scope.ServiceProvider.GetServices(handlerType).Where(h => h is not null).ToList();
@@ -123,7 +151,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
         }
         catch (Exception ex)
         {
-            logger.FailedProcessingCommand(args.Message.ApplicationProperties.GetValueOrDefault("MessageType"), ex);
+            logger.FailedProcessingCommand(messageType, ex);
             await args.AbandonMessageAsync(args.Message);
         }
     }
