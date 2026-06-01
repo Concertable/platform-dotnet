@@ -13,13 +13,13 @@ public abstract class DbContextBase(DbContextOptions options) : DbContext(option
 
         modelBuilder.Entity<OutboxMessageEntity>(b =>
         {
-            b.ToTable(MessagingSchema.Outbox, MessagingSchema.Name, t => t.ExcludeFromMigrations());
+            b.ToTable(MessagingSchema.Tables.Outbox, MessagingSchema.Name, t => t.ExcludeFromMigrations());
             b.Property(m => m.Id).ValueGeneratedNever();
         });
 
         modelBuilder.Entity<InboxMessageEntity>(b =>
         {
-            b.ToTable(MessagingSchema.Inbox, MessagingSchema.Name, t => t.ExcludeFromMigrations());
+            b.ToTable(MessagingSchema.Tables.Inbox, MessagingSchema.Name, t => t.ExcludeFromMigrations());
             b.HasKey(m => new { m.MessageId, m.ConsumerName });
             b.Property(m => m.MessageId).ValueGeneratedNever();
             b.Property(m => m.ConsumerName).IsRequired().HasMaxLength(256);

@@ -16,7 +16,7 @@ internal class OutboxMessageEntityConfiguration : IEntityTypeConfiguration<Outbo
 
     public void Configure(EntityTypeBuilder<OutboxMessageEntity> builder)
     {
-        builder.ToTable(Schema.Outbox, schemaName);
+        builder.ToTable(Schema.Tables.Outbox, schemaName);
         builder.HasKey(m => m.Id);
         builder.Property(m => m.Id).ValueGeneratedNever();
         builder.Property(m => m.MessageType).IsRequired().HasColumnType("nvarchar(450)");
