@@ -10,7 +10,7 @@ using Moq;
 
 namespace Concertable.Messaging.UnitTests;
 
-public class OutboxDispatcherTests
+public sealed class OutboxDispatcherTests
 {
     private static readonly DateTimeOffset Base = new(2026, 5, 20, 12, 0, 0, TimeSpan.Zero);
 

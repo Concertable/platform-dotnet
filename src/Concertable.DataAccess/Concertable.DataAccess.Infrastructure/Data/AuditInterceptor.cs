@@ -5,7 +5,7 @@ using Concertable.Kernel.Identity;
 
 namespace Concertable.DataAccess.Infrastructure.Data;
 
-public class AuditInterceptor(ICurrentUser currentUser) : SaveChangesInterceptor
+public sealed class AuditInterceptor(ICurrentUser currentUser) : SaveChangesInterceptor
 {
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,

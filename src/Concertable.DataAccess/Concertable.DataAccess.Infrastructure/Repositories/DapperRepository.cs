@@ -4,7 +4,7 @@ using System.Data;
 
 namespace Concertable.DataAccess.Infrastructure.Repositories;
 
-public class DapperRepository : IDapperRepository
+public sealed class DapperRepository : IDapperRepository
 {
     private readonly IDbConnection connection;
 

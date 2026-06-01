@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace Concertable.Messaging.Infrastructure.Inbox;
 
-internal class InboxDbContextFactory : IDesignTimeDbContextFactory<InboxDbContext>
+internal sealed class InboxDbContextFactory : IDesignTimeDbContextFactory<InboxDbContext>
 {
     public InboxDbContext CreateDbContext(string[] args)
     {

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Time.Testing;
 
 namespace Concertable.Messaging.UnitTests;
 
-public class OutboxReaderTests
+public sealed class OutboxReaderTests
 {
     private static readonly DateTimeOffset Base = new(2026, 5, 20, 12, 0, 0, TimeSpan.Zero);
 

@@ -1,6 +1,6 @@
 namespace Concertable.Messaging.UnitTests;
 
-public class MessageTypeRegistryTests
+public sealed class MessageTypeRegistryTests
 {
     [Fact]
     public void RegisterEvent_AfterRegistration_ResolvesByFullName()

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Messaging.UnitTests;
 
-public class OutboxWriterTests
+public sealed class OutboxWriterTests
 {
     private static readonly DateTimeOffset Base = new(2026, 5, 20, 12, 0, 0, TimeSpan.Zero);
 

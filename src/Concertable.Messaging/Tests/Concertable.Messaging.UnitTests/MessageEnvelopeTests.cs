@@ -2,7 +2,7 @@ using Concertable.Messaging.Contracts;
 
 namespace Concertable.Messaging.UnitTests;
 
-public class MessageTypeAttributeTests
+public sealed class MessageTypeAttributeTests
 {
     [Fact]
     public void Resolve_OnDecoratedType_ReturnsAttributeName()

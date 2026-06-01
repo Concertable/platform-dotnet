@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.Infrastructure.Outbox;
 
-internal class OutboxMessageEntityConfiguration : IEntityTypeConfiguration<OutboxMessageEntity>
+internal sealed class OutboxMessageEntityConfiguration : IEntityTypeConfiguration<OutboxMessageEntity>
 {
     private readonly string schemaName;
 

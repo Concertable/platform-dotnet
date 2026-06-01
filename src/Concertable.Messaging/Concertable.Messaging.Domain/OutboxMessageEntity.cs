@@ -3,7 +3,7 @@ using Concertable.Messaging.Contracts;
 
 namespace Concertable.Messaging.Domain;
 
-public class OutboxMessageEntity : IGuidEntity
+public sealed class OutboxMessageEntity : IGuidEntity
 {
     private OutboxMessageEntity() { }
 

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Concertable.DataAccess.Infrastructure.Data;
 
-public class DomainEventDispatchInterceptor(
+public sealed class DomainEventDispatchInterceptor(
     IDomainEventDispatcher dispatcher,
     IDbContextAccessor contextAccessor) : SaveChangesInterceptor, IDomainEventDispatchInterceptor
 {

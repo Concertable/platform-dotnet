@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Concertable.Messaging.Infrastructure.Inbox;
 
-internal class InboxMessageEntityConfiguration : IEntityTypeConfiguration<InboxMessageEntity>
+internal sealed class InboxMessageEntityConfiguration : IEntityTypeConfiguration<InboxMessageEntity>
 {
     public void Configure(EntityTypeBuilder<InboxMessageEntity> builder)
     {

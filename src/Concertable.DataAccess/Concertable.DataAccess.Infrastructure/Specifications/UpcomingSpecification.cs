@@ -5,7 +5,7 @@ using Concertable.Kernel.Specifications;
 
 namespace Concertable.DataAccess.Infrastructure.Specifications;
 
-internal class UpcomingSpecification<TEntity>
+internal sealed class UpcomingSpecification<TEntity>
     : PredicateExpressionSpecification<TEntity>, IUpcomingSpecification<TEntity>
     where TEntity : class, IHasDateRange
 {
