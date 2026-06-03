@@ -366,13 +366,9 @@ public static class DistributedApplicationBuilderExtensions
 
         if (builder.ExecutionContext.IsRunMode)
         {
-            builder.AddExecutable(
-                name: "stripe-cli",
-                command: "stripe",
-                workingDirectory: ".",
-                "listen", "--api-key", secretKey,
-                "--forward-to", "https://localhost:7088/api/webhook",
-                "--skip-verify");
+            builder.AddExecutable("stripe-cli", "stripe", ".")
+                .WithArgs("listen", "--api-key", secretKey, "--skip-verify", "--forward-to",
+                    ReferenceExpression.Create($"{paymentWeb.GetEndpoint("https")}/api/webhook"));
             return;
         }
 
