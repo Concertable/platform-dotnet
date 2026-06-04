@@ -14,7 +14,7 @@ public sealed class OutboxReaderTests
             Options.Create(new OutboxOptions()));
 
     private static OutboxReader NewReader(OutboxDbContext context, DateTimeOffset? now = null) =>
-        new(context, new FakeTimeProvider(now ?? Base));
+        new(context, Options.Create(new OutboxOptions()), new FakeTimeProvider(now ?? Base));
 
     [Fact]
     public async Task GetPendingAsync_ReturnsOnlyPendingOrderedByOccurredAt()

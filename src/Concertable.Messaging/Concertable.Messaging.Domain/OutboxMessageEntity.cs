@@ -48,6 +48,7 @@ public sealed class OutboxMessageEntity : IGuidEntity
         Status = OutboxStatus.Dispatched;
         DispatchedAtUtc = when;
         LastError = null;
+        NextRetryAtUtc = null;
     }
 
     public void RecordFailure(string error, int maxAttempts, DateTimeOffset now)
@@ -59,8 +60,14 @@ public sealed class OutboxMessageEntity : IGuidEntity
         Attempts++;
         LastError = error;
         if (Attempts >= maxAttempts)
+        {
             Status = OutboxStatus.DeadLettered;
+            NextRetryAtUtc = null;
+        }
         else
+        {
+            Status = OutboxStatus.Pending;
             NextRetryAtUtc = now.AddSeconds(Math.Min(Math.Pow(2, Attempts - 1), 300));
+        }
     }
 }

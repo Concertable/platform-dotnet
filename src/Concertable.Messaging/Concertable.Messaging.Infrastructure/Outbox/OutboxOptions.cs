@@ -6,4 +6,5 @@ public sealed class OutboxOptions
     public int BatchSize { get; init; } = 100;
     public int MaxAttempts { get; init; } = 20;
     public string SchemaName { get; init; } = Schema.Name;
+    public TimeSpan LeaseDuration { get; init; } = TimeSpan.FromMinutes(5);
 }

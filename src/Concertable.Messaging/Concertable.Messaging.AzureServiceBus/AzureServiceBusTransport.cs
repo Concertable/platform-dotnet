@@ -29,13 +29,7 @@ internal sealed class AzureServiceBusTransport : IBusTransport, IAsyncDisposable
     {
         var topic = options.TopicNameFor(typeof(TEvent));
         var sender = senders.GetOrAdd(topic, name => client.CreateSender(name));
-        try
-        {
-            await sender.SendMessageAsync(BuildMessage(@event, envelope), ct);
-        }
-        catch (ServiceBusException ex) when (ex.Reason == ServiceBusFailureReason.MessagingEntityNotFound)
-        {
-        }
+        await sender.SendMessageAsync(BuildMessage(@event, envelope), ct);
     }
 
     public async Task SendAsync<TCommand>(TCommand command, MessageEnvelope envelope, CancellationToken ct = default)
