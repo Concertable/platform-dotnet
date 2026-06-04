@@ -4,6 +4,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Concertable.Messaging.Infrastructure.Outbox;
 
+/// <summary>
+/// Decorates <see cref="OutboxBus"/> with synchronous in-process fan-out: after staging the outbox row,
+/// published events are immediately dispatched to every <see cref="IIntegrationEventHandler{TEvent}"/>
+/// registered in the current service provider, without waiting for the broker round trip. Remote delivery
+/// is unaffected. Commands are not dispatched locally.
+/// </summary>
 internal sealed class LocalDispatchingBus : IBus
 {
     private readonly OutboxBus outbox;
@@ -22,11 +28,7 @@ internal sealed class LocalDispatchingBus : IBus
     {
         await outbox.PublishAsync(@event, ct);
 
-        var envelope = new MessageEnvelope(
-            Guid.NewGuid(),
-            MessageTypeAttribute.Resolve(typeof(TEvent)),
-            timeProvider.GetUtcNow(),
-            null);
+        var envelope = MessageEnvelope.Create<TEvent>(timeProvider.GetUtcNow());
 
         foreach (var handler in serviceProvider.GetServices<IIntegrationEventHandler<TEvent>>())
             await handler.HandleAsync(@event, envelope, ct);

@@ -26,8 +26,7 @@ public sealed class OutboxMessageEntity : IGuidEntity
         MessageKind kind,
         string? correlationId = null)
     {
-        if (string.IsNullOrWhiteSpace(payload))
-            throw new DomainException("Payload is required.");
+        DomainException.ThrowIfNullOrWhiteSpace(payload, "Payload");
         return new OutboxMessageEntity
         {
             Id = Guid.NewGuid(),
@@ -39,6 +38,8 @@ public sealed class OutboxMessageEntity : IGuidEntity
             Status = OutboxStatus.Pending,
         };
     }
+
+    public MessageEnvelope ToEnvelope() => new(Id, MessageType, OccurredAtUtc, CorrelationId);
 
     public void MarkDispatched(DateTimeOffset when)
     {
@@ -55,8 +56,7 @@ public sealed class OutboxMessageEntity : IGuidEntity
     {
         if (Status is OutboxStatus.Dispatched)
             throw new DomainException("Cannot record failure on a dispatched message.");
-        if (string.IsNullOrWhiteSpace(error))
-            throw new DomainException("Error is required.");
+        DomainException.ThrowIfNullOrWhiteSpace(error, "Error");
         Attempts++;
         LastError = error;
         if (Attempts >= maxAttempts)

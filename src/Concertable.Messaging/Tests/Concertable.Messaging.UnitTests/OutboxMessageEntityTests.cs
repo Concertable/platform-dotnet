@@ -1,4 +1,5 @@
 using Concertable.Kernel;
+using Concertable.Messaging.Contracts;
 
 namespace Concertable.Messaging.UnitTests;
 
@@ -18,7 +19,7 @@ public sealed class OutboxMessageEntityTests
 
         // Assert
         Assert.NotEqual(Guid.Empty, entity.Id);
-        Assert.Equal(type.FullName, entity.MessageType);
+        Assert.Equal(MessageTypeAttribute.Resolve(type), entity.MessageType);
         Assert.Equal(payload, entity.Payload);
         Assert.Equal(Now, entity.OccurredAtUtc);
         Assert.Equal(MessageKind.Event, entity.Kind);

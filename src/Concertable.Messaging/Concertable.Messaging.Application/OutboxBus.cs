@@ -3,6 +3,13 @@ using Concertable.Messaging.Domain;
 
 namespace Concertable.Messaging.Application;
 
+/// <summary>
+/// Transactional-outbox <see cref="IBus"/> implementation: serializes the message and stages it as an
+/// <see cref="OutboxMessageEntity"/> row on the caller's ambient <c>DbContext</c>, so dispatch commits
+/// atomically with the producing business transaction. <c>OutboxDispatcher</c> subsequently forwards
+/// committed rows to <c>IBusTransport</c> with retry and dead-lettering — same destination as <c>Bus</c>,
+/// one durable hop earlier.
+/// </summary>
 internal sealed class OutboxBus : IBus
 {
     private readonly IOutboxWriter writer;

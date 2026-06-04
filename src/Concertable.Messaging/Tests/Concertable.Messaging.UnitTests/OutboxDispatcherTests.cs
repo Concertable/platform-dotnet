@@ -26,6 +26,9 @@ public sealed class OutboxDispatcherTests
         services.AddScoped<IOutboxReader, OutboxReader>();
         services.AddSingleton(transport);
         services.AddSingleton(registry);
+        services.AddScoped<EventDispatcher>();
+        services.AddScoped<CommandDispatcher>();
+        services.AddScoped<IMessageDispatchResolver, MessageDispatchResolver>();
         services.AddSingleton(new MessageSerializer());
         services.AddSingleton<TimeProvider>(new FakeTimeProvider(Base));
         return services.BuildServiceProvider();
