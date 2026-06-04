@@ -1,30 +1,32 @@
+using Concertable.Messaging.Contracts;
+
 namespace Concertable.Messaging.UnitTests;
 
 public sealed class MessageTypeRegistryTests
 {
     [Fact]
-    public void RegisterEvent_AfterRegistration_ResolvesByFullName()
+    public void RegisterEvent_AfterRegistration_ResolvesByCanonicalName()
     {
         // Arrange
         var registry = new MessageTypeRegistry();
 
         // Act
         registry.RegisterEvent<FakeIntegrationEvent>();
-        var resolved = registry.ResolveEvent(typeof(FakeIntegrationEvent).FullName!);
+        var resolved = registry.ResolveEvent(MessageTypeAttribute.Resolve(typeof(FakeIntegrationEvent)));
 
         // Assert
         Assert.Equal(typeof(FakeIntegrationEvent), resolved);
     }
 
     [Fact]
-    public void RegisterCommand_AfterRegistration_ResolvesByFullName()
+    public void RegisterCommand_AfterRegistration_ResolvesByCanonicalName()
     {
         // Arrange
         var registry = new MessageTypeRegistry();
 
         // Act
         registry.RegisterCommand<FakeIntegrationCommand>();
-        var resolved = registry.ResolveCommand(typeof(FakeIntegrationCommand).FullName!);
+        var resolved = registry.ResolveCommand(MessageTypeAttribute.Resolve(typeof(FakeIntegrationCommand)));
 
         // Assert
         Assert.Equal(typeof(FakeIntegrationCommand), resolved);
@@ -56,7 +58,7 @@ public sealed class MessageTypeRegistryTests
         registry.RegisterEvent<FakeIntegrationEvent>();
 
         // Assert
-        Assert.Equal(typeof(FakeIntegrationEvent), registry.ResolveEvent(typeof(FakeIntegrationEvent).FullName!));
+        Assert.Equal(typeof(FakeIntegrationEvent), registry.ResolveEvent(MessageTypeAttribute.Resolve(typeof(FakeIntegrationEvent))));
         Assert.Empty(registry.SubscribedEventTypes);
     }
 

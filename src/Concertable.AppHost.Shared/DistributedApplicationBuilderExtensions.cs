@@ -254,7 +254,10 @@ public static class DistributedApplicationBuilderExtensions
     public static void AddMobile(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> api,
-        IResourceBuilder<ProjectResource> auth)
+        IResourceBuilder<ProjectResource> auth,
+        IResourceBuilder<ProjectResource> searchWeb,
+        IResourceBuilder<ProjectResource> customerWeb,
+        IResourceBuilder<ProjectResource> paymentWeb)
     {
         if (!builder.Configuration.GetValue<bool>("RunMobile"))
             return;
@@ -264,20 +267,24 @@ public static class DistributedApplicationBuilderExtensions
 
         tunnel.WithReference(auth, allowAnonymous: true);
         tunnel.WithReference(api, allowAnonymous: true);
+        tunnel.WithReference(searchWeb, allowAnonymous: true);
+        tunnel.WithReference(customerWeb, allowAnonymous: true);
+        tunnel.WithReference(paymentWeb, allowAnonymous: true);
         auth.WithEnvironment(ctx =>
         {
             if (ctx.EnvironmentVariables.TryGetValue("services__auth__https__0", out var authUrl))
                 ctx.EnvironmentVariables["Auth__PublicUrl"] = authUrl;
         });
 
-        AddMobileSurface(builder, api, auth, tunnel, lanIp, "customer");
-        AddMobileSurface(builder, api, auth, tunnel, lanIp, "business");
+        AddMobileSurface(builder, api, auth, tunnel, lanIp, "customer", searchWeb, customerWeb, paymentWeb);
+        AddMobileSurface(builder, api, auth, tunnel, lanIp, "business", searchWeb, customerWeb, paymentWeb);
     }
 
     public static void AddMobileB2B(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> api,
-        IResourceBuilder<ProjectResource> auth)
+        IResourceBuilder<ProjectResource> auth,
+        IResourceBuilder<ProjectResource> paymentWeb)
     {
         if (!builder.Configuration.GetValue<bool>("RunMobile"))
             return;
@@ -287,19 +294,21 @@ public static class DistributedApplicationBuilderExtensions
 
         tunnel.WithReference(auth, allowAnonymous: true);
         tunnel.WithReference(api, allowAnonymous: true);
+        tunnel.WithReference(paymentWeb, allowAnonymous: true);
         auth.WithEnvironment(ctx =>
         {
             if (ctx.EnvironmentVariables.TryGetValue("services__auth__https__0", out var authUrl))
                 ctx.EnvironmentVariables["Auth__PublicUrl"] = authUrl;
         });
 
-        AddMobileSurface(builder, api, auth, tunnel, lanIp, "business");
+        AddMobileSurface(builder, api, auth, tunnel, lanIp, "business", paymentWeb: paymentWeb);
     }
 
     public static void AddMobileCustomer(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> customerWeb,
-        IResourceBuilder<ProjectResource> auth)
+        IResourceBuilder<ProjectResource> auth,
+        IResourceBuilder<ProjectResource> paymentWeb)
     {
         if (!builder.Configuration.GetValue<bool>("RunMobile"))
             return;
@@ -309,13 +318,14 @@ public static class DistributedApplicationBuilderExtensions
 
         tunnel.WithReference(auth, allowAnonymous: true);
         tunnel.WithReference(customerWeb, allowAnonymous: true);
+        tunnel.WithReference(paymentWeb, allowAnonymous: true);
         auth.WithEnvironment(ctx =>
         {
             if (ctx.EnvironmentVariables.TryGetValue("services__auth__https__0", out var authUrl))
                 ctx.EnvironmentVariables["Auth__PublicUrl"] = authUrl;
         });
 
-        AddMobileSurface(builder, customerWeb, auth, tunnel, lanIp, "customer");
+        AddMobileSurface(builder, customerWeb, auth, tunnel, lanIp, "customer", customerWeb: customerWeb, paymentWeb: paymentWeb);
     }
 
     private static IResourceBuilder<NodeAppResource> AddMobileSurface(
@@ -324,9 +334,11 @@ public static class DistributedApplicationBuilderExtensions
         IResourceBuilder<ProjectResource> auth,
         IResourceBuilder<DevTunnelResource> tunnel,
         string lanIp,
-        string surface)
+        string surface,
+        IResourceBuilder<ProjectResource>? searchWeb = null,
+        IResourceBuilder<ProjectResource>? customerWeb = null,
+        IResourceBuilder<ProjectResource>? paymentWeb = null)
     {
-        var apiEnvKey = $"services__{api.Resource.Name.Replace('-', '_')}__https__0";
         var mobile = builder.AddNpmApp($"mobile-{surface}", RepoPath(builder, "app", "mobile", surface), "start:ci")
                .WithEnvironment("REACT_NATIVE_PACKAGER_HOSTNAME", lanIp)
                .WithReference(api, tunnel)
@@ -335,12 +347,45 @@ public static class DistributedApplicationBuilderExtensions
                .WaitFor(tunnel)
                .WithEnvironment(ctx =>
                {
-                   if (ctx.EnvironmentVariables.TryGetValue(apiEnvKey, out var apiUrl))
-                       ctx.EnvironmentVariables["EXPO_PUBLIC_API_URL"] = apiUrl;
+                   SetServiceUrl(ctx, api.Resource.Name, "EXPO_PUBLIC_API_URL");
                    if (ctx.EnvironmentVariables.TryGetValue("services__auth__https__0", out var authUrl))
                        ctx.EnvironmentVariables["EXPO_PUBLIC_AUTH_AUTHORITY"] = authUrl;
                });
 
+        WithServiceUrl(mobile, tunnel, searchWeb, "EXPO_PUBLIC_SEARCH_API_URL");
+        WithServiceUrl(mobile, tunnel, customerWeb, "EXPO_PUBLIC_CUSTOMER_API_URL");
+        WithServiceUrl(mobile, tunnel, paymentWeb, "EXPO_PUBLIC_PAYMENT_API_URL");
+
+        WithClearMetroCacheCommand(builder, mobile, surface);
+
+        return mobile;
+    }
+
+    private static void WithServiceUrl(
+        IResourceBuilder<NodeAppResource> mobile,
+        IResourceBuilder<DevTunnelResource> tunnel,
+        IResourceBuilder<ProjectResource>? service,
+        string envName)
+    {
+        if (service is null)
+            return;
+
+        mobile.WithReference(service, tunnel)
+              .WithEnvironment(ctx => SetServiceUrl(ctx, service.Resource.Name, envName));
+    }
+
+    private static void SetServiceUrl(EnvironmentCallbackContext ctx, string resourceName, string envName)
+    {
+        if (ctx.EnvironmentVariables.TryGetValue($"services__{resourceName}__https__0", out var url)
+            || ctx.EnvironmentVariables.TryGetValue($"services__{resourceName.Replace('-', '_')}__https__0", out url))
+            ctx.EnvironmentVariables[envName] = url;
+    }
+
+    private static void WithClearMetroCacheCommand(
+        IDistributedApplicationBuilder builder,
+        IResourceBuilder<NodeAppResource> mobile,
+        string surface)
+    {
         mobile.WithCommand(
             name: "clear-metro-cache",
             displayName: "Clear Metro Cache",
@@ -354,8 +399,6 @@ public static class DistributedApplicationBuilderExtensions
                 return new ExecuteCommandResult { Success = true };
             },
             commandOptions: new CommandOptions { IconName = "ArrowCounterclockwise" });
-
-        return mobile;
     }
 
     public static void AddStripeCli(this IDistributedApplicationBuilder builder, IResourceBuilder<ProjectResource> paymentWeb)
@@ -364,20 +407,18 @@ public static class DistributedApplicationBuilderExtensions
         if (string.IsNullOrEmpty(secretKey))
             return;
 
-        if (builder.ExecutionContext.IsRunMode)
-        {
-            builder.AddExecutable("stripe-cli", "stripe", ".")
+        IResource stripeCli = builder.ExecutionContext.IsRunMode
+            ? builder.AddExecutable("stripe-cli", "stripe", ".")
                 .WithArgs("listen", "--api-key", secretKey, "--skip-verify", "--forward-to",
-                    ReferenceExpression.Create($"{paymentWeb.GetEndpoint("https")}/api/webhook"));
-            return;
-        }
+                    ReferenceExpression.Create($"{paymentWeb.GetEndpoint("https")}/api/webhook"))
+                .Resource
+            : builder.AddContainer("stripe-cli", "stripe/stripe-cli")
+                .WithVolume("stripe-cli-config", "/root/.config/stripe")
+                .WithArgs("listen", "--api-key", secretKey, "--forward-to",
+                    ReferenceExpression.Create($"{paymentWeb.GetEndpoint("http")}/api/webhook"))
+                .Resource;
 
         var webhookSecret = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var stripeCli = builder.AddContainer("stripe-cli", "stripe/stripe-cli")
-               .WithVolume("stripe-cli-config", "/root/.config/stripe")
-               .WithArgs("listen", "--api-key", secretKey, "--forward-to",
-                   ReferenceExpression.Create($"{paymentWeb.GetEndpoint("http")}/api/webhook"));
 
         builder.Eventing.Subscribe<BeforeStartEvent>((evt, ct) =>
         {
@@ -386,7 +427,7 @@ public static class DistributedApplicationBuilderExtensions
             {
                 try
                 {
-                    await foreach (var line in logs.WatchLinesAsync(stripeCli.Resource, ct))
+                    await foreach (var line in logs.WatchLinesAsync(stripeCli, ct))
                     {
                         var match = Regex.Match(line.Content, @"whsec_\w+");
                         if (match.Success)

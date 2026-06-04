@@ -18,4 +18,10 @@ public sealed class AsbTopology
         topicBuilder.AddServiceBusSubscription(subscription, consumerGroup);
         return this;
     }
+
+    public AsbTopology Queue(string queue)
+    {
+        asb.AddServiceBusQueue(queue);
+        return this;
+    }
 }

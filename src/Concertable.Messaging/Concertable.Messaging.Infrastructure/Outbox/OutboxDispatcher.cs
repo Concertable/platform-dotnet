@@ -1,6 +1,5 @@
 using Concertable.Messaging.Application;
 using Concertable.Messaging.Contracts;
-using Concertable.Messaging.Domain;
 using Concertable.Messaging.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -49,8 +48,7 @@ internal sealed class OutboxDispatcher : BackgroundService
     {
         using var scope = scopeFactory.CreateScope();
         var reader = scope.ServiceProvider.GetRequiredService<IOutboxReader>();
-        var transport = scope.ServiceProvider.GetRequiredService<IBusTransport>();
-        var registry = scope.ServiceProvider.GetRequiredService<MessageTypeRegistry>();
+        var resolver = scope.ServiceProvider.GetRequiredService<IMessageDispatchResolver>();
         var serializer = scope.ServiceProvider.GetRequiredService<MessageSerializer>();
 
         var pending = await reader.GetPendingAsync(options.BatchSize, ct);
@@ -60,21 +58,10 @@ internal sealed class OutboxDispatcher : BackgroundService
         {
             try
             {
-                var type = row.Kind == MessageKind.Event
-                    ? registry.ResolveEvent(row.MessageType)
-                    : registry.ResolveCommand(row.MessageType);
+                var dispatcher = resolver.Resolve(row.Kind);
+                var type = dispatcher.ResolveType(row.MessageType);
                 var instance = serializer.Deserialize(BinaryData.FromString(row.Payload), type);
-                var envelope = new MessageEnvelope(
-                    MessageId: row.Id,
-                    MessageType: row.MessageType,
-                    OccurredAtUtc: row.OccurredAtUtc,
-                    CorrelationId: row.CorrelationId);
-
-                var methodName = row.Kind == MessageKind.Event
-                    ? nameof(IBusTransport.PublishAsync)
-                    : nameof(IBusTransport.SendAsync);
-                var method = typeof(IBusTransport).GetMethod(methodName)!.MakeGenericMethod(type);
-                await (Task)method.Invoke(transport, [instance, envelope, ct])!;
+                await dispatcher.DispatchAsync(instance, row.ToEnvelope(), ct);
 
                 row.MarkDispatched(timeProvider.GetUtcNow());
             }

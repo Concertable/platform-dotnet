@@ -23,6 +23,9 @@ public static class OutboxServiceCollectionExtensions
         services.AddScoped<IOutboxWriter, OutboxWriter>();
         services.AddScoped<IOutboxReader, OutboxReader>();
         services.AddScoped<IBus, OutboxBus>();
+        services.AddScoped<EventDispatcher>();
+        services.AddScoped<CommandDispatcher>();
+        services.AddScoped<IMessageDispatchResolver, MessageDispatchResolver>();
         if (runDispatcher) services.AddHostedService<OutboxDispatcher>();
         services.TryAddSingleton<MessageSerializer>();
         services.TryAddSingleton(TimeProvider.System);

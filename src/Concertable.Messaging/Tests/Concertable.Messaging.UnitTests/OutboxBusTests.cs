@@ -1,3 +1,4 @@
+using Concertable.Messaging.Contracts;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 
@@ -31,7 +32,7 @@ public sealed class OutboxBusTests
         // Assert
         Assert.NotNull(captured);
         Assert.Equal(MessageKind.Event, captured!.Kind);
-        Assert.Equal(typeof(FakeIntegrationEvent).FullName, captured.MessageType);
+        Assert.Equal(MessageTypeAttribute.Resolve(typeof(FakeIntegrationEvent)), captured.MessageType);
         Assert.Equal(Now, captured.OccurredAtUtc);
         Assert.Equal(OutboxStatus.Pending, captured.Status);
         Assert.Contains("\"name\":\"concert\"", captured.Payload);
@@ -55,7 +56,7 @@ public sealed class OutboxBusTests
         // Assert
         Assert.NotNull(captured);
         Assert.Equal(MessageKind.Command, captured!.Kind);
-        Assert.Equal(typeof(FakeIntegrationCommand).FullName, captured.MessageType);
+        Assert.Equal(MessageTypeAttribute.Resolve(typeof(FakeIntegrationCommand)), captured.MessageType);
         Assert.Contains("\"reason\":\"refund\"", captured.Payload);
     }
 }
