@@ -24,7 +24,7 @@ internal sealed class LocalDispatchingBus : IBus
 
         var envelope = new MessageEnvelope(
             Guid.NewGuid(),
-            typeof(TEvent).FullName!,
+            MessageTypeAttribute.Resolve(typeof(TEvent)),
             timeProvider.GetUtcNow(),
             null);
 

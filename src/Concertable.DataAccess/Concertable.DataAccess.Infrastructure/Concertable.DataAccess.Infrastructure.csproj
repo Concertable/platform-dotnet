@@ -19,7 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Concertable.DataAccess.Application\Concertable.DataAccess.Application.csproj" />
-    <ProjectReference Include="..\..\Shared\Seed\Concertable.Seed.Shared\Concertable.Seed.Shared.csproj" />
     <ProjectReference Include="..\..\Shared\Concertable.Kernel\Concertable.Kernel.csproj" />
     <ProjectReference Include="..\..\Concertable.Messaging\Concertable.Messaging.Infrastructure\Concertable.Messaging.Infrastructure.csproj" />
   </ItemGroup>

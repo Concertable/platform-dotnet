@@ -40,7 +40,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
         foreach (var eventType in registry.SubscribedEventTypes)
         {
             var topic = options.TopicNameFor(eventType);
-            var processor = client.CreateProcessor(topic, options.ServiceName);
+            var processor = client.CreateProcessor(topic, options.ServiceName, new ServiceBusProcessorOptions { AutoCompleteMessages = false });
             processor.ProcessMessageAsync += args => HandleEventAsync(args, eventType);
             processor.ProcessErrorAsync += HandleErrorAsync;
             processors.Add(processor);
@@ -51,7 +51,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
         foreach (var commandType in registry.RegisteredCommandTypes)
         {
             var queue = options.QueueNameFor(commandType);
-            var processor = client.CreateProcessor(queue);
+            var processor = client.CreateProcessor(queue, new ServiceBusProcessorOptions { AutoCompleteMessages = false });
             processor.ProcessMessageAsync += args => HandleCommandAsync(args, commandType);
             processor.ProcessErrorAsync += HandleErrorAsync;
             processors.Add(processor);
@@ -74,13 +74,20 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
         var messageType = args.Message.ApplicationProperties.GetValueOrDefault("MessageType");
         logger.MessageReceived(messageType, args.EntityPath);
 
+        if (!Guid.TryParse(args.Message.MessageId, out var messageId))
+        {
+            logger.DeadLetteringInvalidMessageId(args.Message.MessageId);
+            await args.DeadLetterMessageAsync(args.Message, "InvalidMessageId", $"MessageId '{args.Message.MessageId}' is not a valid GUID.");
+            return;
+        }
+
         object @event;
         MessageEnvelope envelope;
         try
         {
             @event = serializer.Deserialize(args.Message.Body, eventType);
             envelope = new MessageEnvelope(
-                Guid.Parse(args.Message.MessageId),
+                messageId,
                 messageType?.ToString() ?? eventType.FullName!,
                 args.Message.EnqueuedTime,
                 args.Message.CorrelationId);
@@ -107,7 +114,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
         catch (Exception ex)
         {
             logger.FailedProcessingEvent(messageType, ex);
-            await args.AbandonMessageAsync(args.Message);
+            await AbandonWithBackoffAsync(args);
         }
     }
 
@@ -115,13 +122,20 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
     {
         var messageType = args.Message.ApplicationProperties.GetValueOrDefault("MessageType");
 
+        if (!Guid.TryParse(args.Message.MessageId, out var messageId))
+        {
+            logger.DeadLetteringInvalidMessageId(args.Message.MessageId);
+            await args.DeadLetterMessageAsync(args.Message, "InvalidMessageId", $"MessageId '{args.Message.MessageId}' is not a valid GUID.");
+            return;
+        }
+
         object command;
         MessageEnvelope envelope;
         try
         {
             command = serializer.Deserialize(args.Message.Body, commandType);
             envelope = new MessageEnvelope(
-                Guid.Parse(args.Message.MessageId),
+                messageId,
                 messageType?.ToString() ?? commandType.FullName!,
                 args.Message.EnqueuedTime,
                 args.Message.CorrelationId);
@@ -152,8 +166,22 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
         catch (Exception ex)
         {
             logger.FailedProcessingCommand(messageType, ex);
-            await args.AbandonMessageAsync(args.Message);
+            await AbandonWithBackoffAsync(args);
         }
+    }
+
+    private static async Task AbandonWithBackoffAsync(ProcessMessageEventArgs args)
+    {
+        var delaySeconds = Math.Min(Math.Pow(2, args.Message.DeliveryCount - 1), 30);
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds), args.CancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        await args.AbandonMessageAsync(args.Message);
     }
 
     private Task HandleErrorAsync(ProcessErrorEventArgs args)
