@@ -4,11 +4,20 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Concertable.DataAccess.Infrastructure.Data;
 
-public sealed class DomainEventDispatchInterceptor(
-    IDomainEventDispatcher dispatcher,
-    IDbContextAccessor contextAccessor) : SaveChangesInterceptor, IDomainEventDispatchInterceptor
+public sealed class DomainEventDispatchInterceptor : SaveChangesInterceptor, IDomainEventDispatchInterceptor
 {
+    private readonly IDomainEventDispatcher dispatcher;
+    private readonly IDbContextAccessor contextAccessor;
+
     private readonly Stack<List<IDomainEvent>> pendingEventsStack = new();
+
+    public DomainEventDispatchInterceptor(
+        IDomainEventDispatcher dispatcher,
+        IDbContextAccessor contextAccessor)
+    {
+        this.dispatcher = dispatcher;
+        this.contextAccessor = contextAccessor;
+    }
 
     public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,

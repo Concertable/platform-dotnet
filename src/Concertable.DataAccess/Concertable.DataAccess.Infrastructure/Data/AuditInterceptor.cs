@@ -5,8 +5,15 @@ using Concertable.Kernel.Identity;
 
 namespace Concertable.DataAccess.Infrastructure.Data;
 
-public sealed class AuditInterceptor(ICurrentUser currentUser) : SaveChangesInterceptor
+public sealed class AuditInterceptor : SaveChangesInterceptor
 {
+    private readonly ICurrentUser currentUser;
+
+    public AuditInterceptor(ICurrentUser currentUser)
+    {
+        this.currentUser = currentUser;
+    }
+
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
         InterceptionResult<int> result,
