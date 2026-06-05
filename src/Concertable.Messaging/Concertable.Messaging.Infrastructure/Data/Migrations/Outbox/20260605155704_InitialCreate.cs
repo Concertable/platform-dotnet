@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Concertable.Messaging.Infrastructure.Data.Migrations.Outbox
 {
     /// <inheritdoc />
-    public sealed partial class InitialCreate : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
