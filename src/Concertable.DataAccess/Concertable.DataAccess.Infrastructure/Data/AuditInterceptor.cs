@@ -8,10 +8,20 @@ namespace Concertable.DataAccess.Infrastructure.Data;
 public sealed class AuditInterceptor : SaveChangesInterceptor
 {
     private readonly ICurrentUser currentUser;
+    private readonly TimeProvider timeProvider;
 
-    public AuditInterceptor(ICurrentUser currentUser)
+    public AuditInterceptor(ICurrentUser currentUser, TimeProvider timeProvider)
     {
         this.currentUser = currentUser;
+        this.timeProvider = timeProvider;
+    }
+
+    public override InterceptionResult<int> SavingChanges(
+        DbContextEventData eventData,
+        InterceptionResult<int> result)
+    {
+        Stamp(eventData.Context);
+        return base.SavingChanges(eventData, result);
     }
 
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
@@ -19,8 +29,14 @@ public sealed class AuditInterceptor : SaveChangesInterceptor
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        var entries = eventData.Context!.ChangeTracker.Entries<IAuditable>();
-        var now = DateTime.UtcNow;
+        Stamp(eventData.Context);
+        return base.SavingChangesAsync(eventData, result, cancellationToken);
+    }
+
+    private void Stamp(DbContext? context)
+    {
+        var entries = context!.ChangeTracker.Entries<IAuditable>();
+        var now = timeProvider.GetUtcNow().UtcDateTime;
         var userId = currentUser.Id?.ToString() ?? string.Empty;
 
         foreach (var entry in entries)
@@ -37,7 +53,5 @@ public sealed class AuditInterceptor : SaveChangesInterceptor
                 entry.Entity.LastModifiedBy = userId;
             }
         }
-
-        return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 }
