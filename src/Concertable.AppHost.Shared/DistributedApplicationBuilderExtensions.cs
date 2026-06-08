@@ -209,27 +209,28 @@ public static class DistributedApplicationBuilderExtensions
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> backend,
         IResourceBuilder<ProjectResource> auth) =>
-        AddSpaSurface(builder, backend, auth, "venue", 5175);
+        AddSpaSurface(builder, backend, auth, "venue", 5175, "b2b");
 
     public static IResourceBuilder<NodeAppResource> AddArtistSpa(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> backend,
         IResourceBuilder<ProjectResource> auth) =>
-        AddSpaSurface(builder, backend, auth, "artist", 5176);
+        AddSpaSurface(builder, backend, auth, "artist", 5176, "b2b");
 
     public static IResourceBuilder<NodeAppResource> AddBusinessSpa(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> backend,
         IResourceBuilder<ProjectResource> auth) =>
-        AddSpaSurface(builder, backend, auth, "business", 5177);
+        AddSpaSurface(builder, backend, auth, "business", 5177, "b2b");
 
     private static IResourceBuilder<NodeAppResource> AddSpaSurface(
         IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> backend,
         IResourceBuilder<ProjectResource> auth,
         string surface,
-        int port) =>
-        builder.AddNpmApp(surface, RepoPath(builder, "app", "web", surface), "dev")
+        int port,
+        params string[] tierSegments) =>
+        builder.AddNpmApp(surface, RepoPath(builder, ["app", "web", .. tierSegments, surface]), "dev")
                .WithHttpsEndpoint(port: port, isProxied: false)
                .WithReference(backend)
                .WithReference(auth)
