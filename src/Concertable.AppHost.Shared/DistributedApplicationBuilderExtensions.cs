@@ -278,7 +278,7 @@ public static class DistributedApplicationBuilderExtensions
         });
 
         AddMobileSurface(builder, api, auth, tunnel, lanIp, "customer", searchWeb, customerWeb, paymentWeb);
-        AddMobileSurface(builder, api, auth, tunnel, lanIp, "business", searchWeb, customerWeb, paymentWeb);
+        AddMobileSurface(builder, api, auth, tunnel, lanIp, "b2b", searchWeb, customerWeb, paymentWeb);
     }
 
     public static void AddMobileB2B(
@@ -302,7 +302,7 @@ public static class DistributedApplicationBuilderExtensions
                 ctx.EnvironmentVariables["Auth__PublicUrl"] = authUrl;
         });
 
-        AddMobileSurface(builder, api, auth, tunnel, lanIp, "business", paymentWeb: paymentWeb);
+        AddMobileSurface(builder, api, auth, tunnel, lanIp, "b2b", paymentWeb: paymentWeb);
     }
 
     public static void AddMobileCustomer(
