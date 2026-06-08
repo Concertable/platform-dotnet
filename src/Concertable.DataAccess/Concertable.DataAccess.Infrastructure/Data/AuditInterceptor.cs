@@ -7,6 +7,8 @@ namespace Concertable.DataAccess.Infrastructure.Data;
 
 public sealed class AuditInterceptor : SaveChangesInterceptor
 {
+    private const string SystemActor = "system";
+
     private readonly ICurrentUser currentUser;
     private readonly TimeProvider timeProvider;
 
@@ -35,9 +37,11 @@ public sealed class AuditInterceptor : SaveChangesInterceptor
 
     private void Stamp(DbContext? context)
     {
-        var entries = context!.ChangeTracker.Entries<IAuditable>();
+        ArgumentNullException.ThrowIfNull(context);
+
+        var entries = context.ChangeTracker.Entries<IAuditable>();
         var now = timeProvider.GetUtcNow().UtcDateTime;
-        var userId = currentUser.Id?.ToString() ?? string.Empty;
+        var userId = currentUser.Id?.ToString() ?? SystemActor;
 
         foreach (var entry in entries)
         {
