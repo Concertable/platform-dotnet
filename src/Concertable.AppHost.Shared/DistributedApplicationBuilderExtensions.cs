@@ -91,7 +91,8 @@ public static class DistributedApplicationBuilderExtensions
     public static IResourceBuilder<AzureFunctionsProjectResource> AddWorkers<TProject>(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<SqlServerDatabaseResource> sql,
-        IResourceBuilder<ProjectResource>? paymentWeb = null)
+        IResourceBuilder<ProjectResource>? paymentWeb = null,
+        IResourceBuilder<ProjectResource>? auth = null)
         where TProject : IProjectMetadata, new()
     {
         var workers = builder.AddAzureFunctionsProject<TProject>(AppHostConstants.ResourceNames.Workers)
@@ -100,6 +101,15 @@ public static class DistributedApplicationBuilderExtensions
 
         if (paymentWeb is not null)
             workers = workers.WithReference(paymentWeb).WaitFor(paymentWeb);
+
+        // The settlement sweep calls Payment over gRPC with client-credential tokens, so the
+        // Workers host needs the same auth wiring as AddApi.
+        if (auth is not null)
+            workers = workers.WithReference(auth)
+                             .WaitFor(auth)
+                             .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
+                             .WithEnvironment("ServiceAuth__ClientId", "concertable-b2b")
+                             .WithOptionalEnvironment("ServiceAuth__ClientSecret", builder.Configuration["ServiceAuth:B2BClientSecret"]);
 
         return workers;
     }
@@ -463,10 +473,11 @@ public static class DistributedApplicationBuilderExtensions
                 yield return line;
     }
 
-    private static IResourceBuilder<ProjectResource> WithOptionalEnvironment(
-        this IResourceBuilder<ProjectResource> resource,
+    private static IResourceBuilder<T> WithOptionalEnvironment<T>(
+        this IResourceBuilder<T> resource,
         string name,
         string? value)
+        where T : IResourceWithEnvironment
     {
         if (!string.IsNullOrEmpty(value))
             resource = resource.WithEnvironment(name, value);
