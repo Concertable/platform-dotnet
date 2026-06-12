@@ -44,12 +44,9 @@ public static class DistributedApplicationBuilderExtensions
                           .WithReference(b2bDb)
                           .WithReference(asb)
                           .WaitFor(asb)
-                          .WithEnvironment(ctx =>
-                          {
-                              if (ctx.EnvironmentVariables.TryGetValue("services__auth__https__0", out var authUrl))
-                                  ctx.EnvironmentVariables["Auth__Authority"] = authUrl;
-                          })
                           .AddSecrets(builder, "ServiceAuth:B2BClientSecret", "ServiceAuth:CustomerClientSecret", "ServiceAuth:AuthClientSecret");
+
+        auth.WithEnvironment("Auth__Authority", auth.GetEndpoint("https"));
 
         var lanIp = builder.Configuration["MobileLanIp"];
         if (!string.IsNullOrEmpty(lanIp))
@@ -102,8 +99,6 @@ public static class DistributedApplicationBuilderExtensions
         if (paymentWeb is not null)
             workers = workers.WithReference(paymentWeb).WaitFor(paymentWeb);
 
-        // The settlement sweep calls Payment over gRPC with client-credential tokens, so the
-        // Workers host needs the same auth wiring as AddApi.
         if (auth is not null)
             workers = workers.WithReference(auth)
                              .WaitFor(auth)
