@@ -4,8 +4,8 @@ namespace Concertable.DataAccess.Application;
 
 public interface IReadRepository<TEntity, TKey> where TEntity : class, IEntity<TKey>
 {
-    Task<TEntity?> GetByIdAsync(TKey id);
-    Task<IEnumerable<TEntity>> GetAllAsync();
+    Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default);
+    Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken ct = default);
     bool Exists(TKey id);
 }
 

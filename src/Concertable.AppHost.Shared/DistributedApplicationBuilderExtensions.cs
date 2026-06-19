@@ -44,12 +44,9 @@ public static class DistributedApplicationBuilderExtensions
                           .WithReference(b2bDb)
                           .WithReference(asb)
                           .WaitFor(asb)
-                          .WithEnvironment(ctx =>
-                          {
-                              if (ctx.EnvironmentVariables.TryGetValue("services__auth__https__0", out var authUrl))
-                                  ctx.EnvironmentVariables["Auth__Authority"] = authUrl;
-                          })
                           .AddSecrets(builder, "ServiceAuth:B2BClientSecret", "ServiceAuth:CustomerClientSecret", "ServiceAuth:AuthClientSecret");
+
+        auth.WithEnvironment("Auth__Authority", auth.GetEndpoint("https"));
 
         var lanIp = builder.Configuration["MobileLanIp"];
         if (!string.IsNullOrEmpty(lanIp))
@@ -91,7 +88,8 @@ public static class DistributedApplicationBuilderExtensions
     public static IResourceBuilder<AzureFunctionsProjectResource> AddWorkers<TProject>(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<SqlServerDatabaseResource> sql,
-        IResourceBuilder<ProjectResource>? paymentWeb = null)
+        IResourceBuilder<ProjectResource>? paymentWeb = null,
+        IResourceBuilder<ProjectResource>? auth = null)
         where TProject : IProjectMetadata, new()
     {
         var workers = builder.AddAzureFunctionsProject<TProject>(AppHostConstants.ResourceNames.Workers)
@@ -100,6 +98,13 @@ public static class DistributedApplicationBuilderExtensions
 
         if (paymentWeb is not null)
             workers = workers.WithReference(paymentWeb).WaitFor(paymentWeb);
+
+        if (auth is not null)
+            workers = workers.WithReference(auth)
+                             .WaitFor(auth)
+                             .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
+                             .WithEnvironment("ServiceAuth__ClientId", "concertable-b2b")
+                             .WithOptionalEnvironment("ServiceAuth__ClientSecret", builder.Configuration["ServiceAuth:B2BClientSecret"]);
 
         return workers;
     }
@@ -463,10 +468,11 @@ public static class DistributedApplicationBuilderExtensions
                 yield return line;
     }
 
-    private static IResourceBuilder<ProjectResource> WithOptionalEnvironment(
-        this IResourceBuilder<ProjectResource> resource,
+    private static IResourceBuilder<T> WithOptionalEnvironment<T>(
+        this IResourceBuilder<T> resource,
         string name,
         string? value)
+        where T : IResourceWithEnvironment
     {
         if (!string.IsNullOrEmpty(value))
             resource = resource.WithEnvironment(name, value);
