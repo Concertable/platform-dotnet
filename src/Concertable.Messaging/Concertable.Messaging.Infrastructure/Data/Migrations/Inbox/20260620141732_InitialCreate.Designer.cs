@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Messaging.Infrastructure.Data.Migrations.Inbox
 {
     [DbContext(typeof(InboxDbContext))]
-    [Migration("20260612135422_InitialCreate")]
+    [Migration("20260620141732_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
