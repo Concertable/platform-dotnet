@@ -1,0 +1,20 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="Aspire.Hosting.Azure.Functions" Version="13.3.2" />
+    <PackageVersion Include="Aspire.Hosting.Azure.ServiceBus" Version="13.3.2" />
+    <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="13.3.2" />
+    <PackageVersion Include="Aspire.Hosting.DevTunnels" Version="13.3.2" />
+    <PackageVersion Include="Aspire.Hosting.NodeJs" Version="9.5.2" />
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.3.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <GlobalPackageReference Include="Meziantou.Analyzer" Version="3.0.98" />
+  </ItemGroup>
+
+</Project>
