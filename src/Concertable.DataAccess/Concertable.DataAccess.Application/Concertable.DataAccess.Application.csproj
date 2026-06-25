@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <Description>Concertable data-access application: shared persistence abstractions (unit of work, repository contracts).</Description>
   </PropertyGroup>
 
   <ItemGroup>
