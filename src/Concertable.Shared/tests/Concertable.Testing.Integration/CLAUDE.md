@@ -32,14 +32,14 @@ If something is only used by one microservice it goes in that service's own fixt
 
 ## Layout of per-service fixture libraries
 
-This shared project lives at `api/Shared/Tests/Concertable.Testing.Integration/`. Each microservice
+This shared project lives at `api/Concertable.Shared/tests/Concertable.Testing.Integration/`. Each microservice
 owns its own fixture library, located under that service, which **references this shared project**:
 
 ```
-api/Shared/Tests/Concertable.Testing.Integration/            ← shared (this project)
-api/Concertable.B2B/Tests/Concertable.B2B.IntegrationTests.Fixtures/             ← B2B-only fixture, Stripe/webhook mocks
-api/Concertable.Customer/Tests/Concertable.Customer.IntegrationTests.Fixtures/   ← Customer-only fixture (owns MockCustomerPaymentClient)
-api/Concertable.Search/Tests/Concertable.Search.IntegrationTests.Fixtures/       ← Search-only fixture
+api/Concertable.Shared/tests/Concertable.Testing.Integration/            ← shared (this project)
+api/Concertable.B2B/tests/Concertable.B2B.IntegrationTests.Fixtures/             ← B2B-only fixture, Stripe/webhook mocks
+api/Concertable.Customer/tests/Concertable.Customer.IntegrationTests.Fixtures/   ← Customer-only fixture (owns MockCustomerPaymentClient)
+api/Concertable.Search/tests/Concertable.Search.IntegrationTests.Fixtures/       ← Search-only fixture
 ```
 
 Each service-owned fixture uses its own root namespace (`Concertable.<Service>.IntegrationTests.Fixtures`)
