@@ -5,11 +5,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
-    <Description>Concertable data-access application: shared persistence abstractions (unit of work, repository contracts).</Description>
+    <Description>Concertable shared PDF-generation abstractions.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Concertable.Shared\src\Concertable.Kernel\Concertable.Kernel.csproj" />
+    <PackageReference Include="QuestPDF" />
   </ItemGroup>
 
 </Project>
