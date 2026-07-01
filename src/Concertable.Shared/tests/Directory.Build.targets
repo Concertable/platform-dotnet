@@ -1,0 +1,46 @@
+<Project>
+
+  <UsingTask TaskName="FilterNdjsonTags"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <Category ParameterType="System.String" Required="false" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Class" Language="cs" Source="$(MSBuildThisFileDirectory)FilterNdjsonTagsTask.cs" />
+    </Task>
+  </UsingTask>
+
+  <Target Name="FilterReqnrollNdjsonTags"
+          AfterTargets="CoreProcessReqnrollFeatureFilesInProject"
+          Condition="'@(ReqnrollFeatureFile)' != ''">
+    <ItemGroup>
+      <_ReqnrollNdjson Include="@(ReqnrollFeatureFile->'%(MessagesFile)')" />
+    </ItemGroup>
+    <FilterNdjsonTags Files="@(_ReqnrollNdjson)" Category="$(ReqnrollCategory)" />
+  </Target>
+
+  <UsingTask TaskName="StripFeatureTraits"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <Category ParameterType="System.String" Required="false" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Class" Language="cs" Source="$(MSBuildThisFileDirectory)StripFeatureTraitsTask.cs" />
+    </Task>
+  </UsingTask>
+
+  <Target Name="StripReqnrollFeatureTraits"
+          AfterTargets="CoreProcessReqnrollFeatureFilesInProject"
+          BeforeTargets="CoreCompile"
+          Condition="'@(ReqnrollFeatureFile)' != ''">
+    <ItemGroup>
+      <_ReqnrollFeatureCs Include="@(ReqnrollFeatureFile->'%(FullPath).cs')" />
+    </ItemGroup>
+    <StripFeatureTraits Files="@(_ReqnrollFeatureCs)" Category="$(ReqnrollCategory)" />
+  </Target>
+
+</Project>

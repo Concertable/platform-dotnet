@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Shared\Concertable.Kernel\Concertable.Kernel.csproj" />
+    <ProjectReference Include="..\..\Concertable.Shared\src\Concertable.Kernel\Concertable.Kernel.csproj" />
   </ItemGroup>
 
 </Project>
