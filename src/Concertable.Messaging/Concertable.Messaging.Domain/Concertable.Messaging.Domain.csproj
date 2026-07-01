@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Concertable.Messaging.Contracts\Concertable.Messaging.Contracts.csproj" />
-    <ProjectReference Include="..\..\Shared\Concertable.Kernel\Concertable.Kernel.csproj" />
+    <ProjectReference Include="..\..\Concertable.Shared\src\Concertable.Kernel\Concertable.Kernel.csproj" />
   </ItemGroup>
 
 </Project>
