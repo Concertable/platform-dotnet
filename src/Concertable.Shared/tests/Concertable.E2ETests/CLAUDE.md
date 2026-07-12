@@ -16,3 +16,13 @@ Things that must **never** be added here:
 The test for new code: *"would this file still compile and make sense if every data service moved to its own repo tomorrow?"* If a type, pin, or path in it names B2B, Customer, or Search, the answer is no — put it in that service's tree.
 
 This rule has been violated and reverted before. Don't relitigate it: if a suite needs something service-specific, the suite (or the owning service's helpers project) is where it goes, even if that means two suites each writing three similar lines.
+
+## Scenario authoring altitude (applies to every UI suite)
+
+A scenario tests **one behaviour** and **starts at the nearest already-verified state** — it never
+re-drives earlier stages through the browser just to reach its starting line. If a happy path already
+covers `create → book`, a scenario acting on a booking fast-forwards to "booked" via a seeded `Given`
+and drives only its own behaviour. Setup jumps to state via seeded data (never UI replay); the one
+exception is state that needs real Stripe objects (refunds, live charges), which cannot be seeded and
+must run the real flow. Each suite carries the concrete mechanics in its own `CLAUDE.md` — see
+`Concertable.B2B.E2ETests.Ui/CLAUDE.md` for the `SeedState` fast-forward pattern and the baseline rules.
