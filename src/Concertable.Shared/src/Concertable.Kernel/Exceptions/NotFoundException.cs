@@ -20,3 +20,22 @@ public sealed class NotFoundException : HttpException
             throw new NotFoundException(message ?? $"{paramName} was not found.");
     }
 }
+
+/// <summary>Inline "must exist or it's a 404" guards — the expression-returning companion to the
+/// statement-form <see cref="NotFoundException.ThrowIfNull"/>. Returns the non-null value so it chains
+/// inline. Must be an extension class (postfix on <c>Task</c>/nullable), so it lives beside the exception
+/// rather than on it.</summary>
+public static class NotFoundExtensions
+{
+    // Self-naming — entity fetches carry their own display name; ZERO string at the call site.
+    public static async Task<T> OrNotFound<T>(this Task<T?> task) where T : class, INamedEntity
+        => await task ?? throw new NotFoundException($"{T.DisplayName} not found");
+
+    // Explicit label — DTOs/projections + id-bearing/contextual messages (name is irreducible here).
+    public static async Task<T> OrNotFound<T>(this Task<T?> task, string entity) where T : class
+        => await task ?? throw new NotFoundException($"{entity} not found");
+
+    // Value types — the sites a `where T : class` helper can't touch (Guid?/int? id projections).
+    public static async Task<T> OrNotFound<T>(this Task<T?> task, string entity) where T : struct
+        => await task ?? throw new NotFoundException($"{entity} not found");
+}
