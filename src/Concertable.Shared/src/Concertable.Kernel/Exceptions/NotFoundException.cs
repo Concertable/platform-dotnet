@@ -28,7 +28,7 @@ public sealed class NotFoundException : HttpException
 public static class NotFoundExtensions
 {
     // Self-naming — entity fetches carry their own display name; ZERO string at the call site.
-    public static async Task<T> OrNotFound<T>(this Task<T?> task) where T : class, INamedEntity
+    public static async Task<T> OrNotFound<T>(this Task<T?> task) where T : class, IEntity
         => await task ?? throw new NotFoundException($"{T.DisplayName} not found");
 
     // Explicit label — DTOs/projections + id-bearing/contextual messages (name is irreducible here).
