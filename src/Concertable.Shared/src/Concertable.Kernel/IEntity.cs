@@ -2,7 +2,7 @@ namespace Concertable.Kernel;
 
 public interface IEntity
 {
-    /// <summary>Human-readable name for "not found" messages, e.g. <c>"Booking agreement"</c>. A
+    /// <summary>Human-readable name for "not found" messages, e.g. <c>"Booking contract"</c>. A
     /// <c>static virtual</c> default interface member, NOT <c>static abstract</c>: making it required
     /// breaks binary compatibility (entity assemblies compiled against the prior <c>IEntity</c> throw
     /// <c>TypeLoadException</c> when loaded against the new one, because the core libs source-reference
