@@ -42,17 +42,17 @@ Last reconciled: 2026-06-01 / Stripe new-card flows fixed (card-entry viewport +
 
 | Suite | Total | Passing | Failing |
 |---|---|---|---|
-| B2B | 23 | 23 | 0 |
+| B2B | 24 | 24 | 0 |
 | Customer | 7 | 7 | 0 |
-| **Total** | **30** | **30** | **0** |
+| **Total** | **31** | **31** | **0** |
 
 Entire suite green. The previously-failing Stripe payment flows (3DS challenge, "new card" variants, declined-card variants) are fixed: new-card entry now fills the Stripe iframe reliably (tall viewport), and the Customer E2E AppHost now forwards Stripe webhooks via stripe-cli so ticket-purchase confirmation completes.
 
 <!-- BASELINE-DATA-START -->
 
-## B2B (23 total)
+## B2B (24 total)
 
-### B2B passing (23)
+### B2B passing (24)
 
 ```text
 New artist manager registers, signs in, creates their artist profile
@@ -66,6 +66,7 @@ Venue manager books artist on a door split with a new card
 Venue manager 3DS authentication fails on door split
 Venue manager completes 3DS challenge on door split
 Venue manager door split card registration is declined
+Venue manager declares external door takings on top of Concertable sales
 Venue manager books artist on a flat fee with a new card
 Venue manager 3DS authentication fails on flat fee
 Venue manager completes 3DS challenge on flat fee
