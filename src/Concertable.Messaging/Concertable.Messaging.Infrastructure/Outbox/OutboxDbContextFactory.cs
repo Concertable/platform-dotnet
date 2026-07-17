@@ -8,8 +8,7 @@ internal sealed class OutboxDbContextFactory : IDesignTimeDbContextFactory<Outbo
 {
     public OutboxDbContext CreateDbContext(string[] args)
     {
-        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__B2BDb")
-            ?? "Server=localhost,1433;Database=concertable-b2b;User Id=sa;Password=Password11!;TrustServerCertificate=True";
+        var connectionString = DesignTimeConnectionString.B2B();
         var options = new DbContextOptionsBuilder<OutboxDbContext>()
             .UseSqlServer(connectionString)
             .Options;
