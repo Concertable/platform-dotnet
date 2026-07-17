@@ -7,9 +7,8 @@ internal sealed class InboxDbContextFactory : IDesignTimeDbContextFactory<InboxD
 {
     public InboxDbContext CreateDbContext(string[] args)
     {
-        var connectionString = DesignTimeConnectionString.B2B();
         var options = new DbContextOptionsBuilder<InboxDbContext>()
-            .UseSqlServer(connectionString)
+            .UseSqlServer(DesignTimeConfiguration.ConnectionString())
             .Options;
         return new InboxDbContext(options);
     }

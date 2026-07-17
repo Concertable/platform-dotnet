@@ -8,9 +8,8 @@ internal sealed class OutboxDbContextFactory : IDesignTimeDbContextFactory<Outbo
 {
     public OutboxDbContext CreateDbContext(string[] args)
     {
-        var connectionString = DesignTimeConnectionString.B2B();
         var options = new DbContextOptionsBuilder<OutboxDbContext>()
-            .UseSqlServer(connectionString)
+            .UseSqlServer(DesignTimeConfiguration.ConnectionString())
             .Options;
         return new OutboxDbContext(options, Options.Create(new OutboxOptions()));
     }
