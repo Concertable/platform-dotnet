@@ -60,9 +60,7 @@ public static class Extensions
 
         var envStream = TryOpenSharedDefault($"appsettings.{builder.Environment.EnvironmentName}.json");
         if (envStream is not null)
-        {
             shared.AddJsonStream(envStream);
-        }
 
         // Chain a pre-built sub-config at index 0 (lowest precedence); don't insert stream sources direct —
         // ConfigurationManager re-reads one-shot manifest streams to EOF on every Sources mutation.
