@@ -1,6 +1,8 @@
+using Azure.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
@@ -20,6 +22,7 @@ public static class Extensions
     public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
     {
         builder.AddSharedDefaults();
+        builder.AddAzureAppConfiguration();
 
         builder.ConfigureContainer(new DefaultServiceProviderFactory(new ServiceProviderOptions
         {
@@ -80,6 +83,27 @@ public static class Extensions
 
     private static Stream? TryOpenSharedDefault(string fileName) =>
         typeof(Extensions).Assembly.GetManifestResourceStream(SharedDefaultsPrefix + fileName);
+
+    /// <summary>
+    /// Swaps Azure App Configuration in as the cloud config source — the non-secret tree (by environment
+    /// label) plus Key Vault references resolved by managed identity. No-op locally: the endpoint is set
+    /// only by the deployed app, so <c>aspire run</c> keeps <see cref="AddSharedDefaults"/> + appsettings.
+    /// </summary>
+    private static IHostApplicationBuilder AddAzureAppConfiguration(this IHostApplicationBuilder builder)
+    {
+        var endpoint = builder.Configuration.GetConnectionString("appconfig");
+        if (string.IsNullOrWhiteSpace(endpoint))
+            return builder;
+
+        var credential = new DefaultAzureCredential();
+        builder.Configuration.AddAzureAppConfiguration(options =>
+            options.Connect(new Uri(endpoint), credential)
+                   .Select(KeyFilter.Any, LabelFilter.Null)                       // unlabeled defaults, then
+                   .Select(KeyFilter.Any, builder.Environment.EnvironmentName)    // this environment's overrides
+                   .ConfigureKeyVault(kv => kv.SetCredential(credential)));        // resolve Key Vault references
+
+        return builder;
+    }
 
     public static IHostApplicationBuilder ConfigureOpenTelemetry(this IHostApplicationBuilder builder)
     {
