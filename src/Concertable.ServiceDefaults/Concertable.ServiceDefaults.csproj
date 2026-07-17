@@ -22,4 +22,8 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="SharedDefaults\appsettings.json" />
+  </ItemGroup>
+
 </Project>
