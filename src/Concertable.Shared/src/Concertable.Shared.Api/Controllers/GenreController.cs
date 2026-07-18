@@ -1,4 +1,4 @@
-using Concertable.Contracts;
+using Concertable.Contracts.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Concertable.Shared.Api.Controllers;

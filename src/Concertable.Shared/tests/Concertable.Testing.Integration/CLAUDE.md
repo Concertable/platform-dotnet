@@ -2,6 +2,10 @@
 
 Shared integration-test infrastructure. This is a reusable library — treat it like one.
 
+Integration-test conventions (fixtures, `Respawn`, `TestAuthHandler`, test-seeding) are imported here:
+
+@../../../docs/INTEGRATION_CONVENTIONS.md
+
 ## What belongs here
 
 Only add something here if it is used by **two or more microservices**, *or* it is a **service-agnostic

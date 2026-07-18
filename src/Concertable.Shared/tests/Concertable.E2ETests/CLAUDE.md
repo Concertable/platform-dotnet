@@ -17,37 +17,11 @@ The test for new code: *"would this file still compile and make sense if every d
 
 This rule has been violated and reverted before. Don't relitigate it: if a suite needs something service-specific, the suite (or the owning service's helpers project) is where it goes, even if that means two suites each writing three similar lines.
 
-## Authoring scenarios — the rules for EVERY UI suite (B2B, Customer)
+## Scenario-authoring rules
 
-Scenarios live in the suites, not in this project, but the rules are identical across suites, so they
-live here (the one doc both suites depend on). Each suite's own `CLAUDE.md` points here and adds only
-its concrete fast-forward mechanics (its `SeedState` shape). This prevents the two suites drifting.
+The rules for authoring UI E2E scenarios (test one behaviour, start at the nearest already-verified
+state, fast-forward via seeded state never UI replay, what can't be seeded, baseline discipline) are
+shared across every suite and live in [`E2E_CONVENTIONS.md`](../../../docs/E2E_CONVENTIONS.md) —
+imported here so they're always in context when working in this harness:
 
-**A scenario tests one behaviour and starts at the nearest already-verified state.** It never
-re-drives earlier stages through the browser to reach its starting line. If a happy path already
-covers `create → book`, a scenario acting on a booking fast-forwards to "booked" and drives only its
-own behaviour + assertion. Litmus test before writing a `When`/`And` setup step: *is this proving the
-behaviour in the scenario title, or just getting me to the starting line?* If it's the latter and
-another scenario already covers it, make it a fast-forward `Given`, not UI steps.
-
-**Fast-forward via seeded state, never UI replay.** A setup `Given` reads pre-seeded data off the
-suite's fixture (`fixture.App.SeedState…`) and sets the id on scenario state — no navigation, no clicks.
-When the starting state you need doesn't exist yet, add the seeded state + a `Given`; don't reach it by
-replaying UI steps another scenario already runs.
-
-**The one thing you cannot seed: payment/Stripe state.** Seeding obeys production's rule (a seeder only
-writes what prod writes directly), and real Payment emits only on live Stripe webhooks — so no seeder
-creates a PaymentIntent/charge. A scenario whose assertion needs a real Stripe object (e.g. a refund
-reversing a real charge) must run the real paying flow; it can't be pure-seed fast-forwarded. Split it:
-the cheap state-transition assertion starts from seeded state, the Stripe-dependent assertion stays on
-a flow that actually paid.
-
-**Baseline discipline — `E2E_BASELINE.md` (this directory).** `./e2e.ps1 ui regress` trusts it. Two
-traps: (1) when a scenario crosses the line, move it between the `passing`/`failing` blocks AND fix both
-`(N)` counts and the summary table (the parser throws on a mismatch); (2) adding an assertion to an
-already-green scenario can silently turn it red while the baseline still lists it as passing — the name
-didn't change, but the body now fails. Re-run and reconcile; a name in `passing` is not proof the
-current body passes.
-
-**Headless by default.** Run via `./e2e.ps1 ui <cmd>` (mandatory Docker health gate); `-Headed` only
-when a human is watching — it changes nothing that's asserted.
+@../../../docs/E2E_CONVENTIONS.md

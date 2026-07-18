@@ -1,4 +1,4 @@
-using Concertable.Kernel;
+using Concertable.Kernel.ValueObjects;
 
 namespace Concertable.Shared.Geocoding.Application;
 

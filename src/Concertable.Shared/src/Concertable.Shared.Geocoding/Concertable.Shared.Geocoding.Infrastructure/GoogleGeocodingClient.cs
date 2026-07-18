@@ -1,6 +1,6 @@
 using System.Globalization;
-using Concertable.Kernel;
 using Concertable.Kernel.Exceptions;
+using Concertable.Kernel.ValueObjects;
 using Concertable.Shared.Geocoding.Application;
 
 namespace Concertable.Shared.Geocoding.Infrastructure;
