@@ -1,4 +1,4 @@
-namespace Concertable.Kernel;
+namespace Concertable.Kernel.ValueObjects;
 
 public interface IAddress
 {

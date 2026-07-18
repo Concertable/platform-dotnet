@@ -1,4 +1,4 @@
-using Concertable.Kernel;
+using Concertable.Kernel.ValueObjects;
 using Concertable.Shared.Geocoding.Application;
 
 namespace Concertable.Testing.Integration.Mocks;

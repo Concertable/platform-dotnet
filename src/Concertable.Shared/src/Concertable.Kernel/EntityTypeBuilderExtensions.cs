@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Concertable.Kernel.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

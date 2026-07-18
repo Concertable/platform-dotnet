@@ -1,5 +1,5 @@
-using Concertable.Kernel;
 using Concertable.Kernel.Specifications;
+using Concertable.Kernel.ValueObjects;
 
 namespace Concertable.DataAccess.Application.Specifications;
 

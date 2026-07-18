@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Concertable.Contracts;
+namespace Concertable.Contracts.Enums;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum Genre
