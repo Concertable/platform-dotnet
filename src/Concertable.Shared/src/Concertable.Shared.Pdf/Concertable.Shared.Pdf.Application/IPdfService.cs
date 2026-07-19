@@ -1,8 +1,4 @@
-using QuestPDF.Infrastructure;
-
 namespace Concertable.Shared.Pdf.Application;
 
-public interface IPdfService
-{
-    byte[] Render(IDocument document);
-}
+// Temporary alias for IPdfRenderer while consumers migrate off IPdfService; removed once nothing injects it.
+public interface IPdfService : IPdfRenderer;
