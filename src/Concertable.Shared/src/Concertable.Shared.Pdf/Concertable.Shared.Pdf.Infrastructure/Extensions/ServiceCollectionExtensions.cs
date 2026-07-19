@@ -9,7 +9,9 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddSharedPdf(this IServiceCollection services)
     {
         QuestPDF.Settings.License = LicenseType.Community;
-        services.AddScoped<IPdfService, PdfService>();
+        services.AddScoped<PdfRenderer>();
+        services.AddScoped<IPdfRenderer>(sp => sp.GetRequiredService<PdfRenderer>());
+        services.AddScoped<IPdfService>(sp => sp.GetRequiredService<PdfRenderer>());
         return services;
     }
 }
