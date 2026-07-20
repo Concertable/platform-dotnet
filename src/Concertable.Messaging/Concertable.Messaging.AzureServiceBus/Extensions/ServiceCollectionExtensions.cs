@@ -14,6 +14,12 @@ public static class ServiceCollectionExtensions
         Action<AzureServiceBusOptions> configure,
         Action<MessageTypeRegistry> register)
     {
+        var options = new AzureServiceBusOptions();
+        configure(options);
+        if (string.IsNullOrWhiteSpace(options.ServiceName))
+            throw new InvalidOperationException(
+                "AzureServiceBusOptions.ServiceName is required — it scopes command queue names; an empty value yields a malformed 'command--<type>' queue.");
+
         services.Configure(configure);
 
         var registry = new MessageTypeRegistry();
