@@ -29,6 +29,7 @@
     <PackageReference Include="NetTopologySuite" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Refit.HttpClientFactory" />
+    <PackageReference Include="Vogen" />
   </ItemGroup>
 
   <ItemGroup>
