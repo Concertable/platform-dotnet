@@ -5,7 +5,7 @@ namespace Concertable.Kernel.ValueObjects;
 
 [ValueObject<string>(throws: typeof(DomainException),
     conversions: Conversions.EfCoreValueConverter | Conversions.SystemTextJson)]
-public readonly partial struct EmailAddress
+public sealed partial record EmailAddress
 {
     private static string NormalizeInput(string input) => input.Trim().ToLowerInvariant();
 
