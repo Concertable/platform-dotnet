@@ -61,12 +61,3 @@ public abstract class Repository<TEntity, TContext, TKey>(TContext context)
     public bool Exists(TKey id) =>
         context.Set<TEntity>().Any(e => e.Id!.Equals(id));
 }
-
-public abstract class OwnedRepository<TEntity, TContext, TKey>(TContext context)
-    : BaseRepository<TEntity, TContext>(context)
-    where TEntity : class, IOwned<TKey>
-    where TContext : DbContextBase
-{
-    public Task<TEntity?> GetByOwnerIdAsync(TKey ownerId, CancellationToken ct = default) =>
-        context.Set<TEntity>().FirstOrDefaultAsync(e => e.OwnerId!.Equals(ownerId), ct);
-}
