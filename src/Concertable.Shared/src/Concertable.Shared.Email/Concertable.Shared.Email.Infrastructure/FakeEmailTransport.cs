@@ -3,12 +3,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Concertable.Shared.Email.Infrastructure;
 
-internal sealed class FakeEmailSender : IEmailSender
+internal sealed class FakeEmailTransport : IEmailTransport, IEmailSender
 {
     private readonly IHttpClientFactory httpClientFactory;
-    private readonly ILogger<FakeEmailSender> logger;
+    private readonly ILogger<FakeEmailTransport> logger;
 
-    public FakeEmailSender(IHttpClientFactory httpClientFactory, ILogger<FakeEmailSender> logger)
+    public FakeEmailTransport(IHttpClientFactory httpClientFactory, ILogger<FakeEmailTransport> logger)
     {
         this.httpClientFactory = httpClientFactory;
         this.logger = logger;
@@ -27,4 +27,3 @@ internal sealed class FakeEmailSender : IEmailSender
         await client.GetAsync($"{verifyBaseUrl}?token={Uri.EscapeDataString(token)}", ct);
     }
 }
-
