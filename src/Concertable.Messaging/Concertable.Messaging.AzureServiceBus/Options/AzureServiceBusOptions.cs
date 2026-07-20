@@ -11,5 +11,5 @@ public sealed class AzureServiceBusOptions
         EventTopicPrefix + eventType.Name.ToLowerInvariant();
 
     public string QueueNameFor(Type commandType) =>
-        CommandQueuePrefix + commandType.Name.ToLowerInvariant();
+        $"{CommandQueuePrefix}{ServiceName}-{commandType.Name.ToLowerInvariant()}";
 }

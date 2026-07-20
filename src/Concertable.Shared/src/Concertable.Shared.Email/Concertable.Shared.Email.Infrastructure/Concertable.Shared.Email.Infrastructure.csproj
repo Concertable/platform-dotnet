@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Concertable.Shared.Email.Application\Concertable.Shared.Email.Application.csproj" />
+    <ProjectReference Include="..\..\..\..\Concertable.Messaging\Concertable.Messaging.Contracts\Concertable.Messaging.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

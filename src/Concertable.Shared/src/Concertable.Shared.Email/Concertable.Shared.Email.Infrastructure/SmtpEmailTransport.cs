@@ -6,11 +6,11 @@ using MimeKit;
 
 namespace Concertable.Shared.Email.Infrastructure;
 
-internal sealed class EmailSender : IEmailSender
+internal sealed class SmtpEmailTransport : IEmailTransport, IEmailSender
 {
     private readonly IConfiguration configuration;
 
-    public EmailSender(IConfiguration configuration)
+    public SmtpEmailTransport(IConfiguration configuration)
     {
         this.configuration = configuration;
     }

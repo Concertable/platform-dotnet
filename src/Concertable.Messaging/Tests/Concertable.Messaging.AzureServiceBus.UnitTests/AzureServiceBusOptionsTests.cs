@@ -20,7 +20,7 @@ public sealed class AzureServiceBusOptionsTests
     }
 
     [Fact]
-    public void QueueNameFor_WithDefaultPrefix_PrependsCommandPrefixAndLowercases()
+    public void QueueNameFor_WithDefaultPrefix_PrependsCommandPrefixAndServiceNameAndLowercases()
     {
         // Arrange
         var options = new AzureServiceBusOptions
@@ -33,7 +33,7 @@ public sealed class AzureServiceBusOptionsTests
         var queue = options.QueueNameFor(typeof(FakeIntegrationCommand));
 
         // Assert
-        Assert.Equal("command-fakeintegrationcommand", queue);
+        Assert.Equal("command-b2b-fakeintegrationcommand", queue);
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public sealed class AzureServiceBusOptionsTests
         var queue = options.QueueNameFor(typeof(FakeIntegrationCommand));
 
         // Assert
-        Assert.Equal("cmd-fakeintegrationcommand", queue);
+        Assert.Equal("cmd-customer-fakeintegrationcommand", queue);
     }
 
     [Fact]

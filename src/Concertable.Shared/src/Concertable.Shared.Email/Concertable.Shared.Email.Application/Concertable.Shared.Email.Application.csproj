@@ -8,4 +8,8 @@
     <Description>Concertable shared email abstractions.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Concertable.Messaging\Concertable.Messaging.Contracts\Concertable.Messaging.Contracts.csproj" />
+  </ItemGroup>
+
 </Project>
