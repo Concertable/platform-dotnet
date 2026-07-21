@@ -14,16 +14,15 @@ public static class ServiceCollectionExtensions
         {
             services.AddScoped<SmtpEmailTransport>();
             services.AddScoped<IEmailTransport>(sp => sp.GetRequiredService<SmtpEmailTransport>());
-            // Transitional: IEmailSender stays synchronous until callers stage sends via the outbox.
-            services.AddScoped<IEmailSender>(sp => sp.GetRequiredService<SmtpEmailTransport>());
         }
         else
         {
             services.AddHttpClient();
             services.AddScoped<FakeEmailTransport>();
             services.AddScoped<IEmailTransport>(sp => sp.GetRequiredService<FakeEmailTransport>());
-            services.AddScoped<IEmailSender>(sp => sp.GetRequiredService<FakeEmailTransport>());
         }
+
+        services.AddScoped<IEmailSender, OutboxEmailSender>();
 
         services.AddScoped<IIntegrationCommandHandler<SendEmailCommand>, SendEmailCommandHandler>();
         services.AddScoped<IIntegrationCommandHandler<SendVerificationEmailCommand>, SendVerificationEmailCommandHandler>();

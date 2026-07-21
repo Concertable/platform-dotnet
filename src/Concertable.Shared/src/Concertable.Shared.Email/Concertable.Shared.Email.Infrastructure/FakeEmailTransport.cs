@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Concertable.Shared.Email.Infrastructure;
 
-internal sealed class FakeEmailTransport : IEmailTransport, IEmailSender
+internal sealed class FakeEmailTransport : IEmailTransport
 {
     private readonly IHttpClientFactory httpClientFactory;
     private readonly ILogger<FakeEmailTransport> logger;
