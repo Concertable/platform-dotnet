@@ -4,9 +4,7 @@ using Concertable.Kernel.Background;
 using Concertable.Kernel.Events;
 using Concertable.Kernel.Geometry;
 using Concertable.Kernel.Identity;
-using Concertable.Kernel.Services;
 using Concertable.Kernel.Services.Geometry;
-using Concertable.Kernel.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,9 +21,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
         services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
         services.AddSingleton<IBackgroundTaskRunner, BackgroundTaskRunner>();
-
-        services.Configure<UrlSettings>(configuration.GetSection("Urls"));
-        services.AddScoped<IUriService, UriService>();
 
         return services;
     }
