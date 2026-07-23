@@ -1,7 +1,6 @@
-using Concertable.DataAccess.Application;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Concertable.DataAccess.Infrastructure;
+namespace Concertable.Kernel.DependencyInjection;
 
 public sealed class Scoped<T> : IScoped<T> where T : notnull
 {
