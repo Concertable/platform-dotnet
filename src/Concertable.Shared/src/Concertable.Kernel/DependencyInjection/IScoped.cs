@@ -1,4 +1,4 @@
-namespace Concertable.DataAccess.Application;
+namespace Concertable.Kernel.DependencyInjection;
 
 /// <summary>
 /// Executes an action against a <typeparamref name="T"/> resolved inside a fresh dependency-injection
