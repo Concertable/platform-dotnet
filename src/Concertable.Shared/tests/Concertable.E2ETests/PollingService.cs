@@ -4,11 +4,11 @@ namespace Concertable.E2ETests;
 
 public sealed class PollingService : IPollingService
 {
-    private readonly ILogger<PollingService> _logger;
+    private readonly ILogger<PollingService> logger;
 
     public PollingService(ILogger<PollingService> logger)
     {
-        _logger = logger;
+        this.logger = logger;
     }
 
     public async Task UntilAsync(
@@ -29,7 +29,7 @@ public sealed class PollingService : IPollingService
             }
             catch (Exception ex)
             {
-                _logger.ConditionCheckFailed(ex);
+                logger.ConditionCheckFailed(ex);
             }
 
             try
@@ -67,7 +67,7 @@ public sealed class PollingService : IPollingService
             }
             catch (Exception ex)
             {
-                _logger.PollingActionFailed(ex);
+                logger.PollingActionFailed(ex);
             }
 
             try
