@@ -8,6 +8,8 @@ public readonly record struct Money(decimal Amount, Currency Currency)
 
     public static Money Zero(Currency currency) => new(0m, currency);
 
+    public static Money Gbp(decimal amount) => new(amount, Currency.Gbp);
+
     public static Money operator +(Money a, Money b) => SameCurrency(a, b) with { Amount = a.Amount + b.Amount };
 
     public static Money operator -(Money a, Money b) => SameCurrency(a, b) with { Amount = a.Amount - b.Amount };
