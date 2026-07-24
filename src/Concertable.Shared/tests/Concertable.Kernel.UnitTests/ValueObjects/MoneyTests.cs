@@ -60,6 +60,19 @@ public sealed class MoneyTests
 
     #endregion
 
+    #region Gbp
+
+    [Fact]
+    public void Gbp_CreatesGbpMoneyWithTheGivenAmount()
+    {
+        var money = Money.Gbp(12.34m);
+
+        Assert.Equal(12.34m, money.Amount);
+        Assert.Equal(Currency.Gbp, money.Currency);
+    }
+
+    #endregion
+
     #region Arithmetic
 
     [Fact]
