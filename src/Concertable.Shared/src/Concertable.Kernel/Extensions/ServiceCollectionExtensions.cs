@@ -1,15 +1,15 @@
 using Concertable.Contracts;
 using Concertable.Kernel.Auth;
 using Concertable.Kernel.Background;
+using Concertable.Kernel.DependencyInjection;
 using Concertable.Kernel.Events;
 using Concertable.Kernel.Geometry;
 using Concertable.Kernel.Identity;
-using Concertable.Kernel.Services;
 using Concertable.Kernel.Services.Geometry;
-using Concertable.Kernel.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using NetTopologySuite;
 using Refit;
@@ -23,9 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
         services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
         services.AddSingleton<IBackgroundTaskRunner, BackgroundTaskRunner>();
-
-        services.Configure<UrlSettings>(configuration.GetSection("Urls"));
-        services.AddScoped<IUriService, UriService>();
+        services.TryAddSingleton(typeof(IScoped<>), typeof(Scoped<>));
 
         return services;
     }
