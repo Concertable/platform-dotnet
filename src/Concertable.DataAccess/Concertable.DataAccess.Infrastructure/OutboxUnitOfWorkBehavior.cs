@@ -3,7 +3,7 @@ using Concertable.Messaging.Infrastructure.Outbox;
 
 namespace Concertable.DataAccess.Infrastructure;
 
-public sealed class OutboxUnitOfWorkBehavior<TContext> : IOutboxUnitOfWorkBehavior<TContext>
+public class OutboxUnitOfWorkBehavior<TContext> : IOutboxUnitOfWorkBehavior<TContext>
     where TContext : DbContextBase
 {
     private readonly TContext context;
