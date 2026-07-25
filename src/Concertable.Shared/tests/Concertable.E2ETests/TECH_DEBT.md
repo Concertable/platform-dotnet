@@ -6,28 +6,6 @@ When an item is fixed, update this file.
 
 ## HIGH
 
-### P1 — API E2E reseed fails: `There is already an object named 'Outbox'` (blocks every E2E-running PR)
-
-`e2e-api-tests` fails for **all** B2B Payments tests at fixture setup: `AppFixture.ReseedAsync` →
-`DevDbInitializer.InitializeAsync` → `outbox.Database.MigrateAsync()` throws
-`SqlException: There is already an object named 'Outbox'`. Every test dies in ~1ms (shared-fixture
-init), so it's not a per-test bug — the reseed re-runs the Outbox migration against a DB that already
-has the table.
-
-Surfaced by PR #209 (platform fee) — the **first PR to actually run E2E** after the recent messaging
-refactors (`OutboxUnitOfWorkBehavior<TContext>`, and a commit literally titled *"realign messaging
-migrations"*) all merged under **`[skip-e2e]`** and were never E2E-tested. So it is a **pre-existing
-regression in the messaging-migration setup**, independent of the fee change. #209 shipped with
-`[skip-e2e]` to unblock; this must be fixed before E2E can gate anything again.
-
-The reseed's Respawn config (`DbFixture.cs`) correctly ignores `__EFMigrationsHistory`, so the root
-cause is upstream in how the Outbox migration/`OutboxDbContext` is created — not the reset path.
-(Local repro was blocked by a Docker-engine flap on the full stack — `pre-login handshake` resets —
-so this needs a machine with Docker Desktop able to hold the ~6-container stack.)
-
-**Resolves when:** the messaging-migration change is traced to root (why `MigrateAsync` re-creates
-`Outbox` on a DB that has it), fixed, and a clean `e2e-api-tests` run passes without `[skip-e2e]`.
-
 ### API E2E suites are outside the regress contract; UI scenarios stop at draft creation
 
 Two facts compound into a coverage hole over the back half of the concert lifecycle:
