@@ -3,6 +3,7 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Azure;
 using Aspire.Hosting.Azure.ServiceBus;
 using Aspire.Hosting.DevTunnels;
+using Concertable.Messaging.AzureServiceBus.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Runtime.CompilerServices;
@@ -81,6 +82,7 @@ public static class DistributedApplicationBuilderExtensions
                       .WithReference(paymentWeb)
                       .WaitFor(paymentWeb)
                       .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
+                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, AppHostConstants.ServiceNames.B2B)
                       .WithEnvironment("ServiceAuth__ClientId", "concertable-b2b")
                       .WithOptionalEnvironment("ServiceAuth__ClientSecret", b2bSecret);
     }
@@ -128,6 +130,7 @@ public static class DistributedApplicationBuilderExtensions
                       .WithReference(paymentWeb)
                       .WaitFor(paymentWeb)
                       .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
+                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, AppHostConstants.ServiceNames.Customer)
                       .WithEnvironment("ServiceAuth__ClientId", "concertable-customer")
                       .WithOptionalEnvironment("ServiceAuth__ClientSecret", customerSecret);
     }
@@ -156,7 +159,8 @@ public static class DistributedApplicationBuilderExtensions
                       .WithReference(searchDb)
                       .WaitFor(searchDb)
                       .WithReference(asb)
-                      .WaitFor(asb);
+                      .WaitFor(asb)
+                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, AppHostConstants.ServiceNames.Search);
     }
 
     public static IResourceBuilder<ProjectResource> AddB2BSeedingSimulator<TProject>(
@@ -184,6 +188,7 @@ public static class DistributedApplicationBuilderExtensions
                       .WithReference(asb)
                       .WaitFor(asb)
                       .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
+                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, AppHostConstants.ServiceNames.Payment)
                       .AddSecrets(builder, "Stripe:SecretKey", "Stripe:WebhookSecret", "ExternalServices:UseRealStripe");
     }
 
@@ -198,6 +203,7 @@ public static class DistributedApplicationBuilderExtensions
                       .WaitFor(paymentDb)
                       .WithReference(asb)
                       .WaitFor(asb)
+                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, AppHostConstants.ServiceNames.Payment)
                       .AddSecrets(builder, "Stripe:SecretKey", "ExternalServices:UseRealStripe");
     }
 
