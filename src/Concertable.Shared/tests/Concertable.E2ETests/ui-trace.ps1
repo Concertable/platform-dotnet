@@ -1,6 +1,6 @@
 $all = Get-ChildItem -Recurse -Filter "trace-*.zip" $PSScriptRoot
 
-if (-not $all) { Write-Error "No trace files found under api/Tests/Concertable.E2ETests."; exit 1 }
+if (-not $all) { Write-Error "No trace files found under api/Concertable.Shared/tests/Concertable.E2ETests."; exit 1 }
 
 $latest = $all | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
