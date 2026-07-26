@@ -21,7 +21,7 @@ This rule has been violated and reverted before. Don't relitigate it: if a suite
 
 The rules for authoring UI E2E scenarios (test one behaviour, start at the nearest already-verified
 state, fast-forward via seeded state never UI replay, what can't be seeded, baseline discipline) are
-shared across every suite and live in [`E2E_CONVENTIONS.md`](../../../docs/E2E_CONVENTIONS.md) —
+shared across every suite and live in [`E2E_CONVENTIONS.md`](../../../agents/E2E_CONVENTIONS.md) —
 imported here so they're always in context when working in this harness:
 
-@../../../docs/E2E_CONVENTIONS.md
+@../../../agents/E2E_CONVENTIONS.md
