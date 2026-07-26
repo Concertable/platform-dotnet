@@ -29,39 +29,14 @@ public sealed class AsbTopology
         return this;
     }
 
-    public ServiceScope ForService(string consumerGroup) => new(this, consumerGroup);
+    public AsbTopology Subscribe<TEvent>(string consumerGroup) =>
+        Subscribe<TEvent>($"{consumerGroup}-{KebabCase(typeof(TEvent))}", consumerGroup);
 
-    public sealed class ServiceScope
+    private static string KebabCase(Type eventType)
     {
-        private readonly AsbTopology topology;
-        private readonly string consumerGroup;
-
-        internal ServiceScope(AsbTopology topology, string consumerGroup)
-        {
-            this.topology = topology;
-            this.consumerGroup = consumerGroup;
-        }
-
-        public ServiceScope Subscribe<TEvent>()
-        {
-            topology.Subscribe<TEvent>($"{consumerGroup}-{KebabCase(typeof(TEvent))}", consumerGroup);
-            return this;
-        }
-
-        public ServiceScope Queue(string queue)
-        {
-            topology.Queue(queue);
-            return this;
-        }
-
-        public AsbTopology Topology => topology;
-
-        private static string KebabCase(Type eventType)
-        {
-            var name = eventType.Name.EndsWith("Event", StringComparison.Ordinal)
-                ? eventType.Name[..^"Event".Length]
-                : eventType.Name;
-            return Regex.Replace(name, "(?<!^)([A-Z])", "-$1").ToLowerInvariant();
-        }
+        var name = eventType.Name.EndsWith("Event", StringComparison.Ordinal)
+            ? eventType.Name[..^"Event".Length]
+            : eventType.Name;
+        return Regex.Replace(name, "(?<!^)([A-Z])", "-$1").ToLowerInvariant();
     }
 }
