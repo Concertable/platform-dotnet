@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 
 public sealed class AsbTopology
 {
+    private const string EventSuffix = "Event";
     private readonly IResourceBuilder<AzureServiceBusResource> asb;
     private readonly AzureServiceBusOptions options = new();
     private readonly Dictionary<string, IResourceBuilder<AzureServiceBusTopicResource>> topics = new();
@@ -34,8 +35,8 @@ public sealed class AsbTopology
 
     private static string KebabCase(Type eventType)
     {
-        var name = eventType.Name.EndsWith("Event", StringComparison.Ordinal)
-            ? eventType.Name[..^"Event".Length]
+        var name = eventType.Name.EndsWith(EventSuffix, StringComparison.Ordinal)
+            ? eventType.Name[..^EventSuffix.Length]
             : eventType.Name;
         return Regex.Replace(name, "(?<!^)([A-Z])", "-$1").ToLowerInvariant();
     }
