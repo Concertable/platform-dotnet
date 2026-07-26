@@ -4,7 +4,7 @@ Shared integration-test infrastructure. This is a reusable library — treat it 
 
 Integration-test conventions (fixtures, `Respawn`, `TestAuthHandler`, test-seeding) are imported here:
 
-@../../../docs/INTEGRATION_CONVENTIONS.md
+@../../../agents/INTEGRATION_CONVENTIONS.md
 
 ## What belongs here
 
