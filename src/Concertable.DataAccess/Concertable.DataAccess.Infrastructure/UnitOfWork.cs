@@ -1,4 +1,5 @@
 using Concertable.DataAccess.Application;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Concertable.DataAccess.Infrastructure;
