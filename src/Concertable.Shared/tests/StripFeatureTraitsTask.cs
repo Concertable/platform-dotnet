@@ -14,7 +14,7 @@ public class StripFeatureTraits : Task
     public override bool Execute()
     {
         var stripPattern = new Regex(
-            @"^\s*\[global::Xunit\.TraitAttribute\(""(FeatureTitle|Description|Category)"",\s*""[^""]*""\)\]\s*$");
+            @"^\s*\[global::Xunit\.TraitAttribute\(""(FeatureTitle|Description|Category)"",\s*""(?<value>[^""]*)""\)\]\s*$");
 
         var injectMarker = !string.IsNullOrEmpty(Category)
             ? $"[global::Xunit.TraitAttribute(\"Category\", \"{Category}\")]"
@@ -32,7 +32,10 @@ public class StripFeatureTraits : Task
 
             foreach (var line in original.Split('\n'))
             {
-                if (stripPattern.IsMatch(line))
+                var stripMatch = stripPattern.Match(line);
+                // Collapse every auto-generated trait to the one project Category — except @quarantine,
+                // the one tag CI filters on to split the blocking lane from the non-gating flake lane.
+                if (stripMatch.Success && stripMatch.Groups["value"].Value != "quarantine")
                 {
                     changed = true;
                     continue;
