@@ -33,6 +33,9 @@ public sealed class AsbTopology
     public AsbTopology Subscribe<TEvent>(string consumerGroup) =>
         Subscribe<TEvent>($"{consumerGroup}-{KebabCase(typeof(TEvent))}", consumerGroup);
 
+    public AsbTopology Queue<TCommand>(string serviceName) =>
+        Queue(options.QueueNameFor(serviceName, typeof(TCommand)));
+
     private static string KebabCase(Type eventType)
     {
         var name = eventType.Name.EndsWith(EventSuffix, StringComparison.Ordinal)
