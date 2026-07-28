@@ -1,7 +1,9 @@
+using Concertable.Shared.Email.Application;
+
 public static class AuthTopology
 {
     public static AsbTopology AddAuthTopology(this AsbTopology topology) =>
         topology
-            .Queue("command-concertable-auth-sendemailcommand")
-            .Queue("command-concertable-auth-sendverificationemailcommand");
+            .Queue<SendEmailCommand>(AppHostConstants.ServiceNames.Auth)
+            .Queue<SendVerificationEmailCommand>(AppHostConstants.ServiceNames.Auth);
 }
