@@ -1,6 +1,6 @@
 # E2E Baseline
 
-The contract for which scenarios are **expected** to pass vs fail. `./e2e.ps1 regress` reads this file to know which scenarios to run; PR review reads it to see what changed.
+The contract for which scenarios are **expected** to pass vs fail. `./scripts/e2e.ps1 regress` reads this file to know which scenarios to run; PR review reads it to see what changed.
 
 <!-- ============================================================
      EDITING RULES — the regress script parser depends on these
@@ -30,7 +30,7 @@ The contract for which scenarios are **expected** to pass vs fail. `./e2e.ps1 re
        (= the Scenario line in the .feature file, no decorations)
 
      UPDATE FLOW
-     When `./e2e.ps1 run` shows a scenario crossing the line (now
+     When `./scripts/e2e.ps1 run` shows a scenario crossing the line (now
      passes that didn't, or now fails that did), move it between
      the passing and failing fenced blocks below AND update both
      (N) counts in the headings AND update the summary table.
