@@ -35,4 +35,14 @@ public static class AppHostConstants
         public const string ArtistSpa = "https://localhost:5176";
         public const string BusinessSpa = "https://localhost:5177";
     }
+
+    public static class ServiceNames
+    {
+        private const string Prefix = "concertable-";
+
+        public const string B2B = Prefix + "b2b";
+        public const string Customer = Prefix + "customer";
+        public const string Search = Prefix + "search";
+        public const string Payment = Prefix + "payment";
+    }
 }

@@ -15,4 +15,8 @@
     <PackageReference Include="Aspire.Hosting.SqlServer" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Concertable.Messaging\Concertable.Messaging.AzureServiceBus\Concertable.Messaging.AzureServiceBus.csproj" IsAspireProjectResource="false" />
+  </ItemGroup>
+
 </Project>
