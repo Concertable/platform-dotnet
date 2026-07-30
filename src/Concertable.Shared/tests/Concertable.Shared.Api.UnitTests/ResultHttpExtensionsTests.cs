@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net;
 using System.Net.Mime;
 
 namespace Concertable.Shared.Api.UnitTests;
@@ -13,16 +15,15 @@ namespace Concertable.Shared.Api.UnitTests;
 public sealed class ResultHttpExtensionsTests
 {
     [Theory]
-    [InlineData(ErrorKind.Invalid, StatusCodes.Status400BadRequest, "Bad Request")]
-    [InlineData(ErrorKind.NotFound, StatusCodes.Status404NotFound, "Not Found")]
-    [InlineData(ErrorKind.Conflict, StatusCodes.Status409Conflict, "Conflict")]
-    [InlineData(ErrorKind.Unauthenticated, StatusCodes.Status401Unauthorized, "Unauthorized")]
-    [InlineData(ErrorKind.Forbidden, StatusCodes.Status403Forbidden, "Forbidden")]
-    [InlineData(ErrorKind.PaymentRequired, StatusCodes.Status402PaymentRequired, "Payment Required")]
+    [InlineData(ErrorKind.Invalid, HttpStatusCode.BadRequest)]
+    [InlineData(ErrorKind.NotFound, HttpStatusCode.NotFound)]
+    [InlineData(ErrorKind.Conflict, HttpStatusCode.Conflict)]
+    [InlineData(ErrorKind.Unauthenticated, HttpStatusCode.Unauthorized)]
+    [InlineData(ErrorKind.Forbidden, HttpStatusCode.Forbidden)]
+    [InlineData(ErrorKind.PaymentRequired, HttpStatusCode.PaymentRequired)]
     public void ToOkActionResult_FailedResult_MapsSemanticKind(
         ErrorKind kind,
-        int expectedStatus,
-        string expectedTitle)
+        HttpStatusCode expectedStatus)
     {
         var error = new TestError(new ErrorDescriptor("test.code", "Safe detail.", kind));
         var result = Result.Failure<string, TestError>(error);
@@ -31,9 +32,11 @@ public sealed class ResultHttpExtensionsTests
 
         var objectResult = Assert.IsAssignableFrom<ObjectResult>(actionResult.Result);
         var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
-        Assert.Equal(expectedStatus, objectResult.StatusCode);
-        Assert.Equal(expectedStatus, problemDetails.Status);
-        Assert.Equal(expectedTitle, problemDetails.Title);
+        Assert.Equal((int)expectedStatus, objectResult.StatusCode);
+        Assert.Equal((int)expectedStatus, problemDetails.Status);
+        Assert.Equal(
+            ReasonPhrases.GetReasonPhrase((int)expectedStatus),
+            problemDetails.Title);
         Assert.Equal("Safe detail.", problemDetails.Detail);
         Assert.Null(problemDetails.Instance);
         Assert.Equal("test.code", problemDetails.Extensions["code"]);

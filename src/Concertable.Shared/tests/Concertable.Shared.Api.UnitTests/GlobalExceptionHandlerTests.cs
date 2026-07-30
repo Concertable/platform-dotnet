@@ -2,10 +2,12 @@ using Concertable.Kernel.Exceptions;
 using Concertable.Shared.Api.Exceptions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Net;
 using System.Text.Json;
 
 namespace Concertable.Shared.Api.UnitTests;
@@ -43,7 +45,9 @@ public sealed class GlobalExceptionHandlerTests
         Assert.True(handled);
         Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
         Assert.Equal("application/problem+json", context.Response.ContentType);
-        Assert.Equal("Internal Server Error", problemDetails.GetProperty("title").GetString());
+        Assert.Equal(
+            ReasonPhrases.GetReasonPhrase((int)HttpStatusCode.InternalServerError),
+            problemDetails.GetProperty("title").GetString());
         Assert.Equal("An unexpected error occurred.", problemDetails.GetProperty("detail").GetString());
         Assert.False(problemDetails.TryGetProperty("exceptionType", out _));
         Assert.False(problemDetails.TryGetProperty("stackTrace", out _));
@@ -84,7 +88,9 @@ public sealed class GlobalExceptionHandlerTests
             .Select(value => value.GetString()!)
             .ToArray();
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-        Assert.Equal("Bad Request", problemDetails.GetProperty("title").GetString());
+        Assert.Equal(
+            ReasonPhrases.GetReasonPhrase((int)HttpStatusCode.BadRequest),
+            problemDetails.GetProperty("title").GetString());
         Assert.Equal(["First error.", "Second error."], errors);
     }
 
@@ -101,7 +107,9 @@ public sealed class GlobalExceptionHandlerTests
 
         var problemDetails = await ReadResponseAsync(context);
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
-        Assert.Equal("Not Found", problemDetails.GetProperty("title").GetString());
+        Assert.Equal(
+            ReasonPhrases.GetReasonPhrase((int)HttpStatusCode.NotFound),
+            problemDetails.GetProperty("title").GetString());
         Assert.Equal("Concert not found.", problemDetails.GetProperty("detail").GetString());
         Assert.Equal("/test", problemDetails.GetProperty("instance").GetString());
     }
