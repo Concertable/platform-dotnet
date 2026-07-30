@@ -7,9 +7,6 @@ namespace Concertable.Shared.Api.Results;
 
 internal static class ErrorHttpExtensions
 {
-    private const string CodeExtensionKey = "code";
-    private const string ErrorsExtensionKey = "errors";
-
     private static readonly FrozenDictionary<ErrorKind, HttpStatusCode> httpStatusCodes =
         new Dictionary<ErrorKind, HttpStatusCode>
         {
@@ -26,10 +23,10 @@ internal static class ErrorHttpExtensions
         var descriptor = error.Descriptor;
         var statusCode = httpStatusCodes[descriptor.Kind];
         var problemDetails = ApplicationProblemDetails.Create(statusCode, descriptor.Message);
-        problemDetails.Extensions[CodeExtensionKey] = descriptor.Code;
+        problemDetails.Extensions[ApplicationProblemDetails.CodeExtensionKey] = descriptor.Code;
 
         if (descriptor is ValidationErrorDescriptor validation)
-            problemDetails.Extensions[ErrorsExtensionKey] = validation.Errors;
+            problemDetails.Extensions[ApplicationProblemDetails.ErrorsExtensionKey] = validation.Errors;
 
         return new ApplicationErrorResult(problemDetails);
     }

@@ -50,6 +50,9 @@ public sealed class GlobalExceptionHandlerTests
             ReasonPhrases.GetReasonPhrase((int)HttpStatusCode.InternalServerError),
             problemDetails.GetProperty("title").GetString());
         Assert.Equal("An unexpected error occurred.", problemDetails.GetProperty("detail").GetString());
+        Assert.Equal(
+            context.TraceIdentifier,
+            problemDetails.GetProperty("traceId").GetString());
         Assert.False(problemDetails.TryGetProperty("exceptionType", out _));
         Assert.False(problemDetails.TryGetProperty("stackTrace", out _));
     }
@@ -155,11 +158,110 @@ public sealed class GlobalExceptionHandlerTests
         Assert.Equal("/test", problemDetails.GetProperty("instance").GetString());
     }
 
-    private static GlobalExceptionHandler CreateHandler(string environmentName)
+    [Fact]
+    public async Task TryHandleAsync_DependencyUnavailable_ReturnsSafeServiceUnavailable()
+    {
+        var handler = CreateHandler(Environments.Production);
+        var context = CreateContext();
+
+        await handler.TryHandleAsync(
+            context,
+            new DependencyUnavailableException(
+                "Payment",
+                new InvalidOperationException("Sensitive provider detail.")),
+            CancellationToken.None);
+
+        var problemDetails = await ReadResponseAsync(context);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
+        Assert.Equal(
+            ReasonPhrases.GetReasonPhrase((int)HttpStatusCode.ServiceUnavailable),
+            problemDetails.GetProperty("title").GetString());
+        Assert.Equal(
+            "A required service is temporarily unavailable.",
+            problemDetails.GetProperty("detail").GetString());
+        Assert.Equal(
+            "dependency.unavailable",
+            problemDetails.GetProperty("code").GetString());
+        Assert.DoesNotContain(
+            "Sensitive provider detail.",
+            problemDetails.GetRawText(),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_DependencyTimeout_ReturnsSafeGatewayTimeout()
+    {
+        var handler = CreateHandler(Environments.Production);
+        var context = CreateContext();
+
+        await handler.TryHandleAsync(
+            context,
+            new DependencyTimeoutException(
+                "Payment",
+                new TimeoutException("Sensitive provider detail.")),
+            CancellationToken.None);
+
+        var problemDetails = await ReadResponseAsync(context);
+        Assert.Equal(StatusCodes.Status504GatewayTimeout, context.Response.StatusCode);
+        Assert.Equal(
+            ReasonPhrases.GetReasonPhrase((int)HttpStatusCode.GatewayTimeout),
+            problemDetails.GetProperty("title").GetString());
+        Assert.Equal(
+            "A required service did not respond in time.",
+            problemDetails.GetProperty("detail").GetString());
+        Assert.Equal(
+            "dependency.timeout",
+            problemDetails.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_UnclassifiedTimeout_ReturnsSafeInternalServerError()
+    {
+        var handler = CreateHandler(Environments.Production);
+        var context = CreateContext();
+
+        await handler.TryHandleAsync(
+            context,
+            new TimeoutException("Sensitive provider detail."),
+            CancellationToken.None);
+
+        var problemDetails = await ReadResponseAsync(context);
+        Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
+        Assert.Equal(
+            "An unexpected error occurred.",
+            problemDetails.GetProperty("detail").GetString());
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_Customizer_AppliesToExceptionProblemDetails()
+    {
+        var handler = CreateHandler(
+            Environments.Production,
+            options => options.CustomizeProblemDetails = problemContext =>
+            {
+                problemContext.ProblemDetails.Extensions["customized"] = true;
+                problemContext.ProblemDetails.Extensions["hasException"] =
+                    problemContext.Exception is not null;
+            });
+        var context = CreateContext();
+
+        await handler.TryHandleAsync(
+            context,
+            new InvalidOperationException("Sensitive detail."),
+            CancellationToken.None);
+
+        var problemDetails = await ReadResponseAsync(context);
+        Assert.True(problemDetails.GetProperty("customized").GetBoolean());
+        Assert.True(problemDetails.GetProperty("hasException").GetBoolean());
+    }
+
+    private static GlobalExceptionHandler CreateHandler(
+        string environmentName,
+        Action<ProblemDetailsOptions>? configure = null)
     {
         var services = new ServiceCollection();
         services.AddOptions();
-        services.AddProblemDetails();
+        services.AddProblemDetails(options => configure?.Invoke(options));
         var provider = services.BuildServiceProvider();
         return new(
             NullLogger<GlobalExceptionHandler>.Instance,
@@ -174,6 +276,7 @@ public sealed class GlobalExceptionHandlerTests
     {
         var context = new DefaultHttpContext();
         context.Request.Path = "/test";
+        context.TraceIdentifier = "trace-123";
         context.Response.Body = new MemoryStream();
         return context;
     }

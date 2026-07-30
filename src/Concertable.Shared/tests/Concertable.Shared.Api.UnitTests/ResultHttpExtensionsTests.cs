@@ -7,8 +7,10 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Mime;
+using System.Text.Json;
 
 namespace Concertable.Shared.Api.UnitTests;
 
@@ -142,16 +144,22 @@ public sealed class ResultHttpExtensionsTests
     }
 
     [Fact]
-    public async Task ToOkActionResult_FailureExecution_SetsInstanceAndProblemContentType()
+    public async Task ToOkActionResult_FailureExecution_AppliesSharedProblemDetailsPolicy()
     {
         var error = new TestError(
             new ErrorDescriptor("test.not_found", "Not found.", ErrorKind.NotFound));
         var result = Result.Failure<string, TestError>(error);
-        var services = new ServiceCollection()
-            .AddLogging()
-            .AddControllers()
-            .Services
-            .BuildServiceProvider();
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddLogging();
+        serviceCollection.AddControllers();
+        serviceCollection.AddProblemDetails(
+            options => options.CustomizeProblemDetails = problemContext =>
+            {
+                problemContext.ProblemDetails.Extensions["customized"] = true;
+                problemContext.ProblemDetails.Extensions["hasException"] =
+                    problemContext.Exception is not null;
+            });
+        var services = serviceCollection.BuildServiceProvider();
         var context = new DefaultHttpContext
         {
             RequestServices = services,
@@ -161,6 +169,7 @@ public sealed class ResultHttpExtensionsTests
             }
         };
         context.Request.Path = "/test";
+        context.TraceIdentifier = "trace-123";
         var actionContext = new ActionContext(
             context,
             new RouteData(),
@@ -170,9 +179,17 @@ public sealed class ResultHttpExtensionsTests
         var objectResult = Assert.IsAssignableFrom<ObjectResult>(actionResult.Result);
         await objectResult.ExecuteResultAsync(actionContext);
 
+        context.Response.Body.Position = 0;
+        using var document = await JsonDocument.ParseAsync(context.Response.Body);
+        var response = document.RootElement;
         var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
         Assert.Equal("/test", problemDetails.Instance);
-        Assert.StartsWith(MediaTypeNames.Application.ProblemJson, context.Response.ContentType);
+        Assert.Equal(
+            Activity.Current?.Id ?? "trace-123",
+            response.GetProperty("traceId").GetString());
+        Assert.True(response.GetProperty("customized").GetBoolean());
+        Assert.False(response.GetProperty("hasException").GetBoolean());
+        Assert.Equal(MediaTypeNames.Application.ProblemJson, context.Response.ContentType);
     }
 
     private sealed record TestError(ErrorDescriptor Descriptor) : IError;
