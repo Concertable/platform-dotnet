@@ -14,7 +14,6 @@ public static class ServiceCollectionExtensions
         {
             services.AddScoped<SmtpEmailTransport>();
             services.AddScoped<IEmailTransport>(sp => sp.GetRequiredService<SmtpEmailTransport>());
-            // Transitional: IEmailSender stays synchronous until callers stage sends via the outbox.
             services.AddScoped<IEmailSender>(sp => sp.GetRequiredService<SmtpEmailTransport>());
         }
         else
@@ -28,6 +27,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIntegrationCommandHandler<SendEmailCommand>, SendEmailCommandHandler>();
         services.AddScoped<IIntegrationCommandHandler<SendVerificationEmailCommand>, SendVerificationEmailCommandHandler>();
 
+        return services;
+    }
+
+    public static IServiceCollection UseOutboxEmailSender(this IServiceCollection services)
+    {
+        services.AddScoped<IEmailSender, OutboxEmailSender>();
         return services;
     }
 }

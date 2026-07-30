@@ -40,6 +40,7 @@ public static class AppHostConstants
     {
         private const string Prefix = "concertable-";
 
+        public const string Auth = Prefix + "auth";
         public const string B2B = Prefix + "b2b";
         public const string Customer = Prefix + "customer";
         public const string Search = Prefix + "search";
