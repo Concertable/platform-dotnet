@@ -1,4 +1,7 @@
+using Concertable.Shared.Api.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net.Mime;
 
 namespace Concertable.Shared.Api.Results;
@@ -12,10 +15,17 @@ internal sealed class ApplicationErrorResult : ObjectResult
         ContentTypes.Add(MediaTypeNames.Application.ProblemJson);
     }
 
-    public override Task ExecuteResultAsync(ActionContext context)
+    public override async Task ExecuteResultAsync(ActionContext context)
     {
         var problemDetails = (ProblemDetails)Value!;
-        problemDetails.Instance = context.HttpContext.Request.Path;
-        return base.ExecuteResultAsync(context);
+        var problemDetailsService = context.HttpContext.RequestServices
+            .GetRequiredService<IProblemDetailsService>();
+
+        await ApplicationProblemDetails
+            .WriteAsync(
+                context.HttpContext,
+                problemDetailsService,
+                problemDetails)
+            .ConfigureAwait(false);
     }
 }

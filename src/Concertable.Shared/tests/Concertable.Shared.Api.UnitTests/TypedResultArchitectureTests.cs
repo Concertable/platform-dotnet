@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace Concertable.Shared.Api.UnitTests;
 
@@ -32,6 +33,24 @@ public sealed partial class TypedResultArchitectureTests
             .ToArray();
 
         Assert.Empty(unions);
+    }
+
+    [Fact]
+    public void SharedProduction_DoesNotReferenceDunet()
+    {
+        var sharedSource = Path.Combine(FindApiRoot(), "Concertable.Shared", "src");
+        var projects = Directory
+            .EnumerateFiles(sharedSource, "*.csproj", SearchOption.AllDirectories)
+            .Where(path => XDocument
+                .Load(path)
+                .Descendants("PackageReference")
+                .Any(reference => string.Equals(
+                    (string?)reference.Attribute("Include"),
+                    "Dunet",
+                    StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+
+        Assert.Empty(projects);
     }
 
     private static bool IsProductionSource(string path)

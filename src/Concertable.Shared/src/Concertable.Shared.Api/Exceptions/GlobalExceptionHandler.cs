@@ -47,20 +47,25 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 http.StatusCode,
                 http.Title,
                 http.Message),
+            DependencyUnavailableException => CreateDependencyProblemDetails(
+                HttpStatusCode.ServiceUnavailable,
+                "A required service is temporarily unavailable.",
+                "dependency.unavailable"),
+            DependencyTimeoutException => CreateDependencyProblemDetails(
+                HttpStatusCode.GatewayTimeout,
+                "A required service did not respond in time.",
+                "dependency.timeout"),
             _ => CreateInternalServerError(exception)
         };
 
-        problemDetails.Instance = httpContext.Request.Path;
-        httpContext.Response.StatusCode = problemDetails.Status!.Value;
-
         logger.UnhandledException(exception);
 
-        await problemDetailsService
-            .WriteAsync(new ProblemDetailsContext
-            {
-                HttpContext = httpContext,
-                ProblemDetails = problemDetails
-            })
+        await ApplicationProblemDetails
+            .WriteAsync(
+                httpContext,
+                problemDetailsService,
+                problemDetails,
+                exception)
             .ConfigureAwait(false);
 
         return true;
@@ -72,7 +77,18 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             exception.StatusCode,
             exception.Title,
             exception.Message);
-        problemDetails.Extensions["errors"] = exception.ValidationErrors!;
+        problemDetails.Extensions[ApplicationProblemDetails.ErrorsExtensionKey] =
+            exception.ValidationErrors!;
+        return problemDetails;
+    }
+
+    private static ProblemDetails CreateDependencyProblemDetails(
+        HttpStatusCode statusCode,
+        string detail,
+        string code)
+    {
+        var problemDetails = ApplicationProblemDetails.Create(statusCode, detail);
+        problemDetails.Extensions[ApplicationProblemDetails.CodeExtensionKey] = code;
         return problemDetails;
     }
 
