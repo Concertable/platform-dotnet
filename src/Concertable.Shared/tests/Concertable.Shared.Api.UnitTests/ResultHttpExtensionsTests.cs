@@ -192,5 +192,49 @@ public sealed class ResultHttpExtensionsTests
         Assert.Equal(MediaTypeNames.Application.ProblemJson, context.Response.ContentType);
     }
 
+    [Fact]
+    public async Task ToOkActionResult_UnsupportedAccept_SerializesSelectedProblemDetails()
+    {
+        var error = new TestError(
+            new ErrorDescriptor("test.not_found", "Not found.", ErrorKind.NotFound));
+        var result = Result.Failure<string, TestError>(error);
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddLogging();
+        serviceCollection.AddControllers();
+        serviceCollection.AddProblemDetails();
+        var services = serviceCollection.BuildServiceProvider();
+        var context = new DefaultHttpContext
+        {
+            RequestServices = services,
+            Response =
+            {
+                Body = new MemoryStream()
+            }
+        };
+        context.Request.Headers.Accept = MediaTypeNames.Application.Xml;
+        context.Request.Path = "/test";
+        context.TraceIdentifier = "trace-123";
+        var actionContext = new ActionContext(
+            context,
+            new RouteData(),
+            new ActionDescriptor());
+
+        var actionResult = result.ToOkActionResult();
+        var objectResult = Assert.IsAssignableFrom<ObjectResult>(actionResult.Result);
+        await objectResult.ExecuteResultAsync(actionContext);
+
+        context.Response.Body.Position = 0;
+        using var document = await JsonDocument.ParseAsync(context.Response.Body);
+        var response = document.RootElement;
+        Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
+        Assert.Equal(MediaTypeNames.Application.ProblemJson, context.Response.ContentType);
+        Assert.Equal("Not found.", response.GetProperty("detail").GetString());
+        Assert.Equal("test.not_found", response.GetProperty("code").GetString());
+        Assert.Equal("/test", response.GetProperty("instance").GetString());
+        Assert.Equal(
+            Activity.Current?.Id ?? "trace-123",
+            response.GetProperty("traceId").GetString());
+    }
+
     private sealed record TestError(ErrorDescriptor Descriptor) : IError;
 }

@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Net;
+using System.Net.Mime;
 using System.Text.Json;
 
 namespace Concertable.Shared.Api.UnitTests;
@@ -253,6 +254,36 @@ public sealed class GlobalExceptionHandlerTests
         var problemDetails = await ReadResponseAsync(context);
         Assert.True(problemDetails.GetProperty("customized").GetBoolean());
         Assert.True(problemDetails.GetProperty("hasException").GetBoolean());
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_UnsupportedAccept_SerializesSelectedProblemDetails()
+    {
+        var handler = CreateHandler(Environments.Production);
+        var context = CreateContext();
+        context.Request.Headers.Accept = MediaTypeNames.Application.Xml;
+
+        var handled = await handler.TryHandleAsync(
+            context,
+            new DependencyUnavailableException(
+                "Payment",
+                new InvalidOperationException("Sensitive provider detail.")),
+            CancellationToken.None);
+
+        var problemDetails = await ReadResponseAsync(context);
+        Assert.True(handled);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
+        Assert.Equal(MediaTypeNames.Application.ProblemJson, context.Response.ContentType);
+        Assert.Equal(
+            "A required service is temporarily unavailable.",
+            problemDetails.GetProperty("detail").GetString());
+        Assert.Equal(
+            "dependency.unavailable",
+            problemDetails.GetProperty("code").GetString());
+        Assert.Equal("/test", problemDetails.GetProperty("instance").GetString());
+        Assert.Equal(
+            context.TraceIdentifier,
+            problemDetails.GetProperty("traceId").GetString());
     }
 
     private static GlobalExceptionHandler CreateHandler(
