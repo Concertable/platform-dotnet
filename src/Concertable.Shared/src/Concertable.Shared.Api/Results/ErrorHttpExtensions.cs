@@ -1,7 +1,7 @@
 using Concertable.Kernel.Errors;
 using Concertable.Shared.Api.Http;
-using Microsoft.AspNetCore.Http;
 using System.Collections.Frozen;
+using System.Net;
 
 namespace Concertable.Shared.Api.Results;
 
@@ -10,15 +10,15 @@ internal static class ErrorHttpExtensions
     private const string CodeExtensionKey = "code";
     private const string ErrorsExtensionKey = "errors";
 
-    private static readonly FrozenDictionary<ErrorKind, int> httpStatusCodes =
-        new Dictionary<ErrorKind, int>
+    private static readonly FrozenDictionary<ErrorKind, HttpStatusCode> httpStatusCodes =
+        new Dictionary<ErrorKind, HttpStatusCode>
         {
-            [ErrorKind.Invalid] = StatusCodes.Status400BadRequest,
-            [ErrorKind.NotFound] = StatusCodes.Status404NotFound,
-            [ErrorKind.Conflict] = StatusCodes.Status409Conflict,
-            [ErrorKind.Unauthenticated] = StatusCodes.Status401Unauthorized,
-            [ErrorKind.Forbidden] = StatusCodes.Status403Forbidden,
-            [ErrorKind.PaymentRequired] = StatusCodes.Status402PaymentRequired
+            [ErrorKind.Invalid] = HttpStatusCode.BadRequest,
+            [ErrorKind.NotFound] = HttpStatusCode.NotFound,
+            [ErrorKind.Conflict] = HttpStatusCode.Conflict,
+            [ErrorKind.Unauthenticated] = HttpStatusCode.Unauthorized,
+            [ErrorKind.Forbidden] = HttpStatusCode.Forbidden,
+            [ErrorKind.PaymentRequired] = HttpStatusCode.PaymentRequired
         }.ToFrozenDictionary();
 
     internal static ApplicationErrorResult ToProblemActionResult(this IError error)
