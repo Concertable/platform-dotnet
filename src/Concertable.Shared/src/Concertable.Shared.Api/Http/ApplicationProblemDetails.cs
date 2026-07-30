@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.WebUtilities;
 using System.Net;
 
 namespace Concertable.Shared.Api.Http;
@@ -9,7 +8,7 @@ internal static class ApplicationProblemDetails
     internal static ProblemDetails Create(HttpStatusCode statusCode, string detail) =>
         Create(
             statusCode,
-            ReasonPhrases.GetReasonPhrase((int)statusCode),
+            statusCode.ToReasonPhrase(),
             detail);
 
     internal static ProblemDetails Create(
