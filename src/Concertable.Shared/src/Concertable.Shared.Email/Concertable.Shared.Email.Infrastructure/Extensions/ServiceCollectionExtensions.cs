@@ -14,19 +14,25 @@ public static class ServiceCollectionExtensions
         {
             services.AddScoped<SmtpEmailTransport>();
             services.AddScoped<IEmailTransport>(sp => sp.GetRequiredService<SmtpEmailTransport>());
+            services.AddScoped<IEmailSender>(sp => sp.GetRequiredService<SmtpEmailTransport>());
         }
         else
         {
             services.AddHttpClient();
             services.AddScoped<FakeEmailTransport>();
             services.AddScoped<IEmailTransport>(sp => sp.GetRequiredService<FakeEmailTransport>());
+            services.AddScoped<IEmailSender>(sp => sp.GetRequiredService<FakeEmailTransport>());
         }
-
-        services.AddScoped<IEmailSender, OutboxEmailSender>();
 
         services.AddScoped<IIntegrationCommandHandler<SendEmailCommand>, SendEmailCommandHandler>();
         services.AddScoped<IIntegrationCommandHandler<SendVerificationEmailCommand>, SendVerificationEmailCommandHandler>();
 
+        return services;
+    }
+
+    public static IServiceCollection UseOutboxEmailSender(this IServiceCollection services)
+    {
+        services.AddScoped<IEmailSender, OutboxEmailSender>();
         return services;
     }
 }
