@@ -1,3 +1,4 @@
+using Concertable.Kernel;
 using Concertable.Kernel.Exceptions;
 using Concertable.Shared.Api.Exceptions;
 using Microsoft.AspNetCore.Hosting;
@@ -70,6 +71,46 @@ public sealed class GlobalExceptionHandlerTests
             typeof(InvalidOperationException).FullName,
             problemDetails.GetProperty("exceptionType").GetString());
         Assert.Contains("Diagnostic detail.", problemDetails.GetProperty("stackTrace").GetString());
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_UnauthorizedAccessException_PreservesStatusAndDetail()
+    {
+        var handler = CreateHandler(Environments.Production);
+        var context = CreateContext();
+
+        await handler.TryHandleAsync(
+            context,
+            new UnauthorizedAccessException("Authentication is required."),
+            CancellationToken.None);
+
+        var problemDetails = await ReadResponseAsync(context);
+        Assert.Equal(StatusCodes.Status401Unauthorized, context.Response.StatusCode);
+        Assert.Equal(
+            ReasonPhrases.GetReasonPhrase((int)HttpStatusCode.Unauthorized),
+            problemDetails.GetProperty("title").GetString());
+        Assert.Equal("Authentication is required.", problemDetails.GetProperty("detail").GetString());
+    }
+
+    [Fact]
+    public async Task TryHandleAsync_DomainException_PreservesStatusAndDetail()
+    {
+        var handler = CreateHandler(Environments.Production);
+        var context = CreateContext();
+
+        await handler.TryHandleAsync(
+            context,
+            new DomainException("The operation violates a domain rule."),
+            CancellationToken.None);
+
+        var problemDetails = await ReadResponseAsync(context);
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+        Assert.Equal(
+            ReasonPhrases.GetReasonPhrase((int)HttpStatusCode.BadRequest),
+            problemDetails.GetProperty("title").GetString());
+        Assert.Equal(
+            "The operation violates a domain rule.",
+            problemDetails.GetProperty("detail").GetString());
     }
 
     [Fact]
