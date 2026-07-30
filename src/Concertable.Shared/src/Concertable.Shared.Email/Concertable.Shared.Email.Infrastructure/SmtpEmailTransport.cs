@@ -6,7 +6,7 @@ using MimeKit;
 
 namespace Concertable.Shared.Email.Infrastructure;
 
-internal sealed class SmtpEmailTransport : IEmailTransport
+internal sealed class SmtpEmailTransport : IEmailTransport, IEmailSender
 {
     private readonly IConfiguration configuration;
 
