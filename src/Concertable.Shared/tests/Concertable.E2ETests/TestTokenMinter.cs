@@ -21,7 +21,25 @@ public sealed class TestTokenMinter : IDisposable
 
     public async Task<string> MintAsync(string email, string password)
     {
-        var response = await httpClient.PostAsync($"{authBaseUrl}/connect/token",
+        using var response = await RequestAsync(email, password);
+        response.EnsureSuccessStatusCode();
+
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var doc = await JsonDocument.ParseAsync(stream);
+        return doc.RootElement.GetProperty("access_token").GetString()!;
+    }
+
+    public Task WaitUntilMintableAsync(string email, string password, IPollingService polling) =>
+        polling.UntilAsync(
+            async () =>
+            {
+                using var response = await RequestAsync(email, password);
+                return response.IsSuccessStatusCode;
+            },
+            timeout: TimeSpan.FromSeconds(30));
+
+    private Task<HttpResponseMessage> RequestAsync(string email, string password) =>
+        httpClient.PostAsync($"{authBaseUrl}/connect/token",
             new FormUrlEncodedContent([
                 new("grant_type", "password"),
                 new("client_id", "concertable-test"),
@@ -29,12 +47,6 @@ public sealed class TestTokenMinter : IDisposable
                 new("password", password),
                 new("scope", "concertable.b2b.api concertable.customer.api concertable.search.api"),
             ]));
-        response.EnsureSuccessStatusCode();
-
-        using var stream = await response.Content.ReadAsStreamAsync();
-        using var doc = await JsonDocument.ParseAsync(stream);
-        return doc.RootElement.GetProperty("access_token").GetString()!;
-    }
 
     public void Dispose() => httpClient.Dispose();
 }
