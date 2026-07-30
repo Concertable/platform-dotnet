@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Concertable.Messaging\Concertable.Messaging.AzureServiceBus\Concertable.Messaging.AzureServiceBus.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\Concertable.Shared\src\Concertable.Shared.Email\Concertable.Shared.Email.Application\Concertable.Shared.Email.Application.csproj" IsAspireProjectResource="false" />
   </ItemGroup>
 
 </Project>
