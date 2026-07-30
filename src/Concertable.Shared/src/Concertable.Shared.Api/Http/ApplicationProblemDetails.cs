@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Mime;
+using System.Text.Json;
 
 namespace Concertable.Shared.Api.Http;
 
@@ -41,13 +43,22 @@ internal static class ApplicationProblemDetails
             Activity.Current?.Id ?? httpContext.TraceIdentifier;
         httpContext.Response.StatusCode = statusCode;
 
-        await problemDetailsService
-            .WriteAsync(new ProblemDetailsContext
-            {
-                HttpContext = httpContext,
-                ProblemDetails = problemDetails,
-                Exception = exception
-            })
+        var context = new ProblemDetailsContext
+        {
+            HttpContext = httpContext,
+            ProblemDetails = problemDetails,
+            Exception = exception
+        };
+
+        if (await problemDetailsService.TryWriteAsync(context).ConfigureAwait(false))
+            return;
+
+        await httpContext.Response
+            .WriteAsJsonAsync(
+                problemDetails,
+                JsonSerializerOptions.Web,
+                MediaTypeNames.Application.ProblemJson,
+                httpContext.RequestAborted)
             .ConfigureAwait(false);
     }
 }
