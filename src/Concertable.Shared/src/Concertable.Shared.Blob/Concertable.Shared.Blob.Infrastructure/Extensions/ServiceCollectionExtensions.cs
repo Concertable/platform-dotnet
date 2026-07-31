@@ -9,7 +9,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddSharedBlob(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<BlobStorageSettings>(configuration.GetSection("BlobStorage"));
+        services.Configure<BlobStorageSettings>(configuration.GetSection(BlobStorageSettings.SectionName));
 
         var useRealBlob = configuration.GetSection("ExternalServices").GetValue<bool>("UseRealBlob");
         if (useRealBlob)
