@@ -5,11 +5,8 @@ namespace Concertable.DataAccess.Infrastructure.Extensions;
 
 public static class DbUpdateExceptionExtensions
 {
-    public static bool IsDuplicateKey(this DbUpdateException ex)
-    {
-        return ex.InnerException is SqlException sqlEx &&
-            (sqlEx.Number == 2601 || sqlEx.Number == 2627);
-    }
+    public static bool IsDuplicateKey(this DbUpdateException ex) =>
+        ex.InnerException is SqlException sqlEx && sqlEx.IsDuplicateKey();
 
     public static void DiscardFailedChanges(this DbUpdateException ex)
     {
