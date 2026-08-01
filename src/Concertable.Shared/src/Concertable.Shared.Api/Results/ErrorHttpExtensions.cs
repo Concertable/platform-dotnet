@@ -20,12 +20,12 @@ internal static class ErrorHttpExtensions
 
     internal static ApplicationErrorResult ToProblemActionResult(this IError error)
     {
-        var descriptor = error.Descriptor;
-        var statusCode = httpStatusCodes[descriptor.Kind];
-        var problemDetails = ApplicationProblemDetails.Create(statusCode, descriptor.Message);
-        problemDetails.Extensions[ApplicationProblemDetails.CodeExtensionKey] = descriptor.Code;
+        var definition = error.Definition;
+        var statusCode = httpStatusCodes[definition.Kind];
+        var problemDetails = ApplicationProblemDetails.Create(statusCode, definition.Message);
+        problemDetails.Extensions[ApplicationProblemDetails.CodeExtensionKey] = definition.Code;
 
-        if (descriptor is ValidationErrorDescriptor validation)
+        if (definition is ValidationErrorDefinition validation)
             problemDetails.Extensions[ApplicationProblemDetails.ErrorsExtensionKey] = validation.Errors;
 
         return new ApplicationErrorResult(problemDetails);

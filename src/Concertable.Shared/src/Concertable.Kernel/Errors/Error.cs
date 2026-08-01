@@ -12,11 +12,38 @@ public enum ErrorKind
     PaymentRequired
 }
 
-public partial record ErrorDescriptor(
+public partial record ErrorDefinition(
     string Code,
     string Message,
     ErrorKind Kind)
 {
+    public static ErrorDefinition Invalid(string code, string message) =>
+        new(code, message, ErrorKind.Invalid);
+
+    public static ErrorDefinition NotFound(string code, string message) =>
+        new(code, message, ErrorKind.NotFound);
+
+    public static ErrorDefinition NotFound<T>(string code) =>
+        NotFound(code, $"{DisplayNameResolver.Of<T>()} not found.");
+
+    public static ErrorDefinition Conflict(string code, string message) =>
+        new(code, message, ErrorKind.Conflict);
+
+    public static ErrorDefinition Unauthenticated(string code, string message) =>
+        new(code, message, ErrorKind.Unauthenticated);
+
+    public static ErrorDefinition Forbidden(string code, string message) =>
+        new(code, message, ErrorKind.Forbidden);
+
+    public static ErrorDefinition PaymentRequired(string code, string message) =>
+        new(code, message, ErrorKind.PaymentRequired);
+
+    public static ValidationErrorDefinition Validation(
+        string code,
+        string message,
+        IReadOnlyDictionary<string, string[]> errors) =>
+        new(code, message, errors);
+
     private string code = ValidateCode(Code);
     private string message = ValidateMessage(Message);
     private ErrorKind kind = ValidateKind(Kind);
@@ -71,11 +98,11 @@ public partial record ErrorDescriptor(
     private static partial Regex ErrorCodePattern();
 }
 
-public sealed record ValidationErrorDescriptor(
+public sealed record ValidationErrorDefinition(
     string Code,
     string Message,
     IReadOnlyDictionary<string, string[]> Errors)
-    : ErrorDescriptor(Code, Message, ErrorKind.Invalid)
+    : ErrorDefinition(Code, Message, ErrorKind.Invalid)
 {
     private IReadOnlyDictionary<string, string[]> errors = ValidateErrors(Errors);
 
@@ -106,5 +133,5 @@ public sealed record ValidationErrorDescriptor(
 
 public interface IError
 {
-    ErrorDescriptor Descriptor { get; }
+    ErrorDefinition Definition { get; }
 }
