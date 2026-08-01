@@ -1,6 +1,6 @@
 using Concertable.Kernel.Errors;
+using Concertable.Kernel.Functional;
 using Concertable.Shared.Api.Results;
-using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -122,7 +122,7 @@ public sealed class ResultHttpExtensionsTests
     [Fact]
     public void ToNoContentActionResult_Success_ReturnsNoContent()
     {
-        var result = UnitResult.Success<TestError>();
+        var result = Result.Success<TestError>();
 
         var actionResult = result.ToNoContentActionResult();
 
@@ -134,7 +134,7 @@ public sealed class ResultHttpExtensionsTests
     {
         var error = new TestError(
             new ErrorDefinition("test.conflict", "Conflict.", ErrorKind.Conflict));
-        var result = UnitResult.Failure(error);
+        var result = Result.Failure<Unit, TestError>(error);
 
         var actionResult = result.ToNoContentActionResult();
 
