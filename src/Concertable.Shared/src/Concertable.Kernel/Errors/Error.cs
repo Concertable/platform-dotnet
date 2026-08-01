@@ -12,33 +12,33 @@ public enum ErrorKind
     PaymentRequired
 }
 
-public partial record ErrorDescriptor(
+public partial record ErrorDefinition(
     string Code,
     string Message,
     ErrorKind Kind)
 {
-    public static ErrorDescriptor Invalid(string code, string message) =>
+    public static ErrorDefinition Invalid(string code, string message) =>
         new(code, message, ErrorKind.Invalid);
 
-    public static ErrorDescriptor NotFound(string code, string message) =>
+    public static ErrorDefinition NotFound(string code, string message) =>
         new(code, message, ErrorKind.NotFound);
 
-    public static ErrorDescriptor NotFound<T>(string code) =>
+    public static ErrorDefinition NotFound<T>(string code) =>
         NotFound(code, $"{DisplayNameResolver.Of<T>()} not found.");
 
-    public static ErrorDescriptor Conflict(string code, string message) =>
+    public static ErrorDefinition Conflict(string code, string message) =>
         new(code, message, ErrorKind.Conflict);
 
-    public static ErrorDescriptor Unauthenticated(string code, string message) =>
+    public static ErrorDefinition Unauthenticated(string code, string message) =>
         new(code, message, ErrorKind.Unauthenticated);
 
-    public static ErrorDescriptor Forbidden(string code, string message) =>
+    public static ErrorDefinition Forbidden(string code, string message) =>
         new(code, message, ErrorKind.Forbidden);
 
-    public static ErrorDescriptor PaymentRequired(string code, string message) =>
+    public static ErrorDefinition PaymentRequired(string code, string message) =>
         new(code, message, ErrorKind.PaymentRequired);
 
-    public static ValidationErrorDescriptor Validation(
+    public static ValidationErrorDefinition Validation(
         string code,
         string message,
         IReadOnlyDictionary<string, string[]> errors) =>
@@ -98,11 +98,11 @@ public partial record ErrorDescriptor(
     private static partial Regex ErrorCodePattern();
 }
 
-public sealed record ValidationErrorDescriptor(
+public sealed record ValidationErrorDefinition(
     string Code,
     string Message,
     IReadOnlyDictionary<string, string[]> Errors)
-    : ErrorDescriptor(Code, Message, ErrorKind.Invalid)
+    : ErrorDefinition(Code, Message, ErrorKind.Invalid)
 {
     private IReadOnlyDictionary<string, string[]> errors = ValidateErrors(Errors);
 
@@ -133,5 +133,6 @@ public sealed record ValidationErrorDescriptor(
 
 public interface IError
 {
-    ErrorDescriptor Descriptor { get; }
+    ErrorDefinition Definition { get; }
+    ErrorKind Kind { get; }
 }

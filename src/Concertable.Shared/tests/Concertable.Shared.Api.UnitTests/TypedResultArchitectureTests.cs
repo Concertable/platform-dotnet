@@ -67,13 +67,27 @@ public sealed partial class TypedResultArchitectureTests
     }
 
     [Fact]
-    public void DunetUnionDescriptors_UseGeneratedMatch()
+    public void DunetUnionDefinitions_UseGeneratedMatch()
     {
         var violations = EnumerateSourceFiles()
             .Select(path => new { Path = path, Source = File.ReadAllText(path) })
             .Where(file => UnionAttributePattern().IsMatch(file.Source))
             .Where(file => ErrorUnionPattern().IsMatch(file.Source))
-            .Where(file => !DescriptorMatchPattern().IsMatch(file.Source))
+            .Where(file => !DefinitionMatchPattern().IsMatch(file.Source))
+            .Select(file => file.Path)
+            .ToArray();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void DunetUnionKinds_ForwardToDefinition()
+    {
+        var violations = EnumerateSourceFiles()
+            .Select(path => new { Path = path, Source = File.ReadAllText(path) })
+            .Where(file => UnionAttributePattern().IsMatch(file.Source))
+            .Where(file => ErrorUnionPattern().IsMatch(file.Source))
+            .Where(file => !KindForwardingPattern().IsMatch(file.Source))
             .Select(file => file.Path)
             .ToArray();
 
@@ -167,8 +181,11 @@ public sealed partial class TypedResultArchitectureTests
     [GeneratedRegex(@"\bpartial\s+record\s+\w+Error\s*:\s*IError\b")]
     private static partial Regex ErrorUnionPattern();
 
-    [GeneratedRegex(@"\bDescriptor\s*=>\s*Match\s*<\s*ErrorDescriptor\s*>")]
-    private static partial Regex DescriptorMatchPattern();
+    [GeneratedRegex(@"\bDefinition\s*=>\s*Match\s*<\s*ErrorDefinition\s*>")]
+    private static partial Regex DefinitionMatchPattern();
+
+    [GeneratedRegex(@"\bKind\s*=>\s*Definition\.Kind\b")]
+    private static partial Regex KindForwardingPattern();
 
     [GeneratedRegex(@"\bnew\s+[A-Za-z_][A-Za-z0-9_]*Error\.[A-Za-z_][A-Za-z0-9_]*\s*\(")]
     private static partial Regex DirectErrorCaseConstructionPattern();
