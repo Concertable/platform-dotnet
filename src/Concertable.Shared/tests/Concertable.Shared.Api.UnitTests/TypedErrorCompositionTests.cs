@@ -1,8 +1,6 @@
-using System.ComponentModel;
 using Concertable.Kernel.Errors;
+using Concertable.Kernel.Functional;
 using Concertable.Shared.Api.Results;
-using CSharpFunctionalExtensions;
-using Dunet;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -42,7 +40,7 @@ public sealed class TypedErrorCompositionTests
     }
 
     [Fact]
-    public void MapError_DependencyFailure_ProducesOwningUnionCase()
+    public void MapError_DependencyFailure_ProducesOwningTypedError()
     {
         var dependencyResult = Result.Failure<string, PaymentFailure>(
             new PaymentFailure("payment.card_declined", "The card was declined."));
@@ -50,14 +48,15 @@ public sealed class TypedErrorCompositionTests
         var result = dependencyResult.MapError(
             failure => PurchaseError.Rejected(failure.Code, failure.Message));
 
-        var definition = result.Error.Definition;
+        Assert.True(result.TryGetError(out var error));
+        var definition = error.Definition;
         Assert.Equal("payment.card_declined", definition.Code);
         Assert.Equal("The card was declined.", definition.Message);
         Assert.Equal(ErrorKind.PaymentRequired, definition.Kind);
     }
 
     [Fact]
-    public void ToOkActionResult_UnionFailure_ReachesHttpTerminal()
+    public void ToOkActionResult_TypedFailure_ReachesHttpTerminal()
     {
         var result = Result.Failure<string, PurchaseError>(
             PurchaseError.NotFound(42));
@@ -73,33 +72,19 @@ public sealed class TypedErrorCompositionTests
     private sealed record PaymentFailure(string Code, string Message);
 }
 
-[Union]
-internal partial record PurchaseError : IError
+internal sealed record PurchaseError(ErrorDefinition Definition) : IError
 {
-    partial record ConcertNotFound(int ConcertId);
-    partial record Validation(IReadOnlyDictionary<string, string[]> Errors);
-    partial record PaymentRejected(string Code, string Message);
-
     public static PurchaseError NotFound(int concertId) =>
-        new ConcertNotFound(concertId);
+        new(ErrorDefinition.NotFound(
+            "ticket.concert_not_found",
+            "Concert not found."));
 
     public static PurchaseError Invalid(IReadOnlyDictionary<string, string[]> errors) =>
-        new Validation(errors);
-
-    public static PurchaseError Rejected(string code, string message) =>
-        new PaymentRejected(code, message);
-
-    public ErrorDefinition Definition => Match<ErrorDefinition>(
-        notFound => ErrorDefinition.NotFound<ConcertResource>(
-            "ticket.concert_not_found"),
-        validation => ErrorDefinition.Validation(
+        new(ErrorDefinition.Validation(
             "ticket.purchase_invalid",
             "The ticket purchase is invalid.",
-            validation.Errors),
-        paymentRejected => ErrorDefinition.PaymentRequired(
-            paymentRejected.Code,
-            paymentRejected.Message));
-}
+            errors));
 
-[DisplayName("Concert")]
-internal sealed class ConcertResource;
+    public static PurchaseError Rejected(string code, string message) =>
+        new(ErrorDefinition.PaymentRequired(code, message));
+}

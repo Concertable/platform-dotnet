@@ -54,6 +54,50 @@ public sealed partial class TypedResultArchitectureTests
     }
 
     [Fact]
+    public void SharedProduction_DoesNotReferenceCSharpFunctionalExtensions()
+    {
+        var sharedSource = Path.Combine(FindApiRoot(), "Concertable.Shared", "src");
+        var violations = Directory
+            .EnumerateFiles(sharedSource, "*", SearchOption.AllDirectories)
+            .Where(path => Path.GetExtension(path) is ".cs" or ".csproj")
+            .Where(path => !IsGeneratedPath(path))
+            .Where(path => File.ReadAllText(path).Contains(
+                "CSharpFunctionalExtensions",
+                StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void KernelFunctionalTypes_DoNotReferenceThirdPartyCarriers()
+    {
+        var functionalSource = Path.Combine(
+            FindApiRoot(),
+            "Concertable.Shared",
+            "src",
+            "Concertable.Kernel",
+            "Functional");
+        var prohibitedNames = new[]
+        {
+            "CSharpFunctionalExtensions",
+            "FluentResults",
+            "OneOf",
+            "ErrorOr",
+            "LanguageExt",
+            "Dunet"
+        };
+        var violations = Directory
+            .EnumerateFiles(functionalSource, "*.cs", SearchOption.AllDirectories)
+            .Where(path => prohibitedNames.Any(name => File.ReadAllText(path).Contains(
+                name,
+                StringComparison.Ordinal)))
+            .ToArray();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
     public void DunetImports_AppearOnlyInUnionDeclarationFiles()
     {
         var violations = EnumerateSourceFiles()
@@ -151,7 +195,7 @@ public sealed partial class TypedResultArchitectureTests
         throw new DirectoryNotFoundException("Could not locate api/Concertable.slnx.");
     }
 
-    [GeneratedRegex(@"\b(?:Result<[^,\r\n>]+,\s*[^>\r\n]+>|UnitResult<[^>\r\n]+>)")]
+    [GeneratedRegex(@"\bResult<[^,\r\n>]+,\s*[^>\r\n]+>")]
     private static partial Regex TypedResultPattern();
 
     [GeneratedRegex(
