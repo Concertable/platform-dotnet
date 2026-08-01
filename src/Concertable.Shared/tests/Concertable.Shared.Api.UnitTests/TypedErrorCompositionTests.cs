@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Concertable.Kernel.Errors;
 using Concertable.Shared.Api.Results;
 using CSharpFunctionalExtensions;
@@ -10,34 +11,34 @@ namespace Concertable.Shared.Api.UnitTests;
 public sealed class TypedErrorCompositionTests
 {
     [Fact]
-    public void Descriptor_ConcertNotFound_ReturnsStableNotFoundError()
+    public void Definition_ConcertNotFound_ReturnsStableNotFoundError()
     {
-        PurchaseError error = new PurchaseError.ConcertNotFound(42);
+        PurchaseError error = PurchaseError.NotFound(42);
 
-        var descriptor = error.Descriptor;
+        var definition = error.Definition;
 
-        Assert.Equal("ticket.concert_not_found", descriptor.Code);
-        Assert.Equal("Concert 42 was not found.", descriptor.Message);
-        Assert.Equal(ErrorKind.NotFound, descriptor.Kind);
-        Assert.IsNotType<ValidationErrorDescriptor>(descriptor);
+        Assert.Equal("ticket.concert_not_found", definition.Code);
+        Assert.Equal("Concert not found.", definition.Message);
+        Assert.Equal(ErrorKind.NotFound, definition.Kind);
+        Assert.IsNotType<ValidationErrorDefinition>(definition);
     }
 
     [Fact]
-    public void Descriptor_Validation_ReturnsStructuredValidationError()
+    public void Definition_Validation_ReturnsStructuredValidationError()
     {
         IReadOnlyDictionary<string, string[]> errors =
             new Dictionary<string, string[]>
             {
                 ["quantity"] = ["Quantity must be positive."]
             };
-        PurchaseError error = new PurchaseError.Validation(errors);
+        PurchaseError error = PurchaseError.Invalid(errors);
 
-        var descriptor = Assert.IsType<ValidationErrorDescriptor>(error.Descriptor);
+        var definition = Assert.IsType<ValidationErrorDefinition>(error.Definition);
 
-        Assert.Equal("ticket.purchase_invalid", descriptor.Code);
-        Assert.Equal("The ticket purchase is invalid.", descriptor.Message);
-        Assert.Equal(ErrorKind.Invalid, descriptor.Kind);
-        Assert.Same(errors, descriptor.Errors);
+        Assert.Equal("ticket.purchase_invalid", definition.Code);
+        Assert.Equal("The ticket purchase is invalid.", definition.Message);
+        Assert.Equal(ErrorKind.Invalid, definition.Kind);
+        Assert.Same(errors, definition.Errors);
     }
 
     [Fact]
@@ -47,21 +48,19 @@ public sealed class TypedErrorCompositionTests
             new PaymentFailure("payment.card_declined", "The card was declined."));
 
         var result = dependencyResult.MapError(
-            failure => (PurchaseError)new PurchaseError.PaymentRejected(
-                failure.Code,
-                failure.Message));
+            failure => PurchaseError.Rejected(failure.Code, failure.Message));
 
-        var descriptor = result.Error.Descriptor;
-        Assert.Equal("payment.card_declined", descriptor.Code);
-        Assert.Equal("The card was declined.", descriptor.Message);
-        Assert.Equal(ErrorKind.PaymentRequired, descriptor.Kind);
+        var definition = result.Error.Definition;
+        Assert.Equal("payment.card_declined", definition.Code);
+        Assert.Equal("The card was declined.", definition.Message);
+        Assert.Equal(ErrorKind.PaymentRequired, definition.Kind);
     }
 
     [Fact]
     public void ToOkActionResult_UnionFailure_ReachesHttpTerminal()
     {
         var result = Result.Failure<string, PurchaseError>(
-            new PurchaseError.ConcertNotFound(42));
+            PurchaseError.NotFound(42));
 
         var actionResult = result.ToOkActionResult();
 
@@ -81,17 +80,26 @@ internal partial record PurchaseError : IError
     partial record Validation(IReadOnlyDictionary<string, string[]> Errors);
     partial record PaymentRejected(string Code, string Message);
 
-    public ErrorDescriptor Descriptor => Match<ErrorDescriptor>(
-        notFound => new ErrorDescriptor(
-            "ticket.concert_not_found",
-            $"Concert {notFound.ConcertId} was not found.",
-            ErrorKind.NotFound),
-        validation => new ValidationErrorDescriptor(
+    public static PurchaseError NotFound(int concertId) =>
+        new ConcertNotFound(concertId);
+
+    public static PurchaseError Invalid(IReadOnlyDictionary<string, string[]> errors) =>
+        new Validation(errors);
+
+    public static PurchaseError Rejected(string code, string message) =>
+        new PaymentRejected(code, message);
+
+    public ErrorDefinition Definition => Match<ErrorDefinition>(
+        notFound => ErrorDefinition.NotFound<ConcertResource>(
+            "ticket.concert_not_found"),
+        validation => ErrorDefinition.Validation(
             "ticket.purchase_invalid",
             "The ticket purchase is invalid.",
             validation.Errors),
-        paymentRejected => new ErrorDescriptor(
+        paymentRejected => ErrorDefinition.PaymentRequired(
             paymentRejected.Code,
-            paymentRejected.Message,
-            ErrorKind.PaymentRequired));
+            paymentRejected.Message));
 }
+
+[DisplayName("Concert")]
+internal sealed class ConcertResource;

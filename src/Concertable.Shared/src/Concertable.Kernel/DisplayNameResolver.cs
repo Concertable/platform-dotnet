@@ -4,9 +4,7 @@ using System.Reflection;
 
 namespace Concertable.Kernel;
 
-/// <summary>Resolves a type's human-readable name from its <see cref="DisplayNameAttribute"/> for
-/// self-naming "not found" messages. Cached per <see cref="Type"/>: one reflection walk per distinct
-/// type, ever — sits on the already-exceptional <c>OrNotFound</c> throw path.</summary>
+/// <summary>Resolves and caches a type's required <see cref="DisplayNameAttribute"/>.</summary>
 public static class DisplayNameResolver
 {
     private static readonly ConcurrentDictionary<Type, string> Cache = new();
@@ -16,5 +14,5 @@ public static class DisplayNameResolver
     private static string Resolve(Type t)
         => t.GetCustomAttribute<DisplayNameAttribute>()?.DisplayName
            ?? throw new InvalidOperationException(
-               $"{t.Name} has no [DisplayName]; add one so OrNotFound can name it.");
+               $"{t.Name} has no [DisplayName]; add one so caller-facing errors can name it.");
 }

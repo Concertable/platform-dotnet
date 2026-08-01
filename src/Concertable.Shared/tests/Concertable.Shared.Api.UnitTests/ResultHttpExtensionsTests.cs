@@ -27,7 +27,7 @@ public sealed class ResultHttpExtensionsTests
         ErrorKind kind,
         HttpStatusCode expectedStatus)
     {
-        var error = new TestError(new ErrorDescriptor("test.code", "Safe detail.", kind));
+        var error = new TestError(new ErrorDefinition("test.code", "Safe detail.", kind));
         var result = Result.Failure<string, TestError>(error);
 
         var actionResult = result.ToOkActionResult();
@@ -54,7 +54,7 @@ public sealed class ResultHttpExtensionsTests
                 ["quantity"] = ["Quantity must be positive."]
             };
         var error = new TestError(
-            new ValidationErrorDescriptor(
+            new ValidationErrorDefinition(
                 "ticket.purchase_invalid",
                 "The ticket purchase is invalid.",
                 validationErrors));
@@ -72,7 +72,7 @@ public sealed class ResultHttpExtensionsTests
     {
         foreach (var kind in Enum.GetValues<ErrorKind>())
         {
-            var error = new TestError(new ErrorDescriptor("test.code", "Safe detail.", kind));
+            var error = new TestError(new ErrorDefinition("test.code", "Safe detail.", kind));
             var result = Result.Failure<string, TestError>(error);
 
             var exception = Record.Exception(() => result.ToOkActionResult());
@@ -133,7 +133,7 @@ public sealed class ResultHttpExtensionsTests
     public void ToNoContentActionResult_Failure_ReturnsProblemDetails()
     {
         var error = new TestError(
-            new ErrorDescriptor("test.conflict", "Conflict.", ErrorKind.Conflict));
+            new ErrorDefinition("test.conflict", "Conflict.", ErrorKind.Conflict));
         var result = UnitResult.Failure(error);
 
         var actionResult = result.ToNoContentActionResult();
@@ -147,7 +147,7 @@ public sealed class ResultHttpExtensionsTests
     public async Task ToOkActionResult_FailureExecution_AppliesSharedProblemDetailsPolicy()
     {
         var error = new TestError(
-            new ErrorDescriptor("test.not_found", "Not found.", ErrorKind.NotFound));
+            new ErrorDefinition("test.not_found", "Not found.", ErrorKind.NotFound));
         var result = Result.Failure<string, TestError>(error);
         var serviceCollection = new ServiceCollection();
         serviceCollection.AddLogging();
@@ -196,7 +196,7 @@ public sealed class ResultHttpExtensionsTests
     public async Task ToOkActionResult_UnsupportedAccept_SerializesSelectedProblemDetails()
     {
         var error = new TestError(
-            new ErrorDescriptor("test.not_found", "Not found.", ErrorKind.NotFound));
+            new ErrorDefinition("test.not_found", "Not found.", ErrorKind.NotFound));
         var result = Result.Failure<string, TestError>(error);
         var serviceCollection = new ServiceCollection();
         serviceCollection.AddLogging();
@@ -236,5 +236,5 @@ public sealed class ResultHttpExtensionsTests
             response.GetProperty("traceId").GetString());
     }
 
-    private sealed record TestError(ErrorDescriptor Descriptor) : IError;
+    private sealed record TestError(ErrorDefinition Definition) : IError;
 }
