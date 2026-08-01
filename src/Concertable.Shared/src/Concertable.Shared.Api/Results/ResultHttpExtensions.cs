@@ -16,7 +16,7 @@ public static class ResultHttpExtensions
             error => error.ToProblemActionResult());
 
     public static IActionResult ToActionResult<TError>(
-        this Result<TError> result,
+        this UnitResult<TError> result,
         Func<IActionResult> onSuccess)
         where TError : IError =>
         result.Match<IActionResult>(
@@ -44,7 +44,7 @@ public static class ResultHttpExtensions
                 value));
 
     public static IActionResult ToNoContentActionResult<TError>(
-        this Result<TError> result)
+        this UnitResult<TError> result)
         where TError : IError =>
         result.ToActionResult(
             () => new NoContentResult());

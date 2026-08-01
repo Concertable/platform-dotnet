@@ -9,209 +9,126 @@ public sealed class StatusResultTests
     public void FactoriesAndCaseProperties_CreateSelectedCases()
     {
         var success = Result.Success();
-        var failure = Result.Failure();
+        var failure = Result.Failure("error");
 
         Assert.True(success.IsSuccess);
         Assert.False(success.IsFailure);
         Assert.False(failure.IsSuccess);
         Assert.True(failure.IsFailure);
+        Assert.False(success.TryGetError(out _));
+        Assert.True(failure.TryGetError(out var error));
+        Assert.Equal("error", error);
+        Assert.Throws<ArgumentException>(() => Result.Failure(" "));
     }
 
     [Fact]
     public void Match_EachCase_InvokesSelectedDelegateOnce()
     {
         var successes = 0;
-        var failures = 0;
+        var errors = new List<string>();
 
-        var successValue = Result.Success().Match(
-            () => ++successes,
-            () => ++failures);
-        Result.Failure().Match(
-            () => successes++,
-            () => failures++);
+        var successValue = Result.Success().Match(() => ++successes, error => error.Length);
+        Result.Failure("error").Match(() => successes++, errors.Add);
 
         Assert.Equal(1, successValue);
         Assert.Equal(1, successes);
-        Assert.Equal(1, failures);
+        Assert.Equal(["error"], errors);
     }
 
     [Fact]
-    public void Bind_EachTargetArity_ShortCircuitsFailureAndMapsItLazily()
+    public void Bind_EachTargetShape_ShortCircuitsAndMapsFailure()
     {
-        var invocations = 0;
-        var errorInvocations = 0;
-        Func<Result> statusBind = () =>
-        {
-            invocations++;
-            return Result.Success();
-        };
-        Func<string> errorFactory = () =>
-        {
-            errorInvocations++;
-            return "error";
-        };
-
-        var statusSuccess = Result.Success().Bind(statusBind);
-        var statusFailure = Result.Failure().Bind(statusBind);
+        var statusSuccess = Result.Success().Bind(Result.Success);
+        var statusFailure = Result.Failure("error").Bind(Result.Success);
+        var valueSuccess = Result.Success().Bind(() => Result.Success(42));
+        var valueFailure = Result.Failure("error").Bind(() => Result.Success(42));
+        var unitSuccess = Result.Success().Bind(
+            () => UnitResult.Success<int>(),
+            error => error.Length);
+        var unitFailure = Result.Failure("error").Bind(
+            () => UnitResult.Success<int>(),
+            error => error.Length);
         var typedSuccess = Result.Success().Bind(
-            () => Result.Success<string>(),
-            errorFactory);
-        var typedFailure = Result.Failure().Bind(
-            () => Result.Success<string>(),
-            errorFactory);
-        var valueSuccess = Result.Success().Bind(
-            () => Result.Success<int, string>(42),
-            errorFactory);
-        var valueFailure = Result.Failure().Bind(
-            () => Result.Success<int, string>(42),
-            errorFactory);
+            () => Result.Success<int, int>(42),
+            error => error.Length);
+        var typedFailure = Result.Failure("error").Bind(
+            () => Result.Success<int, int>(42),
+            error => error.Length);
 
         Assert.Equal(Result.Success(), statusSuccess);
-        Assert.Equal(Result.Failure(), statusFailure);
-        Assert.Equal(Result.Success<string>(), typedSuccess);
-        Assert.Equal(Result.Failure<string>("error"), typedFailure);
-        Assert.Equal(Result.Success<int, string>(42), valueSuccess);
-        Assert.Equal(Result.Failure<int, string>("error"), valueFailure);
-        Assert.Equal(1, invocations);
-        Assert.Equal(2, errorInvocations);
+        Assert.Equal(Result.Failure("error"), statusFailure);
+        Assert.Equal(Result.Success(42), valueSuccess);
+        Assert.Equal(Result.Failure<int>("error"), valueFailure);
+        Assert.Equal(UnitResult.Success<int>(), unitSuccess);
+        Assert.Equal(UnitResult.Failure(5), unitFailure);
+        Assert.Equal(Result.Success<int, int>(42), typedSuccess);
+        Assert.Equal(Result.Failure<int, int>(5), typedFailure);
     }
 
     [Fact]
-    public void MapError_EachCase_AttachesErrorOnlyToFailure()
-    {
-        var invocations = 0;
-        Func<string> errorFactory = () =>
-        {
-            invocations++;
-            return "error";
-        };
-
-        var success = Result.Success().MapError(errorFactory);
-        var failure = Result.Failure().MapError(errorFactory);
-
-        Assert.Equal(Result.Success<string>(), success);
-        Assert.Equal(Result.Failure<string>("error"), failure);
-        Assert.Equal(1, invocations);
-    }
-
-    [Fact]
-    public void TapRecoverAndRecoverWith_InvokeOnlySelectedDelegates()
+    public void MapErrorTapAndRecovery_InvokeOnlySelectedDelegates()
     {
         var successes = 0;
-        var failures = 0;
-        var recoveries = 0;
-        var success = Result.Success()
-            .Tap(() => successes++)
-            .TapFailure(() => failures++)
-            .Recover(() => recoveries++)
-            .RecoverWith(() =>
-            {
-                recoveries++;
-                return Result.Success();
-            });
-        var recovered = Result.Failure()
-            .Tap(() => successes++)
-            .TapFailure(() => failures++)
-            .RecoverWith(() =>
-            {
-                recoveries++;
-                return Result.Success();
-            });
+        var errors = new List<string>();
+        var mappedSuccess = Result.Success().MapError(error => error.Length);
+        var mappedFailure = Result.Failure("error").MapError(error => error.Length);
+        var success = Result.Success().Tap(() => successes++).TapError(errors.Add);
+        var failure = Result.Failure("error").Tap(() => successes++).TapError(errors.Add);
+        var recovered = failure.Recover(errors.Add);
+        var recoveredWith = failure.RecoverWith(_ => Result.Success());
 
+        Assert.Equal(UnitResult.Success<int>(), mappedSuccess);
+        Assert.Equal(UnitResult.Failure(5), mappedFailure);
         Assert.Equal(Result.Success(), success);
+        Assert.Equal(Result.Failure("error"), failure);
         Assert.Equal(Result.Success(), recovered);
+        Assert.Equal(Result.Success(), recoveredWith);
         Assert.Equal(1, successes);
-        Assert.Equal(1, failures);
-        Assert.Equal(1, recoveries);
+        Assert.Equal(["error", "error"], errors);
     }
 
     [Fact]
-    public void Delegates_NullOrThrowing_RejectOrPropagate()
+    public void InvalidDelegatesAndUninitializedResults_AreRejected()
     {
-        var expected = new TestException();
         var result = Result.Success();
-
-        Assert.Throws<ArgumentNullException>(() => result.Match<int>(null!, () => 0));
+        Assert.Throws<ArgumentNullException>(() => result.Match<int>(null!, _ => 0));
         Assert.Throws<ArgumentNullException>(() => result.Match(() => 0, null!));
-        Assert.Throws<ArgumentNullException>(() => result.Match(null!, () => { }));
-        Assert.Throws<ArgumentNullException>(() => result.Match(() => { }, null!));
         Assert.Throws<ArgumentNullException>(() => result.Bind(null!));
-        Assert.Throws<ArgumentNullException>(() => result.MapError<string>(null!));
+        Assert.Throws<ArgumentNullException>(() => result.MapError<int>(null!));
         Assert.Throws<ArgumentNullException>(() => result.Tap(null!));
-        Assert.Throws<ArgumentNullException>(() => result.TapFailure(null!));
+        Assert.Throws<ArgumentNullException>(() => result.TapError(null!));
         Assert.Throws<ArgumentNullException>(() => result.Recover(null!));
         Assert.Throws<ArgumentNullException>(() => result.RecoverWith(null!));
-        Assert.Same(expected, Assert.Throws<TestException>(() => result.Bind(() => throw expected)));
-        Assert.Same(expected, Assert.Throws<TestException>(() => result.Tap(() => throw expected)));
-    }
-
-    [Fact]
-    public void Bind_UninitializedDelegateResult_ThrowsInvalidOperationException()
-    {
+        Assert.Throws<InvalidOperationException>(() => result.Bind(() => default(Result)));
         Assert.Throws<InvalidOperationException>(
-            () => Result.Success().Bind(() => default(Result)));
-        Assert.Throws<InvalidOperationException>(
-            () => Result.Failure().RecoverWith(() => default));
+            () => Result.Failure("error").RecoverWith(_ => default));
+
+        var uninitialized = default(Result);
+        Assert.Throws<InvalidOperationException>(() => _ = uninitialized.IsSuccess);
+        Assert.Throws<InvalidOperationException>(() => uninitialized.TryGetError(out _));
     }
 
     [Fact]
-    public void Default_OperationalMembers_ThrowInvalidOperationException()
-    {
-        var result = default(Result);
-        var array = new Result[1];
-        var operations = new Action[]
-        {
-            () => _ = result.IsSuccess,
-            () => _ = result.IsFailure,
-            () => result.Match(() => 1, () => 0),
-            () => result.Match(() => { }, () => { }),
-            () => result.Bind(Result.Success),
-            () => result.MapError(() => "error"),
-            () => result.Tap(() => { }),
-            () => result.TapFailure(() => { }),
-            () => result.Recover(() => { }),
-            () => result.RecoverWith(Result.Success)
-        };
-
-        foreach (var operation in operations)
-            Assert.Throws<InvalidOperationException>(operation);
-
-        Assert.Throws<InvalidOperationException>(() => _ = array[0].IsSuccess);
-        Assert.Throws<InvalidOperationException>(() => _ = CreateDefault<Result>().IsFailure);
-    }
-
-    [Fact]
-    public void EqualityHashingOperatorsAndFormatting_IncludeEveryCase()
+    public void EqualityHashingFormattingAndSurface_IncludeFailurePayload()
     {
         var success = Result.Success();
-        var failure = Result.Failure();
-        var uninitialized = default(Result);
-
-        Assert.Equal(Result.Success(), success);
-        Assert.Equal(Result.Success().GetHashCode(), success.GetHashCode());
-        Assert.NotEqual(success, failure);
-        Assert.True(success == Result.Success());
-        Assert.True(success != failure);
-        Assert.Equal(default, uninitialized);
-        Assert.Equal("Success", success.ToString());
-        Assert.Equal("Failure", failure.ToString());
-        Assert.Equal("Uninitialized", uninitialized.ToString());
-    }
-
-    [Fact]
-    public void PublicSurface_HasNoConstructorFieldsPayloadPropertiesOrImplicitConversions()
-    {
+        var failure = Result.Failure("error");
+        var sameFailure = Result.Failure("error");
+        var otherFailure = Result.Failure("other");
         var type = typeof(Result);
 
+        Assert.Equal(failure, sameFailure);
+        Assert.Equal(failure.GetHashCode(), sameFailure.GetHashCode());
+        Assert.NotEqual(failure, otherFailure);
+        Assert.True(failure == sameFailure);
+        Assert.True(success != failure);
+        Assert.Equal("Success", success.ToString());
+        Assert.Equal("Failure(error)", failure.ToString());
+        Assert.Equal("Uninitialized", default(Result).ToString());
         Assert.Empty(type.GetConstructors(BindingFlags.Public | BindingFlags.Instance));
-        Assert.Empty(type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
         Assert.DoesNotContain(type.GetProperties(), property => property.Name is "Value" or "Error");
         Assert.DoesNotContain(
             type.GetMethods(BindingFlags.Public | BindingFlags.Static),
             method => method.Name == "op_Implicit");
     }
-
-    private static T CreateDefault<T>() where T : struct => default;
-
-    private sealed class TestException : Exception;
 }

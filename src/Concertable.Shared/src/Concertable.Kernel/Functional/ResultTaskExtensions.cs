@@ -46,9 +46,9 @@ public static partial class ResultTaskExtensions
         return (await source.ConfigureAwait(false)).Bind(bind);
     }
 
-    public static async Task<Result<TError>> Bind<TValue, TError>(
+    public static async Task<UnitResult<TError>> Bind<TValue, TError>(
         this Task<Result<TValue, TError>> source,
-        Func<TValue, Result<TError>> bind)
+        Func<TValue, UnitResult<TError>> bind)
         where TValue : notnull
         where TError : notnull
     {
@@ -232,9 +232,9 @@ public static partial class ResultTaskExtensions
             .ConfigureAwait(false);
     }
 
-    public static Task<Result<TError>> BindAsync<TValue, TError>(
+    public static Task<UnitResult<TError>> BindAsync<TValue, TError>(
         this Result<TValue, TError> result,
-        Func<TValue, Task<Result<TError>>> bind)
+        Func<TValue, Task<UnitResult<TError>>> bind)
         where TValue : notnull
         where TError : notnull
     {
@@ -243,12 +243,12 @@ public static partial class ResultTaskExtensions
 
         return result.Match(
             value => BindSuccessAsync(value, bind),
-            error => Task.FromResult(Result.Failure(error)));
+            error => Task.FromResult(UnitResult.Failure(error)));
     }
 
-    public static async Task<Result<TError>> BindAsync<TValue, TError>(
+    public static async Task<UnitResult<TError>> BindAsync<TValue, TError>(
         this Task<Result<TValue, TError>> source,
-        Func<TValue, Task<Result<TError>>> bind)
+        Func<TValue, Task<UnitResult<TError>>> bind)
         where TValue : notnull
         where TError : notnull
     {
@@ -398,9 +398,9 @@ public static partial class ResultTaskExtensions
         return result;
     }
 
-    private static async Task<Result<TError>> BindSuccessAsync<TValue, TError>(
+    private static async Task<UnitResult<TError>> BindSuccessAsync<TValue, TError>(
         TValue value,
-        Func<TValue, Task<Result<TError>>> bind)
+        Func<TValue, Task<UnitResult<TError>>> bind)
         where TValue : notnull
         where TError : notnull
     {

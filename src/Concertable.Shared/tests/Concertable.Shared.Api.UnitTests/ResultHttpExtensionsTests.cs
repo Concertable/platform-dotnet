@@ -124,7 +124,7 @@ public sealed class ResultHttpExtensionsTests
     [Fact]
     public void ToNoContentActionResult_Success_ReturnsNoContent()
     {
-        var result = Result.Success<TestError>();
+        var result = UnitResult.Success<TestError>();
 
         var actionResult = result.ToNoContentActionResult();
 
@@ -136,7 +136,7 @@ public sealed class ResultHttpExtensionsTests
     {
         var error = new TestError(
             new ErrorDefinition("test.conflict", "Conflict.", ErrorKind.Conflict));
-        var result = Result.Failure(error);
+        var result = UnitResult.Failure(error);
 
         var actionResult = result.ToNoContentActionResult();
 
@@ -152,7 +152,7 @@ public sealed class ResultHttpExtensionsTests
             () => Result.Success<string, TestError>("value")
                 .ToActionResult(null!));
         Assert.Throws<ArgumentNullException>(
-            () => Result.Success<TestError>()
+            () => UnitResult.Success<TestError>()
                 .ToActionResult(null!));
     }
 
@@ -162,7 +162,7 @@ public sealed class ResultHttpExtensionsTests
         Assert.Throws<InvalidOperationException>(
             () => default(Result<string, TestError>).ToOkActionResult());
         Assert.Throws<InvalidOperationException>(
-            () => default(Result<TestError>).ToNoContentActionResult());
+            () => default(UnitResult<TestError>).ToNoContentActionResult());
     }
 
     [Fact]
