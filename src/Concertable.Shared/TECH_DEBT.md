@@ -29,12 +29,6 @@ The default member is the additive workaround.
 so entities compile against the same Kernel the tests load), at which point `DisplayName` can become
 `static abstract` and the throwing default is deleted.
 
-### Kernel `ClaimsPrincipal.GetId()` fails open with `string.Empty`
-
-`Concertable.Kernel/Identity/ClaimsPrincipalExtensions.cs` returns `user?.FindFirst("sub")?.Value ?? string.Empty` — a principal with no `sub` claim becomes an empty-string user id instead of a failure. Its sibling `CurrentUserExtensions.GetId(ICurrentUser)` gets this right (throws `UnauthorizedAccessException`). The only consumer, `NotificationHub`, assigns the result to `string?` and null-checks it — a check that can never fire because the method never returns null, so an unauthenticated principal sails through as `""`.
-
-**Resolves when:** the extension fails closed (returns `string?` with no empty-string coercion, or throws like its `ICurrentUser` sibling), and `NotificationHub`'s guard actually rejects principals without a `sub` claim.
-
 ---
 
 ### Shared test libraries are ProjectReferenced across the service-folder boundary (carve leak)
