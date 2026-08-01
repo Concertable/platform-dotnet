@@ -1,6 +1,6 @@
 namespace Concertable.Kernel.Functional;
 
-public static class ResultTaskExtensions
+public static partial class ResultTaskExtensions
 {
     public static async Task<TResult> Match<TValue, TError, TResult>(
         this Task<Result<TValue, TError>> source,
@@ -41,6 +41,16 @@ public static class ResultTaskExtensions
         where TValue : notnull
         where TError : notnull
         where TNext : notnull
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return (await source.ConfigureAwait(false)).Bind(bind);
+    }
+
+    public static async Task<Result<TError>> Bind<TValue, TError>(
+        this Task<Result<TValue, TError>> source,
+        Func<TValue, Result<TError>> bind)
+        where TValue : notnull
+        where TError : notnull
     {
         ArgumentNullException.ThrowIfNull(source);
         return (await source.ConfigureAwait(false)).Bind(bind);
@@ -222,6 +232,32 @@ public static class ResultTaskExtensions
             .ConfigureAwait(false);
     }
 
+    public static Task<Result<TError>> BindAsync<TValue, TError>(
+        this Result<TValue, TError> result,
+        Func<TValue, Task<Result<TError>>> bind)
+        where TValue : notnull
+        where TError : notnull
+    {
+        result.EnsureInitialized();
+        ArgumentNullException.ThrowIfNull(bind);
+
+        return result.Match(
+            value => BindSuccessAsync(value, bind),
+            error => Task.FromResult(Result.Failure(error)));
+    }
+
+    public static async Task<Result<TError>> BindAsync<TValue, TError>(
+        this Task<Result<TValue, TError>> source,
+        Func<TValue, Task<Result<TError>>> bind)
+        where TValue : notnull
+        where TError : notnull
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return await (await source.ConfigureAwait(false))
+            .BindAsync(bind)
+            .ConfigureAwait(false);
+    }
+
     public static Task<Result<TValue, TError>> EnsureAsync<TValue, TError>(
         this Result<TValue, TError> result,
         Func<TValue, Task<bool>> predicate,
@@ -355,6 +391,17 @@ public static class ResultTaskExtensions
         Func<TValue, Task<Result<TNext, TError>>> bind)
         where TValue : notnull
         where TNext : notnull
+        where TError : notnull
+    {
+        var result = await RequireTask(bind(value)).ConfigureAwait(false);
+        result.EnsureInitialized();
+        return result;
+    }
+
+    private static async Task<Result<TError>> BindSuccessAsync<TValue, TError>(
+        TValue value,
+        Func<TValue, Task<Result<TError>>> bind)
+        where TValue : notnull
         where TError : notnull
     {
         var result = await RequireTask(bind(value)).ConfigureAwait(false);

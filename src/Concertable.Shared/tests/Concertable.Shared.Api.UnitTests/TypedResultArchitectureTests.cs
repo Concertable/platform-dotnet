@@ -1,5 +1,8 @@
 using System.Text.RegularExpressions;
+using System.Reflection;
 using System.Xml.Linq;
+using Concertable.Kernel.Errors;
+using Concertable.Shared.Api.Results;
 
 namespace Concertable.Shared.Api.UnitTests;
 
@@ -95,6 +98,24 @@ public sealed partial class TypedResultArchitectureTests
             .ToArray();
 
         Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void ProblemTerminal_IsGenericOverConcreteErrorType()
+    {
+        var errorExtensions = typeof(ResultHttpExtensions).Assembly.GetType(
+            "Concertable.Shared.Api.Results.ErrorHttpExtensions",
+            throwOnError: true)!;
+        var method = Assert.Single(
+            errorExtensions.GetMethods(BindingFlags.Static | BindingFlags.NonPublic),
+            method => method.Name == "ToProblemActionResult");
+        var errorType = Assert.Single(method.GetGenericArguments());
+        var receiver = Assert.Single(method.GetParameters());
+
+        Assert.True(method.IsGenericMethodDefinition);
+        Assert.True(receiver.ParameterType.IsGenericParameter);
+        Assert.Equal(errorType, receiver.ParameterType);
+        Assert.Contains(typeof(IError), errorType.GetGenericParameterConstraints());
     }
 
     [Fact]

@@ -209,7 +209,7 @@ public sealed class ResultCollectionExtensionsTests
     }
 
     [Fact]
-    public void Combine_EachCase_ReturnsFirstFailureOrUnitSuccess()
+    public void Combine_EachCase_ReturnsFirstFailureOrSuccess()
     {
         var success = new[]
         {
@@ -219,13 +219,13 @@ public sealed class ResultCollectionExtensionsTests
         var failure = new[]
         {
             Result.Success<string>(),
-            Result.Failure<Unit, string>("first"),
-            Result.Failure<Unit, string>("second")
+            Result.Failure<string>("first"),
+            Result.Failure<string>("second")
         }.Combine();
-        var empty = Array.Empty<Result<Unit, string>>().Combine();
+        var empty = Array.Empty<Result<string>>().Combine();
 
         Assert.Equal(Result.Success<string>(), success);
-        Assert.Equal(Result.Failure<Unit, string>("first"), failure);
+        Assert.Equal(Result.Failure<string>("first"), failure);
         Assert.Equal(Result.Success<string>(), empty);
     }
 

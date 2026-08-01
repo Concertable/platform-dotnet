@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.Net;
@@ -17,15 +16,16 @@ namespace Concertable.Shared.Api.UnitTests;
 public sealed class ResultHttpExtensionsTests
 {
     [Theory]
-    [InlineData(ErrorKind.Invalid, HttpStatusCode.BadRequest)]
-    [InlineData(ErrorKind.NotFound, HttpStatusCode.NotFound)]
-    [InlineData(ErrorKind.Conflict, HttpStatusCode.Conflict)]
-    [InlineData(ErrorKind.Unauthenticated, HttpStatusCode.Unauthorized)]
-    [InlineData(ErrorKind.Forbidden, HttpStatusCode.Forbidden)]
-    [InlineData(ErrorKind.PaymentRequired, HttpStatusCode.PaymentRequired)]
+    [InlineData(ErrorKind.Invalid, HttpStatusCode.BadRequest, "Bad Request")]
+    [InlineData(ErrorKind.NotFound, HttpStatusCode.NotFound, "Not Found")]
+    [InlineData(ErrorKind.Conflict, HttpStatusCode.Conflict, "Conflict")]
+    [InlineData(ErrorKind.Unauthenticated, HttpStatusCode.Unauthorized, "Unauthorized")]
+    [InlineData(ErrorKind.Forbidden, HttpStatusCode.Forbidden, "Forbidden")]
+    [InlineData(ErrorKind.PaymentRequired, HttpStatusCode.PaymentRequired, "Payment Required")]
     public void ToOkActionResult_FailedResult_MapsSemanticKind(
         ErrorKind kind,
-        HttpStatusCode expectedStatus)
+        HttpStatusCode expectedStatus,
+        string expectedTitle)
     {
         var error = new TestError(new ErrorDefinition("test.code", "Safe detail.", kind));
         var result = Result.Failure<string, TestError>(error);
@@ -36,9 +36,7 @@ public sealed class ResultHttpExtensionsTests
         var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
         Assert.Equal((int)expectedStatus, objectResult.StatusCode);
         Assert.Equal((int)expectedStatus, problemDetails.Status);
-        Assert.Equal(
-            ReasonPhrases.GetReasonPhrase((int)expectedStatus),
-            problemDetails.Title);
+        Assert.Equal(expectedTitle, problemDetails.Title);
         Assert.Equal("Safe detail.", problemDetails.Detail);
         Assert.Null(problemDetails.Instance);
         Assert.Equal("test.code", problemDetails.Extensions["code"]);
@@ -63,8 +61,12 @@ public sealed class ResultHttpExtensionsTests
         var actionResult = result.ToOkActionResult();
 
         var objectResult = Assert.IsAssignableFrom<ObjectResult>(actionResult.Result);
-        var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
-        Assert.Same(validationErrors, problemDetails.Extensions["errors"]);
+        var problemDetails = Assert.IsType<ValidationProblemDetails>(objectResult.Value);
+        Assert.Equal(validationErrors["quantity"], problemDetails.Errors["quantity"]);
+        Assert.Equal(StatusCodes.Status400BadRequest, problemDetails.Status);
+        Assert.Equal("Bad Request", problemDetails.Title);
+        Assert.Equal("The ticket purchase is invalid.", problemDetails.Detail);
+        Assert.Equal("ticket.purchase_invalid", problemDetails.Extensions["code"]);
     }
 
     [Fact]
@@ -134,13 +136,41 @@ public sealed class ResultHttpExtensionsTests
     {
         var error = new TestError(
             new ErrorDefinition("test.conflict", "Conflict.", ErrorKind.Conflict));
-        var result = Result.Failure<Unit, TestError>(error);
+        var result = Result.Failure(error);
 
         var actionResult = result.ToNoContentActionResult();
 
         var objectResult = Assert.IsAssignableFrom<ObjectResult>(actionResult);
         var problemDetails = Assert.IsType<ProblemDetails>(objectResult.Value);
         Assert.Equal(StatusCodes.Status409Conflict, problemDetails.Status);
+    }
+
+    [Fact]
+    public void ToActionResult_NullSuccessDelegate_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(
+            () => Result.Success<string, TestError>("value")
+                .ToActionResult(null!));
+        Assert.Throws<ArgumentNullException>(
+            () => Result.Success<TestError>()
+                .ToActionResult(null!));
+    }
+
+    [Fact]
+    public void ToActionResult_UninitializedResults_ThrowInvalidOperationException()
+    {
+        Assert.Throws<InvalidOperationException>(
+            () => default(Result<string, TestError>).ToOkActionResult());
+        Assert.Throws<InvalidOperationException>(
+            () => default(Result<TestError>).ToNoContentActionResult());
+    }
+
+    [Fact]
+    public void ToActionResult_NullDefinition_ThrowsInvalidOperationException()
+    {
+        var result = Result.Failure<string, NullDefinitionError>(new());
+
+        Assert.Throws<InvalidOperationException>(() => result.ToOkActionResult());
     }
 
     [Fact]
@@ -236,5 +266,56 @@ public sealed class ResultHttpExtensionsTests
             response.GetProperty("traceId").GetString());
     }
 
+    [Fact]
+    public async Task ToOkActionResult_ValidationFallbackWriter_SerializesErrors()
+    {
+        var error = new TestError(
+            ErrorDefinition.Validation(
+                "ticket.purchase_invalid",
+                "The ticket purchase is invalid.",
+                new Dictionary<string, string[]>
+                {
+                    ["quantity"] = ["Quantity must be positive."]
+                }));
+        var result = Result.Failure<string, TestError>(error);
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddLogging();
+        serviceCollection.AddControllers();
+        serviceCollection.AddProblemDetails();
+        var services = serviceCollection.BuildServiceProvider();
+        var context = new DefaultHttpContext
+        {
+            RequestServices = services,
+            Response =
+            {
+                Body = new MemoryStream()
+            }
+        };
+        context.Request.Headers.Accept = MediaTypeNames.Application.Xml;
+        context.Request.Path = "/test";
+        var actionContext = new ActionContext(
+            context,
+            new RouteData(),
+            new ActionDescriptor());
+
+        var actionResult = result.ToOkActionResult();
+        var objectResult = Assert.IsAssignableFrom<ObjectResult>(actionResult.Result);
+        await objectResult.ExecuteResultAsync(actionContext);
+
+        context.Response.Body.Position = 0;
+        using var document = await JsonDocument.ParseAsync(context.Response.Body);
+        var response = document.RootElement;
+        Assert.Equal(
+            "Quantity must be positive.",
+            response.GetProperty("errors").GetProperty("quantity")[0].GetString());
+        Assert.Equal("ticket.purchase_invalid", response.GetProperty("code").GetString());
+        Assert.Equal(MediaTypeNames.Application.ProblemJson, context.Response.ContentType);
+    }
+
     private sealed record TestError(ErrorDefinition Definition) : IError;
+
+    private sealed class NullDefinitionError : IError
+    {
+        public ErrorDefinition Definition => null!;
+    }
 }
