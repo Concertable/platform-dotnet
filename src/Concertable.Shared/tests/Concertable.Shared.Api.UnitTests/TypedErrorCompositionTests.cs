@@ -19,7 +19,7 @@ public sealed class TypedErrorCompositionTests
 
         Assert.Equal("ticket.concert_not_found", definition.Code);
         Assert.Equal("Concert not found.", definition.Message);
-        Assert.Equal(ErrorKind.NotFound, error.Kind);
+        Assert.Equal(ErrorKind.NotFound, definition.Kind);
         Assert.IsNotType<ValidationErrorDefinition>(definition);
     }
 
@@ -37,7 +37,7 @@ public sealed class TypedErrorCompositionTests
 
         Assert.Equal("ticket.purchase_invalid", definition.Code);
         Assert.Equal("The ticket purchase is invalid.", definition.Message);
-        Assert.Equal(ErrorKind.Invalid, error.Kind);
+        Assert.Equal(ErrorKind.Invalid, definition.Kind);
         Assert.Same(errors, definition.Errors);
     }
 
@@ -53,7 +53,7 @@ public sealed class TypedErrorCompositionTests
         var definition = result.Error.Definition;
         Assert.Equal("payment.card_declined", definition.Code);
         Assert.Equal("The card was declined.", definition.Message);
-        Assert.Equal(ErrorKind.PaymentRequired, result.Error.Kind);
+        Assert.Equal(ErrorKind.PaymentRequired, definition.Kind);
     }
 
     [Fact]
@@ -99,8 +99,6 @@ internal partial record PurchaseError : IError
         paymentRejected => ErrorDefinition.PaymentRequired(
             paymentRejected.Code,
             paymentRejected.Message));
-
-    public ErrorKind Kind => Definition.Kind;
 }
 
 [DisplayName("Concert")]

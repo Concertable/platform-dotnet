@@ -134,5 +134,4 @@ public sealed record ValidationErrorDefinition(
 public interface IError
 {
     ErrorDefinition Definition { get; }
-    ErrorKind Kind { get; }
 }
