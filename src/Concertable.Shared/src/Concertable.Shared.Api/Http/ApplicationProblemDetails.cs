@@ -53,11 +53,13 @@ internal static class ApplicationProblemDetails
         if (await problemDetailsService.TryWriteAsync(context).ConfigureAwait(false))
             return;
 
-        await httpContext.Response
-            .WriteAsJsonAsync(
+        httpContext.Response.ContentType = MediaTypeNames.Application.ProblemJson;
+        await JsonSerializer
+            .SerializeAsync(
+                httpContext.Response.Body,
                 problemDetails,
+                problemDetails.GetType(),
                 JsonSerializerOptions.Web,
-                MediaTypeNames.Application.ProblemJson,
                 httpContext.RequestAborted)
             .ConfigureAwait(false);
     }

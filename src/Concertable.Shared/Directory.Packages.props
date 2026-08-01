@@ -8,9 +8,7 @@
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.3.2" />
     <PackageVersion Include="Aspire.Hosting.Testing" Version="13.3.2" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.23.0" />
-    <PackageVersion Include="CSharpFunctionalExtensions" Version="3.7.0" />
     <PackageVersion Include="Dapper" Version="2.1.72" />
-    <PackageVersion Include="Dunet" Version="1.16.2" />
     <PackageVersion Include="FluentResults" Version="4.0.0" />
     <PackageVersion Include="FluentValidation" Version="11.11.0" />
     <PackageVersion Include="MailKit" Version="4.10.0" />

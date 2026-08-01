@@ -159,7 +159,6 @@ public sealed class ErrorDefinitionTests
 
         Assert.IsType<ArgumentException>(exception);
     }
-
     [DisplayName("Widget")]
     private sealed class Widget;
 }
