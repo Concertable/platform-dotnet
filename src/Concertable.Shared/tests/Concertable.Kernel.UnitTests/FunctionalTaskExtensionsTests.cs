@@ -42,6 +42,18 @@ public sealed class FunctionalTaskExtensionsTests
     }
 
     [Fact]
+    public async Task NullableTaskToOption_ValueNullAndNullSource_MapToExpectedCases()
+    {
+        Task<string?> value = Task.FromResult<string?>("value");
+        Task<string?> missing = Task.FromResult<string?>(null);
+        Task<string?> nullSource = null!;
+
+        Assert.Equal(Option.Some("value"), await value.ToOption());
+        Assert.True((await missing.ToOption()).IsNone);
+        await Assert.ThrowsAsync<ArgumentNullException>(() => nullSource.ToOption());
+    }
+
+    [Fact]
     public async Task TaskMatchActionOverloads_EachCase_InvokeSelectedAction()
     {
         var resultSuccess = 0;
@@ -254,11 +266,13 @@ public sealed class FunctionalTaskExtensionsTests
         var expected = new TestException();
         var resultSource = Task.FromException<Result<int, string>>(expected);
         var optionSource = Task.FromException<Option<int>>(expected);
+        var nullableSource = Task.FromException<string?>(expected);
 
         Assert.Same(expected, await Assert.ThrowsAsync<TestException>(() => resultSource.Map(value => value)));
         Assert.Same(expected, await Assert.ThrowsAsync<TestException>(() => resultSource.MapAsync(value => Task.FromResult(value))));
         Assert.Same(expected, await Assert.ThrowsAsync<TestException>(() => optionSource.Map(value => value)));
         Assert.Same(expected, await Assert.ThrowsAsync<TestException>(() => optionSource.MapAsync(value => Task.FromResult(value))));
+        Assert.Same(expected, await Assert.ThrowsAsync<TestException>(() => nullableSource.ToOption()));
     }
 
     [Fact]
@@ -268,14 +282,18 @@ public sealed class FunctionalTaskExtensionsTests
         cancellation.Cancel();
         var resultSource = Task.FromCanceled<Result<int, string>>(cancellation.Token);
         var optionSource = Task.FromCanceled<Option<int>>(cancellation.Token);
+        var nullableSource = Task.FromCanceled<string?>(cancellation.Token);
 
         var resultTask = resultSource.Map(value => value);
         var optionTask = optionSource.Map(value => value);
+        var nullableTask = nullableSource.ToOption();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => resultTask);
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => optionTask);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => nullableTask);
         Assert.True(resultTask.IsCanceled);
         Assert.True(optionTask.IsCanceled);
+        Assert.True(nullableTask.IsCanceled);
     }
 
     [Fact]

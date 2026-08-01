@@ -23,6 +23,9 @@ public partial record ErrorDefinition(
     public static ErrorDefinition NotFound(string code, string message) =>
         new(code, message, ErrorKind.NotFound);
 
+    public static ErrorDefinition NotFound<T>(string code) =>
+        NotFound(code, $"{DisplayNameResolver.Of<T>()} not found.");
+
     public static ErrorDefinition Conflict(string code, string message) =>
         new(code, message, ErrorKind.Conflict);
 
