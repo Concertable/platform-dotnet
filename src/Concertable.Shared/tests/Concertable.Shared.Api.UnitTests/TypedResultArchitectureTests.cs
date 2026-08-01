@@ -1,5 +1,8 @@
 using System.Text.RegularExpressions;
+using System.Reflection;
 using System.Xml.Linq;
+using Concertable.Kernel.Errors;
+using Concertable.Shared.Api.Results;
 
 namespace Concertable.Shared.Api.UnitTests;
 
@@ -12,12 +15,49 @@ public sealed partial class TypedResultArchitectureTests
             .EnumerateFiles(FindApiRoot(), "*.cs", SearchOption.AllDirectories)
             .Where(IsProductionSource)
             .Select(path => new { Path = path, Source = File.ReadAllText(path) })
-            .Where(file => TypedResultPattern().IsMatch(file.Source))
-            .Where(file => HttpExceptionPattern().IsMatch(file.Source))
+            .Where(file => IsTypedResultHttpExceptionViolation(file.Source))
             .Select(file => file.Path)
             .ToArray();
 
         Assert.Empty(violations);
+    }
+
+    [Theory]
+    [InlineData("UnitResult<TestError>")]
+    [InlineData("Result<TestValue, TestError>")]
+    public void TypedResultSlices_ResultWithHttpException_IsDetected(string resultType)
+    {
+        var source = $$"""
+            using Concertable.Kernel.Functional;
+
+            {{resultType}} Execute() => throw new NotFoundException();
+            """;
+
+        Assert.True(IsTypedResultHttpExceptionViolation(source));
+    }
+
+    [Fact]
+    public void FluentResultSlices_OneArityResultWithHttpException_IsIgnored()
+    {
+        const string source = """
+            using FluentResults;
+
+            Result<TestValue> Execute() => throw new NotFoundException();
+            """;
+
+        Assert.False(IsTypedResultHttpExceptionViolation(source));
+    }
+
+    [Fact]
+    public void OwnedValueResultSlices_OneArityResultWithHttpException_IsIgnored()
+    {
+        const string source = """
+            using Concertable.Kernel.Functional;
+
+            Result<TestValue> Execute() => throw new NotFoundException();
+            """;
+
+        Assert.False(IsTypedResultHttpExceptionViolation(source));
     }
 
     [Fact]
@@ -51,6 +91,68 @@ public sealed partial class TypedResultArchitectureTests
             .ToArray();
 
         Assert.Empty(projects);
+    }
+
+    [Fact]
+    public void SharedProduction_DoesNotReferenceCSharpFunctionalExtensions()
+    {
+        var sharedSource = Path.Combine(FindApiRoot(), "Concertable.Shared", "src");
+        var violations = Directory
+            .EnumerateFiles(sharedSource, "*", SearchOption.AllDirectories)
+            .Where(path => Path.GetExtension(path) is ".cs" or ".csproj")
+            .Where(path => !IsGeneratedPath(path))
+            .Where(path => File.ReadAllText(path).Contains(
+                "CSharpFunctionalExtensions",
+                StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void KernelFunctionalTypes_DoNotReferenceThirdPartyCarriers()
+    {
+        var functionalSource = Path.Combine(
+            FindApiRoot(),
+            "Concertable.Shared",
+            "src",
+            "Concertable.Kernel",
+            "Functional");
+        var prohibitedNames = new[]
+        {
+            "CSharpFunctionalExtensions",
+            "FluentResults",
+            "OneOf",
+            "ErrorOr",
+            "LanguageExt",
+            "Dunet"
+        };
+        var violations = Directory
+            .EnumerateFiles(functionalSource, "*.cs", SearchOption.AllDirectories)
+            .Where(path => prohibitedNames.Any(name => File.ReadAllText(path).Contains(
+                name,
+                StringComparison.Ordinal)))
+            .ToArray();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void ProblemTerminal_IsGenericOverConcreteErrorType()
+    {
+        var errorExtensions = typeof(ResultHttpExtensions).Assembly.GetType(
+            "Concertable.Shared.Api.Results.ErrorHttpExtensions",
+            throwOnError: true)!;
+        var method = Assert.Single(
+            errorExtensions.GetMethods(BindingFlags.Static | BindingFlags.NonPublic),
+            method => method.Name == "ToProblemActionResult");
+        var errorType = Assert.Single(method.GetGenericArguments());
+        var receiver = Assert.Single(method.GetParameters());
+
+        Assert.True(method.IsGenericMethodDefinition);
+        Assert.True(receiver.ParameterType.IsGenericParameter);
+        Assert.Equal(errorType, receiver.ParameterType);
+        Assert.Contains(typeof(IError), errorType.GetGenericParameterConstraints());
     }
 
     [Fact]
@@ -122,6 +224,10 @@ public sealed partial class TypedResultArchitectureTests
             && !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsTypedResultHttpExceptionViolation(string source) =>
+        HttpExceptionPattern().IsMatch(source)
+        && TypedErrorResultPattern().IsMatch(source);
+
     private static IEnumerable<string> EnumerateSourceFiles() =>
         Directory
             .EnumerateFiles(FindApiRoot(), "*.cs", SearchOption.AllDirectories)
@@ -151,8 +257,8 @@ public sealed partial class TypedResultArchitectureTests
         throw new DirectoryNotFoundException("Could not locate api/Concertable.slnx.");
     }
 
-    [GeneratedRegex(@"\b(?:Result<[^,\r\n>]+,\s*[^>\r\n]+>|UnitResult<[^>\r\n]+>)")]
-    private static partial Regex TypedResultPattern();
+    [GeneratedRegex(@"\b(?:UnitResult<[^>\r\n]+>|Result<[^,\r\n>]+,\s*[^>\r\n]+>)")]
+    private static partial Regex TypedErrorResultPattern();
 
     [GeneratedRegex(
         @"\b(?:HttpException|BadRequestException|NotFoundException|ConflictException|ForbiddenException|PaymentRequiredException|InternalServerException)\b|\.OrNotFound\s*\(")]
