@@ -1,20 +1,63 @@
+using System.ComponentModel;
 using Concertable.Kernel.Errors;
 
 namespace Concertable.Kernel.UnitTests;
 
-public sealed class ErrorDescriptorTests
+public sealed class ErrorDefinitionTests
 {
+    [Fact]
+    public void Factories_SemanticKinds_ReturnMatchingDefinitions()
+    {
+        var definitions = new[]
+        {
+            ErrorDefinition.Invalid("test.invalid", "Invalid."),
+            ErrorDefinition.NotFound("test.not_found", "Not found."),
+            ErrorDefinition.Conflict("test.conflict", "Conflict."),
+            ErrorDefinition.Unauthenticated("test.unauthenticated", "Unauthenticated."),
+            ErrorDefinition.Forbidden("test.forbidden", "Forbidden."),
+            ErrorDefinition.PaymentRequired("test.payment_required", "Payment required.")
+        };
+
+        Assert.Equal(Enum.GetValues<ErrorKind>(), definitions.Select(definition => definition.Kind));
+    }
+
+    [Fact]
+    public void ValidationFactory_Errors_ReturnsValidationDefinition()
+    {
+        var errors = new Dictionary<string, string[]>
+        {
+            ["quantity"] = ["Quantity must be positive."]
+        };
+
+        var definition = ErrorDefinition.Validation(
+            "test.invalid",
+            "Invalid.",
+            errors);
+
+        Assert.Equal(ErrorKind.Invalid, definition.Kind);
+        Assert.Same(errors, definition.Errors);
+    }
+
+    [Fact]
+    public void NotFoundFactory_AnnotatedType_DerivesSafeMessage()
+    {
+        var definition = ErrorDefinition.NotFound<Widget>("test.not_found");
+
+        Assert.Equal("Widget not found.", definition.Message);
+        Assert.Equal(ErrorKind.NotFound, definition.Kind);
+    }
+
     [Theory]
     [InlineData("ticket.concert_not_found")]
     [InlineData("payment.card_declined")]
     [InlineData("dependency.timeout")]
-    public void Constructor_ValidCode_PreservesDescriptor(string code)
+    public void Constructor_ValidCode_PreservesDefinition(string code)
     {
-        var descriptor = new ErrorDescriptor(code, "Safe message.", ErrorKind.Conflict);
+        var definition = new ErrorDefinition(code, "Safe message.", ErrorKind.Conflict);
 
-        Assert.Equal(code, descriptor.Code);
-        Assert.Equal("Safe message.", descriptor.Message);
-        Assert.Equal(ErrorKind.Conflict, descriptor.Kind);
+        Assert.Equal(code, definition.Code);
+        Assert.Equal("Safe message.", definition.Message);
+        Assert.Equal(ErrorKind.Conflict, definition.Kind);
     }
 
     [Theory]
@@ -28,7 +71,7 @@ public sealed class ErrorDescriptorTests
     public void Constructor_InvalidCode_ThrowsArgumentException(string? code)
     {
         var exception = Record.Exception(
-            () => new ErrorDescriptor(code!, "Safe message.", ErrorKind.Invalid));
+            () => new ErrorDefinition(code!, "Safe message.", ErrorKind.Invalid));
 
         Assert.IsAssignableFrom<ArgumentException>(exception);
     }
@@ -40,7 +83,7 @@ public sealed class ErrorDescriptorTests
     public void Constructor_MissingMessage_ThrowsArgumentException(string? message)
     {
         var exception = Record.Exception(
-            () => new ErrorDescriptor("ticket.invalid", message!, ErrorKind.Invalid));
+            () => new ErrorDefinition("ticket.invalid", message!, ErrorKind.Invalid));
 
         Assert.IsAssignableFrom<ArgumentException>(exception);
     }
@@ -49,7 +92,7 @@ public sealed class ErrorDescriptorTests
     public void Constructor_UnknownKind_ThrowsArgumentOutOfRangeException()
     {
         var exception = Record.Exception(
-            () => new ErrorDescriptor(
+            () => new ErrorDefinition(
                 "ticket.invalid",
                 "Safe message.",
                 (ErrorKind)int.MaxValue));
@@ -60,12 +103,12 @@ public sealed class ErrorDescriptorTests
     [Fact]
     public void With_InvalidCode_ThrowsArgumentException()
     {
-        var descriptor = new ErrorDescriptor(
+        var definition = new ErrorDefinition(
             "ticket.invalid",
             "Safe message.",
             ErrorKind.Invalid);
 
-        var exception = Record.Exception(() => descriptor with { Code = "Invalid" });
+        var exception = Record.Exception(() => definition with { Code = "Invalid" });
 
         Assert.IsType<ArgumentException>(exception);
     }
@@ -74,7 +117,7 @@ public sealed class ErrorDescriptorTests
     public void ValidationConstructor_NoErrors_ThrowsArgumentException()
     {
         var exception = Record.Exception(
-            () => new ValidationErrorDescriptor(
+            () => new ValidationErrorDefinition(
                 "ticket.invalid",
                 "Safe message.",
                 new Dictionary<string, string[]>()));
@@ -86,7 +129,7 @@ public sealed class ErrorDescriptorTests
     public void ValidationConstructor_BlankErrorMessage_ThrowsArgumentException()
     {
         var exception = Record.Exception(
-            () => new ValidationErrorDescriptor(
+            () => new ValidationErrorDefinition(
                 "ticket.invalid",
                 "Safe message.",
                 new Dictionary<string, string[]>
@@ -100,7 +143,7 @@ public sealed class ErrorDescriptorTests
     [Fact]
     public void ValidationWith_NoErrors_ThrowsArgumentException()
     {
-        var descriptor = new ValidationErrorDescriptor(
+        var definition = new ValidationErrorDefinition(
             "ticket.invalid",
             "Safe message.",
             new Dictionary<string, string[]>
@@ -109,11 +152,13 @@ public sealed class ErrorDescriptorTests
             });
 
         var exception = Record.Exception(
-            () => descriptor with
+            () => definition with
             {
                 Errors = new Dictionary<string, string[]>()
             });
 
         Assert.IsType<ArgumentException>(exception);
     }
+    [DisplayName("Widget")]
+    private sealed class Widget;
 }
