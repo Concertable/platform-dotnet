@@ -156,7 +156,7 @@ public static class Option
         value.HasValue ? Some(value.Value) : None<T>();
 }
 
-public static class NullableOptionExtensions
+public static class OptionExtensions
 {
     public static Option<T> ToOption<T>(this T? value)
         where T : class =>
@@ -165,4 +165,11 @@ public static class NullableOptionExtensions
     public static Option<T> ToOption<T>(this T? value)
         where T : struct =>
         Option.FromNullable(value);
+
+    public static async Task<Option<T>> ToOption<T>(this Task<T?> source)
+        where T : class
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return (await source.ConfigureAwait(false)).ToOption();
+    }
 }
