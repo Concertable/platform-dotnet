@@ -15,12 +15,37 @@ public sealed partial class TypedResultArchitectureTests
             .EnumerateFiles(FindApiRoot(), "*.cs", SearchOption.AllDirectories)
             .Where(IsProductionSource)
             .Select(path => new { Path = path, Source = File.ReadAllText(path) })
-            .Where(file => TypedResultPattern().IsMatch(file.Source))
-            .Where(file => HttpExceptionPattern().IsMatch(file.Source))
+            .Where(file => IsTypedResultHttpExceptionViolation(file.Source))
             .Select(file => file.Path)
             .ToArray();
 
         Assert.Empty(violations);
+    }
+
+    [Theory]
+    [InlineData("Result<TestError>")]
+    [InlineData("Result<TestValue, TestError>")]
+    public void TypedResultSlices_ResultWithHttpException_IsDetected(string resultType)
+    {
+        var source = $$"""
+            using Concertable.Kernel.Functional;
+
+            {{resultType}} Execute() => throw new NotFoundException();
+            """;
+
+        Assert.True(IsTypedResultHttpExceptionViolation(source));
+    }
+
+    [Fact]
+    public void FluentResultSlices_OneArityResultWithHttpException_IsIgnored()
+    {
+        const string source = """
+            using FluentResults;
+
+            Result<TestValue> Execute() => throw new NotFoundException();
+            """;
+
+        Assert.False(IsTypedResultHttpExceptionViolation(source));
     }
 
     [Fact]
@@ -187,6 +212,12 @@ public sealed partial class TypedResultArchitectureTests
             && !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsTypedResultHttpExceptionViolation(string source) =>
+        HttpExceptionPattern().IsMatch(source)
+        && TypedResultPattern()
+            .Matches(source)
+            .Any(match => match.Value.Contains(',') || OwnedResultContextPattern().IsMatch(source));
+
     private static IEnumerable<string> EnumerateSourceFiles() =>
         Directory
             .EnumerateFiles(FindApiRoot(), "*.cs", SearchOption.AllDirectories)
@@ -216,8 +247,12 @@ public sealed partial class TypedResultArchitectureTests
         throw new DirectoryNotFoundException("Could not locate api/Concertable.slnx.");
     }
 
-    [GeneratedRegex(@"\bResult<[^,\r\n>]+,\s*[^>\r\n]+>")]
+    [GeneratedRegex(@"\bResult<[^,\r\n>]+(?:,\s*[^>\r\n]+)?>")]
     private static partial Regex TypedResultPattern();
+
+    [GeneratedRegex(
+        @"\b(?:using|namespace)\s+Concertable\.Kernel\.Functional\s*;|\bConcertable\.Kernel\.Functional\.Result<")]
+    private static partial Regex OwnedResultContextPattern();
 
     [GeneratedRegex(
         @"\b(?:HttpException|BadRequestException|NotFoundException|ConflictException|ForbiddenException|PaymentRequiredException|InternalServerException)\b|\.OrNotFound\s*\(")]
