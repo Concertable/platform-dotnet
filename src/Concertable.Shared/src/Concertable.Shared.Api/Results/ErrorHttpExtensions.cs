@@ -1,5 +1,6 @@
 using Concertable.Kernel.Errors;
 using Concertable.Shared.Api.Http;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Frozen;
 using System.Net;
 
@@ -18,16 +19,38 @@ internal static class ErrorHttpExtensions
             [ErrorKind.PaymentRequired] = HttpStatusCode.PaymentRequired
         }.ToFrozenDictionary();
 
-    internal static ApplicationErrorResult ToProblemActionResult(this IError error)
+    internal static ApplicationErrorResult ToProblemActionResult<TError>(this TError error)
+        where TError : IError
     {
-        var descriptor = error.Descriptor;
-        var statusCode = httpStatusCodes[descriptor.Kind];
-        var problemDetails = ApplicationProblemDetails.Create(statusCode, descriptor.Message);
-        problemDetails.Extensions[ApplicationProblemDetails.CodeExtensionKey] = descriptor.Code;
+        if (error is null)
+            throw new ArgumentNullException(nameof(error));
 
-        if (descriptor is ValidationErrorDescriptor validation)
-            problemDetails.Extensions[ApplicationProblemDetails.ErrorsExtensionKey] = validation.Errors;
+        var definition = error.Definition
+            ?? throw new InvalidOperationException("An error definition is required.");
+        var statusCode = httpStatusCodes[definition.Kind];
+        var problemDetails = CreateProblemDetails(definition, statusCode);
+        problemDetails.Extensions[ApplicationProblemDetails.CodeExtensionKey] = definition.Code;
 
         return new ApplicationErrorResult(problemDetails);
     }
+
+    private static ProblemDetails CreateProblemDetails(
+        ErrorDefinition definition,
+        HttpStatusCode statusCode) =>
+        definition is ValidationErrorDefinition validation
+            ? new ValidationProblemDetails(
+                validation.Errors.ToDictionary(
+                    error => error.Key,
+                    error => error.Value.ToArray()))
+            {
+                Status = (int)statusCode,
+                Title = statusCode.ToReasonPhrase(),
+                Detail = definition.Message
+            }
+            : new ProblemDetails
+            {
+                Status = (int)statusCode,
+                Title = statusCode.ToReasonPhrase(),
+                Detail = definition.Message
+            };
 }

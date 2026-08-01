@@ -1,5 +1,5 @@
 using Concertable.Kernel.Errors;
-using CSharpFunctionalExtensions;
+using Concertable.Kernel.Functional;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Concertable.Shared.Api.Results;
@@ -9,8 +9,9 @@ public static class ResultHttpExtensions
     public static ActionResult<TValue> ToActionResult<TValue, TError>(
         this Result<TValue, TError> result,
         Func<TValue, ActionResult<TValue>> onSuccess)
+        where TValue : notnull
         where TError : IError =>
-        result.Match(
+        result.Match<ActionResult<TValue>>(
             onSuccess,
             error => error.ToProblemActionResult());
 
@@ -18,12 +19,13 @@ public static class ResultHttpExtensions
         this UnitResult<TError> result,
         Func<IActionResult> onSuccess)
         where TError : IError =>
-        result.Match(
+        result.Match<IActionResult>(
             onSuccess,
             error => error.ToProblemActionResult());
 
     public static ActionResult<TValue> ToOkActionResult<TValue, TError>(
         this Result<TValue, TError> result)
+        where TValue : notnull
         where TError : IError =>
         result.ToActionResult(
             value => new OkObjectResult(value));
@@ -32,6 +34,7 @@ public static class ResultHttpExtensions
         this Result<TValue, TError> result,
         string actionName,
         object? routeValues = null)
+        where TValue : notnull
         where TError : IError =>
         result.ToActionResult(
             value => new CreatedAtActionResult(
