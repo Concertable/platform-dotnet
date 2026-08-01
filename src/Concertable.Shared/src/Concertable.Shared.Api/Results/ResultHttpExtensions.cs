@@ -16,11 +16,11 @@ public static class ResultHttpExtensions
             error => error.ToProblemActionResult());
 
     public static IActionResult ToActionResult<TError>(
-        this Result<Unit, TError> result,
+        this Result<TError> result,
         Func<IActionResult> onSuccess)
         where TError : IError =>
         result.Match<IActionResult>(
-            _ => onSuccess(),
+            onSuccess,
             error => error.ToProblemActionResult());
 
     public static ActionResult<TValue> ToOkActionResult<TValue, TError>(
@@ -44,7 +44,7 @@ public static class ResultHttpExtensions
                 value));
 
     public static IActionResult ToNoContentActionResult<TError>(
-        this Result<Unit, TError> result)
+        this Result<TError> result)
         where TError : IError =>
         result.ToActionResult(
             () => new NoContentResult());
