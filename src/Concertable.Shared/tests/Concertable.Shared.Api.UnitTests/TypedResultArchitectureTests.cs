@@ -53,12 +53,85 @@ public sealed partial class TypedResultArchitectureTests
         Assert.Empty(projects);
     }
 
+    [Fact]
+    public void DunetImports_AppearOnlyInUnionDeclarationFiles()
+    {
+        var violations = EnumerateSourceFiles()
+            .Select(path => new { Path = path, Source = File.ReadAllText(path) })
+            .Where(file => DunetImportPattern().IsMatch(file.Source))
+            .Where(file => !UnionAttributePattern().IsMatch(file.Source))
+            .Select(file => file.Path)
+            .ToArray();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void DunetUnionDescriptors_UseGeneratedMatch()
+    {
+        var violations = EnumerateSourceFiles()
+            .Select(path => new { Path = path, Source = File.ReadAllText(path) })
+            .Where(file => UnionAttributePattern().IsMatch(file.Source))
+            .Where(file => ErrorUnionPattern().IsMatch(file.Source))
+            .Where(file => !DescriptorMatchPattern().IsMatch(file.Source))
+            .Select(file => file.Path)
+            .ToArray();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void OperationErrorCases_AreConstructedThroughFactories()
+    {
+        var violations = EnumerateSourceFiles()
+            .Select(path => new { Path = path, Source = File.ReadAllText(path) })
+            .Where(file => DirectErrorCaseConstructionPattern().IsMatch(file.Source))
+            .Select(file => file.Path)
+            .ToArray();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void DunetReferences_BelongToProjectsDeclaringUnions()
+    {
+        var violations = Directory
+            .EnumerateFiles(FindApiRoot(), "*.csproj", SearchOption.AllDirectories)
+            .Where(path => !IsGeneratedPath(path))
+            .Where(path => XDocument
+                .Load(path)
+                .Descendants("PackageReference")
+                .Any(reference => string.Equals(
+                    (string?)reference.Attribute("Include"),
+                    "Dunet",
+                    StringComparison.OrdinalIgnoreCase)))
+            .Where(path => !Directory
+                .EnumerateFiles(Path.GetDirectoryName(path)!, "*.cs", SearchOption.AllDirectories)
+                .Where(sourcePath => !IsGeneratedPath(sourcePath))
+                .Any(sourcePath => UnionAttributePattern().IsMatch(File.ReadAllText(sourcePath))))
+            .ToArray();
+
+        Assert.Empty(violations);
+    }
+
     private static bool IsProductionSource(string path)
     {
         var separator = Path.DirectorySeparatorChar;
         return path.Contains($"{separator}src{separator}", StringComparison.OrdinalIgnoreCase)
             && !path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase)
             && !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IEnumerable<string> EnumerateSourceFiles() =>
+        Directory
+            .EnumerateFiles(FindApiRoot(), "*.cs", SearchOption.AllDirectories)
+            .Where(path => !IsGeneratedPath(path));
+
+    private static bool IsGeneratedPath(string path)
+    {
+        var separator = Path.DirectorySeparatorChar;
+        return path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase)
+            || path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindApiRoot()
@@ -87,4 +160,16 @@ public sealed partial class TypedResultArchitectureTests
 
     [GeneratedRegex(@"\[\s*Union(?:Attribute)?(?:\s*\(|\s*\])")]
     private static partial Regex UnionAttributePattern();
+
+    [GeneratedRegex(@"\busing\s+Dunet\s*;")]
+    private static partial Regex DunetImportPattern();
+
+    [GeneratedRegex(@"\bpartial\s+record\s+\w+Error\s*:\s*IError\b")]
+    private static partial Regex ErrorUnionPattern();
+
+    [GeneratedRegex(@"\bDescriptor\s*=>\s*Match\s*<\s*ErrorDescriptor\s*>")]
+    private static partial Regex DescriptorMatchPattern();
+
+    [GeneratedRegex(@"\bnew\s+[A-Za-z_][A-Za-z0-9_]*Error\.[A-Za-z_][A-Za-z0-9_]*\s*\(")]
+    private static partial Regex DirectErrorCaseConstructionPattern();
 }

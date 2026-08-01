@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Concertable.Kernel.Errors;
 using Concertable.Shared.Api.Results;
 using CSharpFunctionalExtensions;
@@ -12,12 +13,12 @@ public sealed class TypedErrorCompositionTests
     [Fact]
     public void Descriptor_ConcertNotFound_ReturnsStableNotFoundError()
     {
-        PurchaseError error = new PurchaseError.ConcertNotFound(42);
+        PurchaseError error = PurchaseError.NotFound(42);
 
         var descriptor = error.Descriptor;
 
         Assert.Equal("ticket.concert_not_found", descriptor.Code);
-        Assert.Equal("Concert 42 was not found.", descriptor.Message);
+        Assert.Equal("Concert not found.", descriptor.Message);
         Assert.Equal(ErrorKind.NotFound, descriptor.Kind);
         Assert.IsNotType<ValidationErrorDescriptor>(descriptor);
     }
@@ -30,7 +31,7 @@ public sealed class TypedErrorCompositionTests
             {
                 ["quantity"] = ["Quantity must be positive."]
             };
-        PurchaseError error = new PurchaseError.Validation(errors);
+        PurchaseError error = PurchaseError.Invalid(errors);
 
         var descriptor = Assert.IsType<ValidationErrorDescriptor>(error.Descriptor);
 
@@ -47,9 +48,7 @@ public sealed class TypedErrorCompositionTests
             new PaymentFailure("payment.card_declined", "The card was declined."));
 
         var result = dependencyResult.MapError(
-            failure => (PurchaseError)new PurchaseError.PaymentRejected(
-                failure.Code,
-                failure.Message));
+            failure => PurchaseError.Rejected(failure.Code, failure.Message));
 
         var descriptor = result.Error.Descriptor;
         Assert.Equal("payment.card_declined", descriptor.Code);
@@ -61,7 +60,7 @@ public sealed class TypedErrorCompositionTests
     public void ToOkActionResult_UnionFailure_ReachesHttpTerminal()
     {
         var result = Result.Failure<string, PurchaseError>(
-            new PurchaseError.ConcertNotFound(42));
+            PurchaseError.NotFound(42));
 
         var actionResult = result.ToOkActionResult();
 
@@ -81,17 +80,26 @@ internal partial record PurchaseError : IError
     partial record Validation(IReadOnlyDictionary<string, string[]> Errors);
     partial record PaymentRejected(string Code, string Message);
 
+    public static PurchaseError NotFound(int concertId) =>
+        new ConcertNotFound(concertId);
+
+    public static PurchaseError Invalid(IReadOnlyDictionary<string, string[]> errors) =>
+        new Validation(errors);
+
+    public static PurchaseError Rejected(string code, string message) =>
+        new PaymentRejected(code, message);
+
     public ErrorDescriptor Descriptor => Match<ErrorDescriptor>(
-        notFound => new ErrorDescriptor(
-            "ticket.concert_not_found",
-            $"Concert {notFound.ConcertId} was not found.",
-            ErrorKind.NotFound),
-        validation => new ValidationErrorDescriptor(
+        notFound => ErrorDescriptor.NotFound<ConcertResource>(
+            "ticket.concert_not_found"),
+        validation => ErrorDescriptor.Validation(
             "ticket.purchase_invalid",
             "The ticket purchase is invalid.",
             validation.Errors),
-        paymentRejected => new ErrorDescriptor(
+        paymentRejected => ErrorDescriptor.PaymentRequired(
             paymentRejected.Code,
-            paymentRejected.Message,
-            ErrorKind.PaymentRequired));
+            paymentRejected.Message));
 }
+
+[DisplayName("Concert")]
+internal sealed class ConcertResource;
