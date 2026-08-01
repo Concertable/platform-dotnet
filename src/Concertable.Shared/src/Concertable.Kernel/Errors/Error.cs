@@ -17,6 +17,33 @@ public partial record ErrorDescriptor(
     string Message,
     ErrorKind Kind)
 {
+    public static ErrorDescriptor Invalid(string code, string message) =>
+        new(code, message, ErrorKind.Invalid);
+
+    public static ErrorDescriptor NotFound(string code, string message) =>
+        new(code, message, ErrorKind.NotFound);
+
+    public static ErrorDescriptor NotFound<T>(string code) =>
+        NotFound(code, $"{DisplayNameResolver.Of<T>()} not found.");
+
+    public static ErrorDescriptor Conflict(string code, string message) =>
+        new(code, message, ErrorKind.Conflict);
+
+    public static ErrorDescriptor Unauthenticated(string code, string message) =>
+        new(code, message, ErrorKind.Unauthenticated);
+
+    public static ErrorDescriptor Forbidden(string code, string message) =>
+        new(code, message, ErrorKind.Forbidden);
+
+    public static ErrorDescriptor PaymentRequired(string code, string message) =>
+        new(code, message, ErrorKind.PaymentRequired);
+
+    public static ValidationErrorDescriptor Validation(
+        string code,
+        string message,
+        IReadOnlyDictionary<string, string[]> errors) =>
+        new(code, message, errors);
+
     private string code = ValidateCode(Code);
     private string message = ValidateMessage(Message);
     private ErrorKind kind = ValidateKind(Kind);

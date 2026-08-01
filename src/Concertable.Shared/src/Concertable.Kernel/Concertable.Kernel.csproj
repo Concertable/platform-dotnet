@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CSharpFunctionalExtensions" />
     <PackageReference Include="Dapper" />
     <PackageReference Include="FluentResults" />
     <PackageReference Include="FluentValidation" />
