@@ -22,7 +22,7 @@ public sealed class ResultHttpExtensionsTests
     [InlineData(ErrorKind.Unauthenticated, HttpStatusCode.Unauthorized, "Unauthorized")]
     [InlineData(ErrorKind.Forbidden, HttpStatusCode.Forbidden, "Forbidden")]
     [InlineData(ErrorKind.PaymentRequired, HttpStatusCode.PaymentRequired, "Payment Required")]
-    public void ToOkActionResult_FailedResult_MapsSemanticKind(
+    public void ToOkActionResult_FailedResult_MapsSemanticKindToFrozenHttpContract(
         ErrorKind kind,
         HttpStatusCode expectedStatus,
         string expectedTitle)
