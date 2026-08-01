@@ -236,8 +236,5 @@ public sealed class ResultHttpExtensionsTests
             response.GetProperty("traceId").GetString());
     }
 
-    private sealed record TestError(ErrorDefinition Definition) : IError
-    {
-        public ErrorKind Kind => Definition.Kind;
-    }
+    private sealed record TestError(ErrorDefinition Definition) : IError;
 }

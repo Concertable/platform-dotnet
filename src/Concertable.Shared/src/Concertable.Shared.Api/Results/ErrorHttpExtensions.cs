@@ -21,7 +21,7 @@ internal static class ErrorHttpExtensions
     internal static ApplicationErrorResult ToProblemActionResult(this IError error)
     {
         var definition = error.Definition;
-        var statusCode = httpStatusCodes[error.Kind];
+        var statusCode = httpStatusCodes[definition.Kind];
         var problemDetails = ApplicationProblemDetails.Create(statusCode, definition.Message);
         problemDetails.Extensions[ApplicationProblemDetails.CodeExtensionKey] = definition.Code;
 

@@ -81,20 +81,6 @@ public sealed partial class TypedResultArchitectureTests
     }
 
     [Fact]
-    public void DunetUnionKinds_ForwardToDefinition()
-    {
-        var violations = EnumerateSourceFiles()
-            .Select(path => new { Path = path, Source = File.ReadAllText(path) })
-            .Where(file => UnionAttributePattern().IsMatch(file.Source))
-            .Where(file => ErrorUnionPattern().IsMatch(file.Source))
-            .Where(file => !KindForwardingPattern().IsMatch(file.Source))
-            .Select(file => file.Path)
-            .ToArray();
-
-        Assert.Empty(violations);
-    }
-
-    [Fact]
     public void OperationErrorCases_AreConstructedThroughFactories()
     {
         var violations = EnumerateSourceFiles()
@@ -183,9 +169,6 @@ public sealed partial class TypedResultArchitectureTests
 
     [GeneratedRegex(@"\bDefinition\s*=>\s*Match\s*<\s*ErrorDefinition\s*>")]
     private static partial Regex DefinitionMatchPattern();
-
-    [GeneratedRegex(@"\bKind\s*=>\s*Definition\.Kind\b")]
-    private static partial Regex KindForwardingPattern();
 
     [GeneratedRegex(@"\bnew\s+[A-Za-z_][A-Za-z0-9_]*Error\.[A-Za-z_][A-Za-z0-9_]*\s*\(")]
     private static partial Regex DirectErrorCaseConstructionPattern();
