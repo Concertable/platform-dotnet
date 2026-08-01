@@ -67,32 +67,172 @@ public sealed class ValueResultTests
     }
 
     [Fact]
-    public async Task TaskExtensions_PreserveSemanticsAndAsyncFailures()
+    public async Task TaskSourceSynchronousExtensions_EveryOperation_ComposesSourceTask()
     {
-        var mapped = await Task.FromResult(Result.Success(42)).Map(value => value.ToString());
-        var asyncMapped = await Result.Success(42).MapAsync(value => Task.FromResult(value.ToString()));
-        var bound = await Task.FromResult(Result.Success(42))
-            .BindAsync(value => Task.FromResult(Result.Success(value.ToString())));
-        var matched = await Result.Failure<int>("error").MatchAsync(
-            value => Task.FromResult(value),
-            error => Task.FromResult(error.Length));
-        var tapped = await Result.Failure<int>("error")
-            .TapErrorAsync(_ => Task.CompletedTask);
-        var recovered = await Result.Failure<int>("error")
-            .RecoverWithAsync(error => Task.FromResult(Result.Success(error.Length)));
+        var values = new List<int>();
+        var errors = new List<string>();
+        var success = Task.FromResult(Result.Success(2));
+        var failure = Task.FromResult(Result.Failure<int>("error"));
 
-        Assert.Equal(Result.Success("42"), mapped);
-        Assert.Equal(Result.Success("42"), asyncMapped);
-        Assert.Equal(Result.Success("42"), bound);
-        Assert.Equal(5, matched);
-        Assert.Equal(Result.Failure<int>("error"), tapped);
-        Assert.Equal(Result.Success(5), recovered);
+        Assert.Equal("2", await success.Match(value => value.ToString(), error => error));
+        await failure.Match(values.Add, errors.Add);
+        Assert.Equal(Result.Success("2"), await success.Map(value => value.ToString()));
+        Assert.Equal(Result.Success("2"), await success.Bind(value => Result.Success(value.ToString())));
+        Assert.Equal(Result.Success(), await success.Bind(_ => Result.Success()));
+        Assert.Equal(Result.Failure<int, int>(5), await failure.MapError(error => error.Length));
+        Assert.Equal(Result.Failure<int>("invalid"), await success.Ensure(_ => false, () => "invalid"));
+        Assert.Equal(Result.Success(2), await success.Tap(values.Add));
+        Assert.Equal(Result.Failure<int>("error"), await failure.TapError(errors.Add));
+        Assert.Equal(Result.Success(5), await failure.Recover(error => error.Length));
+        Assert.Equal(
+            Result.Success(5),
+            await failure.RecoverWith(error => Result.Success(error.Length)));
+        Assert.Equal([2], values);
+        Assert.Equal(["error", "error"], errors);
+    }
+
+    [Fact]
+    public async Task AsyncDelegateExtensions_DirectAndTaskSources_ComposeEveryOperation()
+    {
+        var values = new List<int>();
+        var errors = new List<string>();
+        var success = Result.Success(2);
+        var failure = Result.Failure<int>("error");
+
+        Assert.Equal(
+            "2",
+            await success.MatchAsync(
+                value => Task.FromResult(value.ToString()),
+                error => Task.FromResult(error)));
+        await failure.MatchAsync(
+            value =>
+            {
+                values.Add(value);
+                return Task.CompletedTask;
+            },
+            error =>
+            {
+                errors.Add(error);
+                return Task.CompletedTask;
+            });
+        Assert.Equal(Result.Success("2"), await success.MapAsync(value => Task.FromResult(value.ToString())));
+        Assert.Equal(
+            Result.Success("2"),
+            await success.BindAsync(value => Task.FromResult(Result.Success(value.ToString()))));
+        Assert.Equal(Result.Success(2), await success.EnsureAsync(_ => Task.FromResult(true), () => "invalid"));
+        Assert.Equal(Result.Success(2), await success.TapAsync(value =>
+        {
+            values.Add(value);
+            return Task.CompletedTask;
+        }));
+        Assert.Equal(Result.Failure<int>("error"), await failure.TapErrorAsync(error =>
+        {
+            errors.Add(error);
+            return Task.CompletedTask;
+        }));
+        Assert.Equal(
+            Result.Success(5),
+            await failure.RecoverWithAsync(
+                error => Task.FromResult(Result.Success(error.Length))));
+
+        var successTask = Task.FromResult(success);
+        var failureTask = Task.FromResult(failure);
+        Assert.Equal("2", await successTask.MatchAsync(
+            value => Task.FromResult(value.ToString()),
+            error => Task.FromResult(error)));
+        await failureTask.MatchAsync(_ => Task.CompletedTask, _ => Task.CompletedTask);
+        Assert.Equal(Result.Success("2"), await successTask.MapAsync(value => Task.FromResult(value.ToString())));
+        Assert.Equal(
+            Result.Success("2"),
+            await successTask.BindAsync(value => Task.FromResult(Result.Success(value.ToString()))));
+        Assert.Equal(
+            Result.Success(2),
+            await successTask.EnsureAsync(_ => Task.FromResult(true), () => "invalid"));
+        Assert.Equal(Result.Success(2), await successTask.TapAsync(_ => Task.CompletedTask));
+        Assert.Equal(Result.Failure<int>("error"), await failureTask.TapErrorAsync(_ => Task.CompletedTask));
+        Assert.Equal(
+            Result.Success(5),
+            await failureTask.RecoverWithAsync(
+                error => Task.FromResult(Result.Success(error.Length))));
+        Assert.Equal([2], values);
+        Assert.Equal(["error", "error"], errors);
+    }
+
+    [Fact]
+    public async Task AsyncExtensions_UnselectedDelegates_AreNotInvoked()
+    {
+        var invocations = 0;
+        var failure = Result.Failure<int>("error");
+        var success = Result.Success(2);
+
+        await failure.MapAsync(value =>
+        {
+            invocations++;
+            return Task.FromResult(value.ToString());
+        });
+        await failure.BindAsync(value =>
+        {
+            invocations++;
+            return Task.FromResult(Result.Success(value.ToString()));
+        });
+        await failure.EnsureAsync(value =>
+        {
+            invocations++;
+            return Task.FromResult(value > 0);
+        }, () => "invalid");
+        await failure.TapAsync(_ =>
+        {
+            invocations++;
+            return Task.CompletedTask;
+        });
+        await success.TapErrorAsync(_ =>
+        {
+            invocations++;
+            return Task.CompletedTask;
+        });
+        await success.RecoverWithAsync(_ =>
+        {
+            invocations++;
+            return Task.FromResult(Result.Success(0));
+        });
+
+        Assert.Equal(0, invocations);
+    }
+
+    [Fact]
+    public async Task AsyncExtensions_FaultCancellationNullTasksAndDefaults_Propagate()
+    {
+        var sourceException = new TestException();
+        var delegateException = new TestException();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var faultedSource = Task.FromException<Result<int>>(sourceException);
+        var cancelledSource = Task.FromCanceled<Result<int>>(cancellation.Token);
+        Func<int, Task<string>> throwing = _ => throw delegateException;
+        Func<int, Task<string>> faulting = _ => Task.FromException<string>(delegateException);
+        Func<int, Task<string>> cancelled = _ => Task.FromCanceled<string>(cancellation.Token);
+
+        Assert.Same(
+            sourceException,
+            await Assert.ThrowsAsync<TestException>(() => faultedSource.Map(value => value)));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => cancelledSource.MapAsync(value => Task.FromResult(value)));
+        Assert.Same(
+            delegateException,
+            await Assert.ThrowsAsync<TestException>(() => Result.Success(1).MapAsync(throwing)));
+        Assert.Same(
+            delegateException,
+            await Assert.ThrowsAsync<TestException>(() => Result.Success(1).MapAsync(faulting)));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => Result.Success(1).MapAsync(cancelled));
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => Result.Success(42).BindAsync<int, string>(_ => null!));
+            () => Result.Success(1).MapAsync<int, string>(_ => null!));
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => default(Result<int>).MatchAsync(
                 value => Task.FromResult(value),
                 _ => Task.FromResult(0)));
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => Task.FromResult(default(Result<int>)).MapAsync(value => Task.FromResult(value)));
     }
 
     [Fact]
@@ -127,4 +267,6 @@ public sealed class ValueResultTests
             type.GetMethods(BindingFlags.Public | BindingFlags.Static),
             method => method.Name == "op_Implicit");
     }
+
+    private sealed class TestException : Exception;
 }
