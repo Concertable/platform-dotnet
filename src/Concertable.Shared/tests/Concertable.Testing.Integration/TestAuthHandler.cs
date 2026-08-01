@@ -10,7 +10,6 @@ public sealed class TestAuthHandler : AuthenticationHandler<AuthenticationScheme
 {
     public const string SchemeName = "Test";
     public const string UserIdHeader = "X-Test-Sub";
-    public const string RoleHeader = "X-Test-Role";
     public const string EmailHeader = "X-Test-Email";
 
     public TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
@@ -26,13 +25,10 @@ public sealed class TestAuthHandler : AuthenticationHandler<AuthenticationScheme
             new("sub", userIdValues.ToString())
         };
 
-        if (Request.Headers.TryGetValue(RoleHeader, out var roleValues))
-            claims.Add(new Claim("role", roleValues.ToString()));
-
         if (Request.Headers.TryGetValue(EmailHeader, out var emailValues))
             claims.Add(new Claim("email", emailValues.ToString()));
 
-        var identity = new ClaimsIdentity(claims, SchemeName, "sub", "role");
+        var identity = new ClaimsIdentity(claims, SchemeName, "sub", null);
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName);
 
         return Task.FromResult(AuthenticateResult.Success(ticket));
