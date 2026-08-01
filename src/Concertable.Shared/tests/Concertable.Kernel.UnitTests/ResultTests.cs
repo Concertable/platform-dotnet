@@ -12,13 +12,13 @@ public sealed class ResultTests
         var genericFailure = Result<int, string>.Failure("error");
         var success = Result.Success<int, string>(42);
         var failure = Result.Failure<int, string>("error");
-        var noValue = Result.Success<string>();
+        var noValue = UnitResult.Success<string>();
 
         Assert.True(genericSuccess.IsSuccess);
         Assert.True(genericFailure.IsFailure);
         Assert.Equal(genericSuccess, success);
         Assert.Equal(genericFailure, failure);
-        Assert.Equal(Result<string>.Success(), noValue);
+        Assert.Equal(UnitResult<string>.Success(), noValue);
     }
 
     [Fact]
@@ -135,12 +135,12 @@ public sealed class ResultTests
     public void Bind_NoValueResult_PreservesSelectedCase()
     {
         var success = Result.Success<int, string>(2)
-            .Bind(_ => Result.Success<string>());
+            .Bind(_ => UnitResult.Success<string>());
         var failure = Result.Failure<int, string>("error")
-            .Bind(_ => Result.Success<string>());
+            .Bind(_ => UnitResult.Success<string>());
 
-        Assert.Equal(Result.Success<string>(), success);
-        Assert.Equal(Result.Failure<string>("error"), failure);
+        Assert.Equal(UnitResult.Success<string>(), success);
+        Assert.Equal(UnitResult.Failure("error"), failure);
     }
 
     [Fact]

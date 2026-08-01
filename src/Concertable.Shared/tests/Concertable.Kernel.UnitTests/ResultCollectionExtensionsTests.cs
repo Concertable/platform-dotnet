@@ -213,20 +213,20 @@ public sealed class ResultCollectionExtensionsTests
     {
         var success = new[]
         {
-            Result.Success<string>(),
-            Result.Success<string>()
+            UnitResult.Success<string>(),
+            UnitResult.Success<string>()
         }.Combine();
         var failure = new[]
         {
-            Result.Success<string>(),
-            Result.Failure<string>("first"),
-            Result.Failure<string>("second")
+            UnitResult.Success<string>(),
+            UnitResult.Failure("first"),
+            UnitResult.Failure("second")
         }.Combine();
-        var empty = Array.Empty<Result<string>>().Combine();
+        var empty = Array.Empty<UnitResult<string>>().Combine();
 
-        Assert.Equal(Result.Success<string>(), success);
-        Assert.Equal(Result.Failure<string>("first"), failure);
-        Assert.Equal(Result.Success<string>(), empty);
+        Assert.Equal(UnitResult.Success<string>(), success);
+        Assert.Equal(UnitResult.Failure("first"), failure);
+        Assert.Equal(UnitResult.Success<string>(), empty);
     }
 
     [Fact]

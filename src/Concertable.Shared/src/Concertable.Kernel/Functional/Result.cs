@@ -11,214 +11,9 @@ public readonly struct Result : IEquatable<Result>
     internal const string UninitializedText = "Uninitialized";
 
     private readonly byte tag;
+    private readonly string? error;
 
-    private Result(byte tag)
-    {
-        this.tag = tag;
-    }
-
-    public bool IsSuccess
-    {
-        get
-        {
-            this.EnsureInitialized();
-            return this.tag == SuccessTag;
-        }
-    }
-
-    public bool IsFailure
-    {
-        get
-        {
-            this.EnsureInitialized();
-            return this.tag == FailureTag;
-        }
-    }
-
-    public static Result Success() => new(SuccessTag);
-
-    public static Result Failure() => new(FailureTag);
-
-    public static Result<TError> Success<TError>()
-        where TError : notnull =>
-        Result<TError>.Success();
-
-    public static Result<TError> Failure<TError>(TError error)
-        where TError : notnull =>
-        Result<TError>.Failure(error);
-
-    public static Result<TValue, TError> Success<TValue, TError>(TValue value)
-        where TValue : notnull
-        where TError : notnull =>
-        Result<TValue, TError>.Success(value);
-
-    public static Result<TValue, TError> Failure<TValue, TError>(TError error)
-        where TValue : notnull
-        where TError : notnull =>
-        Result<TValue, TError>.Failure(error);
-
-    public TResult Match<TResult>(Func<TResult> success, Func<TResult> failure)
-    {
-        this.EnsureInitialized();
-        ArgumentNullException.ThrowIfNull(success);
-        ArgumentNullException.ThrowIfNull(failure);
-
-        return this.tag == SuccessTag ? success() : failure();
-    }
-
-    public void Match(Action success, Action failure)
-    {
-        this.EnsureInitialized();
-        ArgumentNullException.ThrowIfNull(success);
-        ArgumentNullException.ThrowIfNull(failure);
-
-        if (this.tag == SuccessTag)
-            success();
-        else
-            failure();
-    }
-
-    public Result Bind(Func<Result> bind)
-    {
-        this.EnsureInitialized();
-        ArgumentNullException.ThrowIfNull(bind);
-
-        if (this.tag == FailureTag)
-            return Failure();
-
-        var result = bind();
-        result.EnsureInitialized();
-        return result;
-    }
-
-    public Result<TError> Bind<TError>(
-        Func<Result<TError>> bind,
-        Func<TError> failureFactory)
-        where TError : notnull
-    {
-        this.EnsureInitialized();
-        ArgumentNullException.ThrowIfNull(bind);
-        ArgumentNullException.ThrowIfNull(failureFactory);
-
-        if (this.tag == FailureTag)
-            return Failure(failureFactory());
-
-        var result = bind();
-        result.EnsureInitialized();
-        return result;
-    }
-
-    public Result<TValue, TError> Bind<TValue, TError>(
-        Func<Result<TValue, TError>> bind,
-        Func<TError> failureFactory)
-        where TValue : notnull
-        where TError : notnull
-    {
-        this.EnsureInitialized();
-        ArgumentNullException.ThrowIfNull(bind);
-        ArgumentNullException.ThrowIfNull(failureFactory);
-
-        if (this.tag == FailureTag)
-            return Failure<TValue, TError>(failureFactory());
-
-        var result = bind();
-        result.EnsureInitialized();
-        return result;
-    }
-
-    public Result<TError> MapError<TError>(Func<TError> errorFactory)
-        where TError : notnull
-    {
-        this.EnsureInitialized();
-        ArgumentNullException.ThrowIfNull(errorFactory);
-
-        return this.tag == SuccessTag
-            ? Result.Success<TError>()
-            : Result.Failure(errorFactory());
-    }
-
-    public Result Tap(Action action)
-    {
-        this.EnsureInitialized();
-        ArgumentNullException.ThrowIfNull(action);
-
-        if (this.tag == SuccessTag)
-            action();
-
-        return this;
-    }
-
-    public Result TapFailure(Action action)
-    {
-        this.EnsureInitialized();
-        ArgumentNullException.ThrowIfNull(action);
-
-        if (this.tag == FailureTag)
-            action();
-
-        return this;
-    }
-
-    public Result Recover(Action fallback)
-    {
-        this.EnsureInitialized();
-        ArgumentNullException.ThrowIfNull(fallback);
-
-        if (this.tag == SuccessTag)
-            return this;
-
-        fallback();
-        return Success();
-    }
-
-    public Result RecoverWith(Func<Result> fallback)
-    {
-        this.EnsureInitialized();
-        ArgumentNullException.ThrowIfNull(fallback);
-
-        if (this.tag == SuccessTag)
-            return this;
-
-        var result = fallback();
-        result.EnsureInitialized();
-        return result;
-    }
-
-    public bool Equals(Result other) => this.tag == other.tag;
-
-    public override bool Equals(object? obj) => obj is Result other && this.Equals(other);
-
-    public override int GetHashCode() => HashCode.Combine(this.tag);
-
-    public override string ToString() =>
-        this.tag switch
-        {
-            SuccessTag => SuccessText,
-            FailureTag => FailureText,
-            _ => UninitializedText
-        };
-
-    public static bool operator ==(Result left, Result right) => left.Equals(right);
-
-    public static bool operator !=(Result left, Result right) => !left.Equals(right);
-
-    internal void EnsureInitialized()
-    {
-        if (this.tag is not SuccessTag and not FailureTag)
-            throw new InvalidOperationException("The Result is uninitialized.");
-    }
-}
-
-public readonly struct Result<TError> : IEquatable<Result<TError>>
-    where TError : notnull
-{
-    private const byte SuccessTag = 1;
-    private const byte FailureTag = 2;
-
-    private readonly byte tag;
-    private readonly TError? error;
-
-    private Result(byte tag, TError? error)
+    private Result(byte tag, string? error)
     {
         this.tag = tag;
         this.error = error;
@@ -242,15 +37,33 @@ public readonly struct Result<TError> : IEquatable<Result<TError>>
         }
     }
 
-    public static Result<TError> Success() => new(SuccessTag, default);
+    public static Result Success() => new(SuccessTag, default);
 
-    public static Result<TError> Failure(TError error)
+    public static Result Failure(string error)
     {
-        ArgumentNullException.ThrowIfNull(error);
-        return new Result<TError>(FailureTag, error);
+        ArgumentException.ThrowIfNullOrWhiteSpace(error);
+        return new Result(FailureTag, error);
     }
 
-    public TResult Match<TResult>(Func<TResult> success, Func<TError, TResult> failure)
+    public static Result<TValue> Success<TValue>(TValue value)
+        where TValue : notnull =>
+        Result<TValue>.Success(value);
+
+    public static Result<TValue> Failure<TValue>(string error)
+        where TValue : notnull =>
+        Result<TValue>.Failure(error);
+
+    public static Result<TValue, TError> Success<TValue, TError>(TValue value)
+        where TValue : notnull
+        where TError : notnull =>
+        Result<TValue, TError>.Success(value);
+
+    public static Result<TValue, TError> Failure<TValue, TError>(TError error)
+        where TValue : notnull
+        where TError : notnull =>
+        Result<TValue, TError>.Failure(error);
+
+    public TResult Match<TResult>(Func<TResult> success, Func<string, TResult> failure)
     {
         this.EnsureInitialized();
         ArgumentNullException.ThrowIfNull(success);
@@ -259,7 +72,7 @@ public readonly struct Result<TError> : IEquatable<Result<TError>>
         return this.tag == SuccessTag ? success() : failure(this.error!);
     }
 
-    public void Match(Action success, Action<TError> failure)
+    public void Match(Action success, Action<string> failure)
     {
         this.EnsureInitialized();
         ArgumentNullException.ThrowIfNull(success);
@@ -271,7 +84,7 @@ public readonly struct Result<TError> : IEquatable<Result<TError>>
             failure(this.error!);
     }
 
-    public bool TryGetError([MaybeNullWhen(false)] out TError error)
+    public bool TryGetError([NotNullWhen(true)] out string? error)
     {
         this.EnsureInitialized();
         error = this.error;
@@ -284,52 +97,74 @@ public readonly struct Result<TError> : IEquatable<Result<TError>>
         ArgumentNullException.ThrowIfNull(bind);
 
         if (this.tag == FailureTag)
-            return Result.Failure();
+            return Failure(this.error!);
 
         var result = bind();
         result.EnsureInitialized();
         return result;
     }
 
-    public Result<TError> Bind(Func<Result<TError>> bind)
-    {
-        this.EnsureInitialized();
-        ArgumentNullException.ThrowIfNull(bind);
-
-        if (this.tag == FailureTag)
-            return this;
-
-        var result = bind();
-        result.EnsureInitialized();
-        return result;
-    }
-
-    public Result<TValue, TError> Bind<TValue>(Func<Result<TValue, TError>> bind)
+    public Result<TValue> Bind<TValue>(Func<Result<TValue>> bind)
         where TValue : notnull
     {
         this.EnsureInitialized();
         ArgumentNullException.ThrowIfNull(bind);
 
         if (this.tag == FailureTag)
-            return Result.Failure<TValue, TError>(this.error!);
+            return Failure<TValue>(this.error!);
 
         var result = bind();
         result.EnsureInitialized();
         return result;
     }
 
-    public Result<TNextError> MapError<TNextError>(Func<TError, TNextError> map)
-        where TNextError : notnull
+    public UnitResult<TError> Bind<TError>(
+        Func<UnitResult<TError>> bind,
+        Func<string, TError> mapError)
+        where TError : notnull
+    {
+        this.EnsureInitialized();
+        ArgumentNullException.ThrowIfNull(bind);
+        ArgumentNullException.ThrowIfNull(mapError);
+
+        if (this.tag == FailureTag)
+            return UnitResult.Failure(mapError(this.error!));
+
+        var result = bind();
+        result.EnsureInitialized();
+        return result;
+    }
+
+    public Result<TValue, TError> Bind<TValue, TError>(
+        Func<Result<TValue, TError>> bind,
+        Func<string, TError> mapError)
+        where TValue : notnull
+        where TError : notnull
+    {
+        this.EnsureInitialized();
+        ArgumentNullException.ThrowIfNull(bind);
+        ArgumentNullException.ThrowIfNull(mapError);
+
+        if (this.tag == FailureTag)
+            return Failure<TValue, TError>(mapError(this.error!));
+
+        var result = bind();
+        result.EnsureInitialized();
+        return result;
+    }
+
+    public UnitResult<TError> MapError<TError>(Func<string, TError> map)
+        where TError : notnull
     {
         this.EnsureInitialized();
         ArgumentNullException.ThrowIfNull(map);
 
         return this.tag == SuccessTag
-            ? Result.Success<TNextError>()
-            : Result.Failure(map(this.error!));
+            ? UnitResult.Success<TError>()
+            : UnitResult.Failure(map(this.error!));
     }
 
-    public Result<TError> Tap(Action action)
+    public Result Tap(Action action)
     {
         this.EnsureInitialized();
         ArgumentNullException.ThrowIfNull(action);
@@ -340,7 +175,7 @@ public readonly struct Result<TError> : IEquatable<Result<TError>>
         return this;
     }
 
-    public Result<TError> TapError(Action<TError> action)
+    public Result TapError(Action<string> action)
     {
         this.EnsureInitialized();
         ArgumentNullException.ThrowIfNull(action);
@@ -351,7 +186,7 @@ public readonly struct Result<TError> : IEquatable<Result<TError>>
         return this;
     }
 
-    public Result<TError> Recover(Action<TError> fallback)
+    public Result Recover(Action<string> fallback)
     {
         this.EnsureInitialized();
         ArgumentNullException.ThrowIfNull(fallback);
@@ -363,7 +198,7 @@ public readonly struct Result<TError> : IEquatable<Result<TError>>
         return Success();
     }
 
-    public Result<TError> RecoverWith(Func<TError, Result<TError>> fallback)
+    public Result RecoverWith(Func<string, Result> fallback)
     {
         this.EnsureInitialized();
         ArgumentNullException.ThrowIfNull(fallback);
@@ -376,41 +211,35 @@ public readonly struct Result<TError> : IEquatable<Result<TError>>
         return result;
     }
 
-    public bool Equals(Result<TError> other)
-    {
-        if (this.tag != other.tag)
-            return false;
+    public bool Equals(Result other) =>
+        this.tag == other.tag
+        && (this.tag != FailureTag || this.error == other.error);
 
-        return this.tag != FailureTag
-            || EqualityComparer<TError>.Default.Equals(this.error!, other.error!);
-    }
-
-    public override bool Equals(object? obj) =>
-        obj is Result<TError> other && this.Equals(other);
+    public override bool Equals(object? obj) => obj is Result other && this.Equals(other);
 
     public override int GetHashCode() =>
         this.tag == FailureTag
-            ? HashCode.Combine(this.tag, EqualityComparer<TError>.Default.GetHashCode(this.error!))
+            ? HashCode.Combine(this.tag, this.error)
             : HashCode.Combine(this.tag);
 
     public override string ToString() =>
         this.tag switch
         {
-            SuccessTag => Result.SuccessText,
-            FailureTag => $"{Result.FailureText}({this.error})",
-            _ => Result.UninitializedText
+            SuccessTag => SuccessText,
+            FailureTag => $"{FailureText}({this.error})",
+            _ => UninitializedText
         };
 
-    public static bool operator ==(Result<TError> left, Result<TError> right) => left.Equals(right);
+    public static bool operator ==(Result left, Result right) => left.Equals(right);
 
-    public static bool operator !=(Result<TError> left, Result<TError> right) => !left.Equals(right);
+    public static bool operator !=(Result left, Result right) => !left.Equals(right);
 
     internal void EnsureInitialized()
     {
         if (this.tag is not SuccessTag and not FailureTag)
             throw new InvalidOperationException("The Result is uninitialized.");
 
-        if (this.tag == FailureTag && this.error is null)
+        if (this.tag == FailureTag && string.IsNullOrWhiteSpace(this.error))
             throw new InvalidOperationException("The Result failure has no error.");
     }
 }
@@ -511,26 +340,46 @@ public readonly struct Result<TValue, TError> : IEquatable<Result<TValue, TError
             : Result.Failure<TNext, TError>(this.error!);
     }
 
-    public Result Bind(Func<TValue, Result> bind)
+    public Result Bind(
+        Func<TValue, Result> bind,
+        Func<TError, string> mapError)
     {
         this.EnsureInitialized();
         ArgumentNullException.ThrowIfNull(bind);
+        ArgumentNullException.ThrowIfNull(mapError);
 
         if (this.tag == FailureTag)
-            return Result.Failure();
+            return Result.Failure(mapError(this.error!));
 
         var result = bind(this.value!);
         result.EnsureInitialized();
         return result;
     }
 
-    public Result<TError> Bind(Func<TValue, Result<TError>> bind)
+    public Result<TNext> Bind<TNext>(
+        Func<TValue, Result<TNext>> bind,
+        Func<TError, string> mapError)
+        where TNext : notnull
+    {
+        this.EnsureInitialized();
+        ArgumentNullException.ThrowIfNull(bind);
+        ArgumentNullException.ThrowIfNull(mapError);
+
+        if (this.tag == FailureTag)
+            return Result.Failure<TNext>(mapError(this.error!));
+
+        var result = bind(this.value!);
+        result.EnsureInitialized();
+        return result;
+    }
+
+    public UnitResult<TError> Bind(Func<TValue, UnitResult<TError>> bind)
     {
         this.EnsureInitialized();
         ArgumentNullException.ThrowIfNull(bind);
 
         if (this.tag == FailureTag)
-            return Result.Failure(this.error!);
+            return UnitResult.Failure(this.error!);
 
         var result = bind(this.value!);
         result.EnsureInitialized();

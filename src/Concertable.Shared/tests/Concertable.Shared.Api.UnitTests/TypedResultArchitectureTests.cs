@@ -23,7 +23,7 @@ public sealed partial class TypedResultArchitectureTests
     }
 
     [Theory]
-    [InlineData("Result<TestError>")]
+    [InlineData("UnitResult<TestError>")]
     [InlineData("Result<TestValue, TestError>")]
     public void TypedResultSlices_ResultWithHttpException_IsDetected(string resultType)
     {
@@ -41,6 +41,18 @@ public sealed partial class TypedResultArchitectureTests
     {
         const string source = """
             using FluentResults;
+
+            Result<TestValue> Execute() => throw new NotFoundException();
+            """;
+
+        Assert.False(IsTypedResultHttpExceptionViolation(source));
+    }
+
+    [Fact]
+    public void OwnedValueResultSlices_OneArityResultWithHttpException_IsIgnored()
+    {
+        const string source = """
+            using Concertable.Kernel.Functional;
 
             Result<TestValue> Execute() => throw new NotFoundException();
             """;
@@ -214,9 +226,7 @@ public sealed partial class TypedResultArchitectureTests
 
     private static bool IsTypedResultHttpExceptionViolation(string source) =>
         HttpExceptionPattern().IsMatch(source)
-        && TypedResultPattern()
-            .Matches(source)
-            .Any(match => match.Value.Contains(',') || OwnedResultContextPattern().IsMatch(source));
+        && TypedErrorResultPattern().IsMatch(source);
 
     private static IEnumerable<string> EnumerateSourceFiles() =>
         Directory
@@ -247,12 +257,8 @@ public sealed partial class TypedResultArchitectureTests
         throw new DirectoryNotFoundException("Could not locate api/Concertable.slnx.");
     }
 
-    [GeneratedRegex(@"\bResult<[^,\r\n>]+(?:,\s*[^>\r\n]+)?>")]
-    private static partial Regex TypedResultPattern();
-
-    [GeneratedRegex(
-        @"\b(?:using|namespace)\s+Concertable\.Kernel\.Functional\s*;|\bConcertable\.Kernel\.Functional\.Result<")]
-    private static partial Regex OwnedResultContextPattern();
+    [GeneratedRegex(@"\b(?:UnitResult<[^>\r\n]+>|Result<[^,\r\n>]+,\s*[^>\r\n]+>)")]
+    private static partial Regex TypedErrorResultPattern();
 
     [GeneratedRegex(
         @"\b(?:HttpException|BadRequestException|NotFoundException|ConflictException|ForbiddenException|PaymentRequiredException|InternalServerException)\b|\.OrNotFound\s*\(")]

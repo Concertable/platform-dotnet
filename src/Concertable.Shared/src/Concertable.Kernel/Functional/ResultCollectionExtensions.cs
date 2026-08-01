@@ -85,8 +85,8 @@ public static class ResultCollectionExtensions
         return Result.Success<IReadOnlyList<TValue>, TError>(values);
     }
 
-    public static Result<TError> Combine<TError>(
-        this IEnumerable<Result<TError>> source)
+    public static UnitResult<TError> Combine<TError>(
+        this IEnumerable<UnitResult<TError>> source)
         where TError : notnull
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -94,9 +94,9 @@ public static class ResultCollectionExtensions
         foreach (var result in source)
         {
             if (result.TryGetError(out var error))
-                return Result.Failure(error);
+                return UnitResult.Failure(error);
         }
 
-        return Result.Success<TError>();
+        return UnitResult.Success<TError>();
     }
 }

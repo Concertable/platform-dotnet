@@ -88,7 +88,7 @@ public sealed class ValidationErrorsTests
     {
         var validationErrors = new ValidationErrors(
             [new("quantity", "Quantity must be positive.")]);
-        var validation = Result.Failure<ValidationErrors>(validationErrors);
+        var validation = UnitResult.Failure(validationErrors);
 
         var result = validation.MapError(
             errors => new TestError(
