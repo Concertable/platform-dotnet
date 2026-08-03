@@ -84,10 +84,10 @@ public sealed class ResultHttpExtensionsTests
         var result = Result.Failure<string, TestError>(error);
         var serviceCollection = new ServiceCollection();
         serviceCollection.AddLogging();
-        serviceCollection.AddControllers();
         serviceCollection.AddProblemDetails(
             options => options.CustomizeProblemDetails = problemContext =>
                 problemContext.ProblemDetails.Extensions["customized"] = true);
+        serviceCollection.AddControllers();
         var services = serviceCollection.BuildServiceProvider();
         var context = new DefaultHttpContext
         {
@@ -97,6 +97,13 @@ public sealed class ResultHttpExtensionsTests
                 Body = new MemoryStream()
             }
         };
+        context.SetEndpoint(
+            new Endpoint(
+                _ => Task.CompletedTask,
+                new EndpointMetadataCollection(
+                    new ControllerAttribute(),
+                    new ApiControllerAttribute()),
+                "test"));
         var actionContext = new ActionContext(
             context,
             new RouteData(),
