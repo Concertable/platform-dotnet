@@ -50,8 +50,22 @@ internal static class ApplicationProblemDetails
             Exception = exception
         };
 
+        var hasExistingErrorsExtension = problemDetails.Extensions.TryGetValue(
+            ErrorsExtensionKey,
+            out var existingErrorsExtension);
+        if (problemDetails is ValidationProblemDetails validationProblemDetails)
+            problemDetails.Extensions[ErrorsExtensionKey] = validationProblemDetails.Errors;
+
         if (await problemDetailsService.TryWriteAsync(context).ConfigureAwait(false))
             return;
+
+        if (problemDetails is ValidationProblemDetails)
+        {
+            if (hasExistingErrorsExtension)
+                problemDetails.Extensions[ErrorsExtensionKey] = existingErrorsExtension;
+            else
+                problemDetails.Extensions.Remove(ErrorsExtensionKey);
+        }
 
         httpContext.Response.ContentType = MediaTypeNames.Application.ProblemJson;
         await JsonSerializer
