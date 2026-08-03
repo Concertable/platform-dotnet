@@ -156,6 +156,34 @@ public sealed partial class TypedResultArchitectureTests
     }
 
     [Fact]
+    public void ServiceHosts_RegisterProblemDetailsBeforeMvc()
+    {
+        var violations = Directory
+            .EnumerateFiles(FindApiRoot(), "Program.cs", SearchOption.AllDirectories)
+            .Where(path => Path.GetDirectoryName(path)?
+                .EndsWith(".Web", StringComparison.Ordinal) == true)
+            .Select(path => new
+            {
+                Path = path,
+                Source = File.ReadAllText(path)
+            })
+            .Select(host => new
+            {
+                host.Path,
+                ProblemDetails = ProblemDetailsRegistrationPattern().Match(host.Source),
+                Mvc = MvcRegistrationPattern().Match(host.Source)
+            })
+            .Where(host =>
+                !host.ProblemDetails.Success
+                || !host.Mvc.Success
+                || host.ProblemDetails.Index > host.Mvc.Index)
+            .Select(host => host.Path)
+            .ToArray();
+
+        Assert.Empty(violations);
+    }
+
+    [Fact]
     public void DunetImports_AppearOnlyInUnionDeclarationFiles()
     {
         var violations = EnumerateSourceFiles()
@@ -278,4 +306,10 @@ public sealed partial class TypedResultArchitectureTests
 
     [GeneratedRegex(@"\bnew\s+[A-Za-z_][A-Za-z0-9_]*Error\.[A-Za-z_][A-Za-z0-9_]*\s*\(")]
     private static partial Regex DirectErrorCaseConstructionPattern();
+
+    [GeneratedRegex(@"\.AddProblemDetails\s*\(")]
+    private static partial Regex ProblemDetailsRegistrationPattern();
+
+    [GeneratedRegex(@"\.Add(?:[A-Za-z]+)?Controllers\s*\(")]
+    private static partial Regex MvcRegistrationPattern();
 }
