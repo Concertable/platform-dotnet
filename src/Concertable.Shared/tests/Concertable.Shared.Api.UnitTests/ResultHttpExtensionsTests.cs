@@ -70,6 +70,65 @@ public sealed class ResultHttpExtensionsTests
     }
 
     [Fact]
+    public async Task ToOkActionResult_ValidationFailureExecution_PreservesStructuredErrors()
+    {
+        var error = new TestError(
+            ErrorDefinition.Validation(
+                "ticket.purchase_invalid",
+                "The ticket purchase is invalid.",
+                new Dictionary<string, string[]>
+                {
+                    ["quantity"] = ["Quantity must be positive."],
+                    ["concert"] = ["Concert is not available."]
+                }));
+        var result = Result.Failure<string, TestError>(error);
+        var serviceCollection = new ServiceCollection();
+        serviceCollection.AddLogging();
+        serviceCollection.AddProblemDetails(
+            options => options.CustomizeProblemDetails = problemContext =>
+                problemContext.ProblemDetails.Extensions["customized"] = true);
+        serviceCollection.AddControllers();
+        var services = serviceCollection.BuildServiceProvider();
+        var context = new DefaultHttpContext
+        {
+            RequestServices = services,
+            Response =
+            {
+                Body = new MemoryStream()
+            }
+        };
+        context.SetEndpoint(
+            new Endpoint(
+                _ => Task.CompletedTask,
+                new EndpointMetadataCollection(
+                    new ControllerAttribute(),
+                    new ApiControllerAttribute()),
+                "test"));
+        var actionContext = new ActionContext(
+            context,
+            new RouteData(),
+            new ActionDescriptor());
+
+        var actionResult = result.ToOkActionResult();
+        var objectResult = Assert.IsAssignableFrom<ObjectResult>(actionResult.Result);
+        await objectResult.ExecuteResultAsync(actionContext);
+
+        context.Response.Body.Position = 0;
+        using var document = await JsonDocument.ParseAsync(context.Response.Body);
+        var response = document.RootElement;
+        var errors = response.GetProperty("errors");
+        Assert.Equal(
+            "Quantity must be positive.",
+            errors.GetProperty("quantity")[0].GetString());
+        Assert.Equal(
+            "Concert is not available.",
+            errors.GetProperty("concert")[0].GetString());
+        Assert.Equal("ticket.purchase_invalid", response.GetProperty("code").GetString());
+        Assert.True(response.GetProperty("customized").GetBoolean());
+        Assert.Equal(MediaTypeNames.Application.ProblemJson, context.Response.ContentType);
+    }
+
+    [Fact]
     public void ToOkActionResult_AllErrorKinds_HaveHttpMappings()
     {
         foreach (var kind in Enum.GetValues<ErrorKind>())
@@ -305,6 +364,7 @@ public sealed class ResultHttpExtensionsTests
         context.Response.Body.Position = 0;
         using var document = await JsonDocument.ParseAsync(context.Response.Body);
         var response = document.RootElement;
+        Assert.Single(response.EnumerateObject().Where(property => property.NameEquals("errors")));
         Assert.Equal(
             "Quantity must be positive.",
             response.GetProperty("errors").GetProperty("quantity")[0].GetString());
