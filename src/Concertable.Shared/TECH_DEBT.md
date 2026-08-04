@@ -31,7 +31,7 @@ leak, where a Kernel helper needs a publish-first PR.
 `PackageReference` like the runtime shared libs (carrying the same publish-first + pin-bump boundary) —
 OR test infra is explicitly documented as carve-exempt (dev-only, never shipped in a service runtime)
 and the misleading `IsPackable=true` is dropped. Decision + execution steps:
-[`plans/SHARED_TEST_LIBS_PACKAGING.md`](../../plans/SHARED_TEST_LIBS_PACKAGING.md). Lean: publish, for
+[`plans/platform/SHARED_TEST_LIBS_PACKAGING.md`](../../plans/platform/SHARED_TEST_LIBS_PACKAGING.md). Lean: publish, for
 consistency with the Shared-repo model — the cost is that every shared-test-helper edit then takes the
 publish-first cycle.
 
