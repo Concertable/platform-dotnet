@@ -23,8 +23,6 @@ internal abstract record PaymentError
     internal sealed record ValidationFailed : PaymentError;
 
     internal sealed record NotFound : PaymentError;
-
-    internal sealed record Legacy_NotFound : PaymentError;
 }
 
 internal abstract record CommissionError
@@ -39,6 +37,8 @@ internal abstract record EscrowRefundError
     internal sealed record EscrowNotFound : EscrowRefundError;
 
     internal sealed record RefundNotFound : EscrowRefundError;
+
+    internal sealed record RefundEscrowNotFound : EscrowRefundError;
 
     internal sealed record CurrencyMismatch : EscrowRefundError;
 
@@ -62,22 +62,30 @@ internal abstract record InheritanceError
     internal sealed record MandateNotFound : InheritanceError;
 }
 
-internal abstract record EscrowError
+internal static class UnderivableShapes
 {
-    internal sealed record Escrow : EscrowError;
-}
+    internal abstract record EscrowError
+    {
+        internal sealed record Escrow : EscrowError;
+    }
 
-internal abstract record SingleWordError
-{
-    internal sealed record Case : SingleWordError;
-}
+    internal abstract record SingleWordError
+    {
+        internal sealed record Case : SingleWordError;
+    }
 
-internal abstract record Error
-{
-    internal sealed record NotFound : Error;
-}
+    internal abstract record UnsplittableError
+    {
+        internal sealed record Legacy_NotFound : UnsplittableError;
+    }
 
-internal abstract record UnsuffixedUnion
-{
-    internal sealed record NotFound : UnsuffixedUnion;
+    internal abstract record Error
+    {
+        internal sealed record NotFound : Error;
+    }
+
+    internal abstract record UnsuffixedUnion
+    {
+        internal sealed record NotFound : UnsuffixedUnion;
+    }
 }
