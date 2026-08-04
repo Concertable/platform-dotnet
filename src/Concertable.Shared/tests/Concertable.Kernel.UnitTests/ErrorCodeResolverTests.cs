@@ -53,6 +53,7 @@ public sealed class ErrorCodeResolverTests
         { typeof(CommissionError.RateNotFoundCase), "commission.rate_not_found" },
         { typeof(EscrowRefundError.EscrowNotFound), "escrow.refund_not_found" },
         { typeof(EscrowRefundError.RefundNotFound), "escrow.refund_not_found" },
+        { typeof(EscrowRefundError.RefundEscrowNotFound), "escrow.refund_not_found" },
         { typeof(EscrowRefundError.CurrencyMismatch), "escrow.refund_currency_mismatch" },
         { typeof(GatewayError.HTTP2Unavailable), "gateway.http_2_unavailable" },
         { typeof(GatewayError.ACHMandateNotFound), "gateway.ach_mandate_not_found" }
@@ -61,10 +62,10 @@ public sealed class ErrorCodeResolverTests
     public static TheoryData<Type> UnderivableCases => new()
     {
         typeof(UnnestedNotFound),
-        typeof(UnsuffixedUnion.NotFound),
-        typeof(Error.NotFound),
-        typeof(SingleWordError.Case),
-        typeof(EscrowError.Escrow),
-        typeof(PaymentError.Legacy_NotFound)
+        typeof(UnderivableShapes.UnsuffixedUnion.NotFound),
+        typeof(UnderivableShapes.Error.NotFound),
+        typeof(UnderivableShapes.SingleWordError.Case),
+        typeof(UnderivableShapes.EscrowError.Escrow),
+        typeof(UnderivableShapes.UnsplittableError.Legacy_NotFound)
     };
 }
