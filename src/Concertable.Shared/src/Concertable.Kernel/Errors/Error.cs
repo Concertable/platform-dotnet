@@ -12,6 +12,24 @@ public enum ErrorKind
     PaymentRequired
 }
 
+/// <summary>
+/// The published error code of an error case, overriding the code derived from its union and case
+/// names. Declare it on a case whose CLR name no longer matches the code consumers already depend on.
+/// </summary>
+[AttributeUsage(
+    AttributeTargets.Class | AttributeTargets.Struct,
+    AllowMultiple = false,
+    Inherited = false)]
+public sealed class ErrorCodeAttribute : Attribute
+{
+    public ErrorCodeAttribute(string code)
+    {
+        this.Code = code;
+    }
+
+    public string Code { get; }
+}
+
 public partial record ErrorDefinition(
     string Code,
     string Message,
@@ -20,29 +38,52 @@ public partial record ErrorDefinition(
     public static ErrorDefinition Invalid(string code, string message) =>
         new(code, message, ErrorKind.Invalid);
 
+    public static ErrorDefinition Invalid<TCase>(string message) =>
+        Invalid(ErrorCodeResolver.Of<TCase>(), message);
+
     public static ErrorDefinition NotFound(string code, string message) =>
         new(code, message, ErrorKind.NotFound);
 
     public static ErrorDefinition NotFound<T>(string code) =>
         NotFound(code, $"{DisplayNameResolver.Of<T>()} not found.");
 
+    public static ErrorDefinition NotFound<TCase>() =>
+        NotFound(ErrorCodeResolver.Of<TCase>(), $"{DisplayNameResolver.Of<TCase>()} not found.");
+
     public static ErrorDefinition Conflict(string code, string message) =>
         new(code, message, ErrorKind.Conflict);
+
+    public static ErrorDefinition Conflict<TCase>(string message) =>
+        Conflict(ErrorCodeResolver.Of<TCase>(), message);
 
     public static ErrorDefinition Unauthenticated(string code, string message) =>
         new(code, message, ErrorKind.Unauthenticated);
 
+    public static ErrorDefinition Unauthenticated<TCase>(string message) =>
+        Unauthenticated(ErrorCodeResolver.Of<TCase>(), message);
+
     public static ErrorDefinition Forbidden(string code, string message) =>
         new(code, message, ErrorKind.Forbidden);
 
+    public static ErrorDefinition Forbidden<TCase>(string message) =>
+        Forbidden(ErrorCodeResolver.Of<TCase>(), message);
+
     public static ErrorDefinition PaymentRequired(string code, string message) =>
         new(code, message, ErrorKind.PaymentRequired);
+
+    public static ErrorDefinition PaymentRequired<TCase>(string message) =>
+        PaymentRequired(ErrorCodeResolver.Of<TCase>(), message);
 
     public static ValidationErrorDefinition Validation(
         string code,
         string message,
         IReadOnlyDictionary<string, string[]> errors) =>
         new(code, message, errors);
+
+    public static ValidationErrorDefinition Validation<TCase>(
+        string message,
+        IReadOnlyDictionary<string, string[]> errors) =>
+        Validation(ErrorCodeResolver.Of<TCase>(), message, errors);
 
     private string code = ValidateCode(Code);
     private string message = ValidateMessage(Message);

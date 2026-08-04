@@ -47,6 +47,81 @@ public sealed class ErrorDefinitionTests
         Assert.Equal(ErrorKind.NotFound, definition.Kind);
     }
 
+    [Fact]
+    public void CaseFactories_EveryKind_DeriveCodeAndKind()
+    {
+        var errors = new Dictionary<string, string[]>
+        {
+            ["amount"] = ["Amount must be positive."]
+        };
+
+        var definitions = new ErrorDefinition[]
+        {
+            ErrorDefinition.Invalid<PaymentError.InvalidRequest>("Invalid."),
+            ErrorDefinition.NotFound<PaymentError.PayerNotFound>(),
+            ErrorDefinition.Conflict<PaymentError.AlreadyCaptured>("Conflict."),
+            ErrorDefinition.Unauthenticated<PaymentError.AuthenticationRequired>("Unauthenticated."),
+            ErrorDefinition.Forbidden<PaymentError.AccessForbidden>("Forbidden."),
+            ErrorDefinition.PaymentRequired<PaymentError.DeclinedCase>("Payment required."),
+            ErrorDefinition.Validation<PaymentError.ValidationFailed>("Validation failed.", errors)
+        };
+
+        Assert.Equal(
+            [
+                "payment.invalid_request",
+                "payment.payer_not_found",
+                "payment.already_captured",
+                "payment.authentication_required",
+                "payment.access_forbidden",
+                "payment.declined",
+                "payment.validation_failed"
+            ],
+            definitions.Select(definition => definition.Code));
+        Assert.Equal(
+            [
+                ErrorKind.Invalid,
+                ErrorKind.NotFound,
+                ErrorKind.Conflict,
+                ErrorKind.Unauthenticated,
+                ErrorKind.Forbidden,
+                ErrorKind.PaymentRequired,
+                ErrorKind.Invalid
+            ],
+            definitions.Select(definition => definition.Kind));
+        Assert.Same(errors, Assert.IsType<ValidationErrorDefinition>(definitions[^1]).Errors);
+    }
+
+    [Fact]
+    public void NotFoundCaseFactory_AnnotatedCase_NamesTheDisplayName()
+    {
+        var definition = ErrorDefinition.NotFound<PaymentError.PayerNotFound>();
+
+        Assert.Equal("Payer payment account not found.", definition.Message);
+    }
+
+    [Fact]
+    public void NotFoundCaseFactory_UnannotatedCase_ThrowsInvalidOperationException()
+    {
+        Assert.Throws<InvalidOperationException>(
+            ErrorDefinition.NotFound<CommissionError.BindingNotFound>);
+    }
+
+    [Fact]
+    public void CaseFactory_ErrorCodeAttribute_PreservesPublishedCode()
+    {
+        var definition = ErrorDefinition.Conflict<EscrowRefundError.EscrowRejected>(
+            "The escrow cannot be refunded in its current state.");
+
+        Assert.Equal("escrow.refund_not_allowed", definition.Code);
+    }
+
+    [Fact]
+    public void CaseFactory_MalformedErrorCodeAttribute_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(
+            () => ErrorDefinition.Conflict<EscrowRefundError.MalformedOverride>("Conflict."));
+    }
+
     [Theory]
     [InlineData("ticket.concert_not_found")]
     [InlineData("payment.card_declined")]
@@ -159,6 +234,7 @@ public sealed class ErrorDefinitionTests
 
         Assert.IsType<ArgumentException>(exception);
     }
+
     [DisplayName("Widget")]
     private sealed class Widget;
 }
