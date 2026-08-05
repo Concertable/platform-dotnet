@@ -42,17 +42,17 @@ Last reconciled: 2026-06-01 / Stripe new-card flows fixed (card-entry viewport +
 
 | Suite | Total | Passing | Failing |
 |---|---|---|---|
-| B2B | 27 | 27 | 0 |
+| B2B | 29 | 29 | 0 |
 | Customer | 7 | 7 | 0 |
-| **Total** | **34** | **34** | **0** |
+| **Total** | **36** | **36** | **0** |
 
 Entire suite green. The previously-failing Stripe payment flows (3DS challenge, "new card" variants, declined-card variants) are fixed: new-card entry now fills the Stripe iframe reliably (tall viewport), and the Customer E2E AppHost now forwards Stripe webhooks via stripe-cli so ticket-purchase confirmation completes.
 
 <!-- BASELINE-DATA-START -->
 
-## B2B (27 total)
+## B2B (29 total)
 
-### B2B passing (27)
+### B2B passing (29)
 
 ```text
 New artist manager registers, signs in, creates their artist profile
@@ -82,6 +82,8 @@ Artist venue hire attempt is declined
 Owner invites a member who accepts and is then managed
 Switching organization scopes member management to the chosen tenant
 A venue's members share one inbox with independent read state
+A visitor rejects all cookies and the choice persists
+A visitor accepts all cookies
 ```
 
 ### B2B failing (0)
