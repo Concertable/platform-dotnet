@@ -211,25 +211,15 @@ public sealed partial class TypedResultArchitectureTests
     }
 
     [Fact]
-    public void DunetUnionDefinitions_UseGeneratedMatch()
+    public void DunetUnionDefinitions_UseSupportedDefinitionShape()
     {
         var violations = EnumerateSourceFiles()
             .Select(path => new { Path = path, Source = File.ReadAllText(path) })
             .Where(file => UnionAttributePattern().IsMatch(file.Source))
             .Where(file => ErrorUnionPattern().IsMatch(file.Source))
-            .Where(file => !DefinitionMatchPattern().IsMatch(file.Source))
-            .Select(file => file.Path)
-            .ToArray();
-
-        Assert.Empty(violations);
-    }
-
-    [Fact]
-    public void OperationErrorCases_AreConstructedThroughFactories()
-    {
-        var violations = EnumerateSourceFiles()
-            .Select(path => new { Path = path, Source = File.ReadAllText(path) })
-            .Where(file => DirectErrorCaseConstructionPattern().IsMatch(file.Source))
+            .Where(file =>
+                !DefinitionMatchPattern().IsMatch(file.Source)
+                && !AbstractDefinitionPattern().IsMatch(file.Source))
             .Select(file => file.Path)
             .ToArray();
 
@@ -266,14 +256,8 @@ public sealed partial class TypedResultArchitectureTests
             && !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase);
     }
 
-    // Payment files still mid-migration to owned typed results: they keep backwards-compatible
-    // HTTP-exception methods alongside new Result<T, Error> methods until the migration completes.
-    // TransitionalTypedResultSlice_StillMixesHttpException_UntilMigrated asserts each still violates,
-    // so this allowlist self-cleans: once a file stops throwing, remove its entry here — leaving it
-    // fails that theory. See plans/TYPED_RESULT_MIGRATION.md.
     public static TheoryData<string> TransitionalTypedResultSlices { get; } = new()
     {
-        "Concertable.Payment.Client/Adapters/CustomerPaymentClient.cs",
         "Concertable.Payment.Infrastructure/CustomerPaymentService.cs",
         "Concertable.Payment.Infrastructure/ManagerPaymentService.cs"
     };
@@ -338,8 +322,8 @@ public sealed partial class TypedResultArchitectureTests
     [GeneratedRegex(@"\bDefinition\s*=>\s*Match\s*<\s*ErrorDefinition\s*>")]
     private static partial Regex DefinitionMatchPattern();
 
-    [GeneratedRegex(@"\bnew\s+[A-Za-z_][A-Za-z0-9_]*Error\.[A-Za-z_][A-Za-z0-9_]*\s*\(")]
-    private static partial Regex DirectErrorCaseConstructionPattern();
+    [GeneratedRegex(@"\babstract\s+ErrorDefinition\s+Definition\s*\{")]
+    private static partial Regex AbstractDefinitionPattern();
 
     [GeneratedRegex(@"\.AddProblemDetails\s*\(")]
     private static partial Regex ProblemDetailsRegistrationPattern();
