@@ -135,34 +135,6 @@ public static class DistributedApplicationBuilderExtensions
                       .WithOptionalEnvironment("ServiceAuth__ClientSecret", customerSecret);
     }
 
-    public static IResourceBuilder<ProjectResource> AddSearchWeb<TProject>(
-        this IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> auth,
-        IResourceBuilder<SqlServerDatabaseResource> searchDb)
-        where TProject : IProjectMetadata, new()
-    {
-        return builder.AddProject<TProject>(AppHostConstants.ResourceNames.SearchWeb)
-                      .WithReference(auth)
-                      .WaitFor(auth)
-                      .WithReference(searchDb)
-                      .WaitFor(searchDb)
-                      .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"));
-    }
-
-    public static IResourceBuilder<ProjectResource> AddSearchWorkers<TProject>(
-        this IDistributedApplicationBuilder builder,
-        IResourceBuilder<SqlServerDatabaseResource> searchDb,
-        IResourceBuilder<AzureServiceBusResource> asb)
-        where TProject : IProjectMetadata, new()
-    {
-        return builder.AddProject<TProject>(AppHostConstants.ResourceNames.SearchWorkers)
-                      .WithReference(searchDb)
-                      .WaitFor(searchDb)
-                      .WithReference(asb)
-                      .WaitFor(asb)
-                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, AppHostConstants.ServiceNames.Search);
-    }
-
     public static IResourceBuilder<ProjectResource> AddB2BSeedingSimulator<TProject>(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<AzureServiceBusResource> asb)
