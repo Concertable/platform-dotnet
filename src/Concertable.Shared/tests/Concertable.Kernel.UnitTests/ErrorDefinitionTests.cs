@@ -48,7 +48,7 @@ public sealed class ErrorDefinitionTests
     }
 
     [Fact]
-    public void CaseFactories_EveryKind_DeriveCodeAndKind()
+    public void CaseFactories_EveryKind_DeriveCodeMessageAndKind()
     {
         var errors = new Dictionary<string, string[]>
         {
@@ -57,13 +57,13 @@ public sealed class ErrorDefinitionTests
 
         var definitions = new ErrorDefinition[]
         {
-            ErrorDefinition.Invalid<PaymentError.InvalidRequest>("Invalid."),
+            ErrorDefinition.Invalid<PaymentError.InvalidRequest>(),
             ErrorDefinition.NotFound<PaymentError.PayerNotFound>(),
-            ErrorDefinition.Conflict<PaymentError.AlreadyCaptured>("Conflict."),
-            ErrorDefinition.Unauthenticated<PaymentError.AuthenticationRequired>("Unauthenticated."),
-            ErrorDefinition.Forbidden<PaymentError.AccessForbidden>("Forbidden."),
-            ErrorDefinition.PaymentRequired<PaymentError.DeclinedCase>("Payment required."),
-            ErrorDefinition.Validation<PaymentError.ValidationFailed>("Validation failed.", errors)
+            ErrorDefinition.Conflict<PaymentError.AlreadyCaptured>(),
+            ErrorDefinition.Unauthenticated<PaymentError.AuthenticationRequired>(),
+            ErrorDefinition.Forbidden<PaymentError.AccessForbidden>(),
+            ErrorDefinition.PaymentRequired<PaymentError.DeclinedCase>(),
+            ErrorDefinition.Validation<PaymentError.ValidationFailed>(errors)
         };
 
         Assert.Equal(
@@ -79,6 +79,17 @@ public sealed class ErrorDefinitionTests
             definitions.Select(definition => definition.Code));
         Assert.Equal(
             [
+                "Invalid request.",
+                "Payer not found.",
+                "Already captured.",
+                "Authentication required.",
+                "Access forbidden.",
+                "Declined.",
+                "Validation failed."
+            ],
+            definitions.Select(definition => definition.Message));
+        Assert.Equal(
+            [
                 ErrorKind.Invalid,
                 ErrorKind.NotFound,
                 ErrorKind.Conflict,
@@ -92,18 +103,27 @@ public sealed class ErrorDefinitionTests
     }
 
     [Fact]
-    public void NotFoundCaseFactory_AnnotatedCase_NamesTheDisplayName()
+    public void NotFoundCaseFactory_HumanizesCaseName()
     {
         var definition = ErrorDefinition.NotFound<PaymentError.PayerNotFound>();
 
-        Assert.Equal("Payer payment account not found.", definition.Message);
+        Assert.Equal("Payer not found.", definition.Message);
     }
 
     [Fact]
-    public void NotFoundCaseFactory_UnannotatedCase_ThrowsInvalidOperationException()
+    public void NotFoundCaseFactory_OtherUnion_HumanizesCaseName()
     {
-        Assert.Throws<InvalidOperationException>(
-            ErrorDefinition.NotFound<CommissionError.BindingNotFound>);
+        var definition = ErrorDefinition.NotFound<CommissionError.BindingNotFound>();
+
+        Assert.Equal("Binding not found.", definition.Message);
+    }
+
+    [Fact]
+    public void CaseFactory_AcronymAndNumber_HumanizesCaseName()
+    {
+        var definition = ErrorDefinition.Invalid<GatewayError.HTTP2Unavailable>();
+
+        Assert.Equal("HTTP 2 unavailable.", definition.Message);
     }
 
     [Fact]
