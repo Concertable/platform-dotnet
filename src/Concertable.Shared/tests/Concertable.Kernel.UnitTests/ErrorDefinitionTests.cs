@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using Concertable.Kernel.Errors;
 
 namespace Concertable.Kernel.UnitTests;
@@ -36,15 +35,6 @@ public sealed class ErrorDefinitionTests
 
         Assert.Equal(ErrorKind.Invalid, definition.Kind);
         Assert.Same(errors, definition.Errors);
-    }
-
-    [Fact]
-    public void NotFoundFactory_AnnotatedType_DerivesSafeMessage()
-    {
-        var definition = ErrorDefinition.NotFound<Widget>("test.not_found");
-
-        Assert.Equal("Widget not found.", definition.Message);
-        Assert.Equal(ErrorKind.NotFound, definition.Kind);
     }
 
     [Fact]
@@ -116,6 +106,17 @@ public sealed class ErrorDefinitionTests
         var definition = ErrorDefinition.NotFound<CommissionError.BindingNotFound>();
 
         Assert.Equal("Binding not found.", definition.Message);
+    }
+
+    [Fact]
+    public void NotFoundCaseFactory_ExplicitMessage_DerivesCode()
+    {
+        var definition = ErrorDefinition.NotFound<PaymentError.PayerNotFound>(
+            "Payer payment account not found.");
+
+        Assert.Equal("payment.payer_not_found", definition.Code);
+        Assert.Equal("Payer payment account not found.", definition.Message);
+        Assert.Equal(ErrorKind.NotFound, definition.Kind);
     }
 
     [Fact]
@@ -254,7 +255,4 @@ public sealed class ErrorDefinitionTests
 
         Assert.IsType<ArgumentException>(exception);
     }
-
-    [DisplayName("Widget")]
-    private sealed class Widget;
 }

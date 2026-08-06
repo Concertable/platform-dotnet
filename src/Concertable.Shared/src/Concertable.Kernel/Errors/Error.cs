@@ -47,8 +47,8 @@ public partial record ErrorDefinition(
     public static ErrorDefinition NotFound(string code, string message) =>
         new(code, message, ErrorKind.NotFound);
 
-    public static ErrorDefinition NotFound<T>(string code) =>
-        NotFound(code, $"{DisplayNameResolver.Of<T>()} not found.");
+    public static ErrorDefinition NotFound<TCase>(string message) =>
+        NotFound(ErrorCodeResolver.Of<TCase>(), message);
 
     public static ErrorDefinition NotFound<TCase>() =>
         NotFound(ErrorCodeResolver.Of<TCase>(), ErrorMessageResolver.Of<TCase>());
