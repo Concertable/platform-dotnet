@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using Concertable.Kernel.Errors;
 
 namespace Concertable.Kernel.UnitTests;
@@ -9,7 +8,6 @@ internal abstract record PaymentError
 {
     internal sealed record InvalidRequest : PaymentError;
 
-    [DisplayName("Payer payment account")]
     internal sealed record PayerNotFound : PaymentError;
 
     internal sealed record AlreadyCaptured : PaymentError;
