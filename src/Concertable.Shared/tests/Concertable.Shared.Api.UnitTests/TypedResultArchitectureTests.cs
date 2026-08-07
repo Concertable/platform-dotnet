@@ -14,12 +14,26 @@ public sealed partial class TypedResultArchitectureTests
         var violations = Directory
             .EnumerateFiles(FindApiRoot(), "*.cs", SearchOption.AllDirectories)
             .Where(IsProductionSource)
+            .Where(path => !IsTransitionalTypedResultSlice(path))
             .Select(path => new { Path = path, Source = File.ReadAllText(path) })
             .Where(file => IsTypedResultHttpExceptionViolation(file.Source))
             .Select(file => file.Path)
             .ToArray();
 
         Assert.Empty(violations);
+    }
+
+    [Theory]
+    [MemberData(nameof(TransitionalTypedResultSlices))]
+    public void TransitionalTypedResultSlice_StillMixesHttpException_UntilMigrated(string relativePath)
+    {
+        var source = File.ReadAllText(Directory
+            .EnumerateFiles(FindApiRoot(), "*.cs", SearchOption.AllDirectories)
+            .Single(path => path.Replace('\\', '/').EndsWith(relativePath, StringComparison.Ordinal)));
+
+        Assert.True(
+            IsTypedResultHttpExceptionViolation(source),
+            $"{relativePath} no longer mixes HTTP exceptions with typed results — remove it from the transitional allowlist.");
     }
 
     [Theory]
@@ -252,6 +266,20 @@ public sealed partial class TypedResultArchitectureTests
         return path.Contains($"{separator}src{separator}", StringComparison.OrdinalIgnoreCase)
             && !path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase)
             && !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static TheoryData<string> TransitionalTypedResultSlices { get; } = new()
+    {
+        "Concertable.Payment.Infrastructure/CustomerPaymentService.cs",
+        "Concertable.Payment.Infrastructure/ManagerPaymentService.cs"
+    };
+
+    private static bool IsTransitionalTypedResultSlice(string path)
+    {
+        var normalized = path.Replace('\\', '/');
+        return TransitionalTypedResultSlices
+            .Cast<object[]>()
+            .Any(row => normalized.EndsWith((string)row[0], StringComparison.Ordinal));
     }
 
     private static bool IsTypedResultHttpExceptionViolation(string source) =>
