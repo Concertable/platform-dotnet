@@ -245,6 +245,8 @@ public sealed partial class TypedResultArchitectureTests
     [Theory]
     [InlineData("_")]
     [InlineData("default")]
+    [InlineData("var _")]
+    [InlineData("var ignored")]
     public void DunetUnionDefinition_CatchAllSwitchArm_IsRejected(string pattern)
     {
         var source = $$"""
@@ -258,10 +260,13 @@ public sealed partial class TypedResultArchitectureTests
         Assert.False(UsesSupportedDefinitionShape(source));
     }
 
-    [Fact]
-    public void DunetUnionDefinition_UnrelatedDiscardSwitchArm_IsAccepted()
+    [Theory]
+    [InlineData("_")]
+    [InlineData("var _")]
+    [InlineData("var ignored")]
+    public void DunetUnionDefinition_UnrelatedCatchAllSwitchArm_IsAccepted(string pattern)
     {
-        const string source = """
+        var source = $$"""
             public ErrorDefinition Definition => this switch
             {
                 Missing => ErrorDefinition.NotFound<Missing>()
@@ -269,7 +274,7 @@ public sealed partial class TypedResultArchitectureTests
 
             public string Code => value switch
             {
-                _ => "fallback"
+                {{pattern}} => "fallback"
             };
             """;
 
@@ -385,7 +390,7 @@ public sealed partial class TypedResultArchitectureTests
     private static partial Regex SwitchDefinitionPattern();
 
     [GeneratedRegex(
-        @"\bErrorDefinition\s+Definition\s*=>\s*this\s+switch\s*\{(?:(?!^[ \t]*\};).)*?(?:(?<=\{)|(?<=,))\s*(?:_|default)\b\s*(?:when\b(?:(?!=>).)*)?=>",
+        @"\bErrorDefinition\s+Definition\s*=>\s*this\s+switch\s*\{(?:(?!^[ \t]*\};).)*?(?:(?<=\{)|(?<=,))\s*(?:var\s+(?:_|@?[A-Za-z_]\w*)|_|default)\b\s*(?:when\b(?:(?!=>).)*)?=>",
         RegexOptions.Multiline | RegexOptions.Singleline)]
     private static partial Regex DefinitionSwitchCatchAllArmPattern();
 
