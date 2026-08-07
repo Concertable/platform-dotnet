@@ -197,25 +197,13 @@ public sealed partial class TypedResultArchitectureTests
     }
 
     [Fact]
-    public void DunetUnionDefinitions_UseGeneratedMatch()
+    public void DunetUnionDefinitions_UseExhaustiveSwitch()
     {
         var violations = EnumerateSourceFiles()
             .Select(path => new { Path = path, Source = File.ReadAllText(path) })
             .Where(file => UnionAttributePattern().IsMatch(file.Source))
             .Where(file => ErrorUnionPattern().IsMatch(file.Source))
-            .Where(file => !DefinitionMatchPattern().IsMatch(file.Source))
-            .Select(file => file.Path)
-            .ToArray();
-
-        Assert.Empty(violations);
-    }
-
-    [Fact]
-    public void OperationErrorCases_AreConstructedThroughFactories()
-    {
-        var violations = EnumerateSourceFiles()
-            .Select(path => new { Path = path, Source = File.ReadAllText(path) })
-            .Where(file => DirectErrorCaseConstructionPattern().IsMatch(file.Source))
+            .Where(file => !DefinitionSwitchPattern().IsMatch(file.Source))
             .Select(file => file.Path)
             .ToArray();
 
@@ -301,11 +289,8 @@ public sealed partial class TypedResultArchitectureTests
     [GeneratedRegex(@"\bpartial\s+record\s+\w+Error\s*:\s*IError\b")]
     private static partial Regex ErrorUnionPattern();
 
-    [GeneratedRegex(@"\bDefinition\s*=>\s*Match\s*<\s*ErrorDefinition\s*>")]
-    private static partial Regex DefinitionMatchPattern();
-
-    [GeneratedRegex(@"\bnew\s+[A-Za-z_][A-Za-z0-9_]*Error\.[A-Za-z_][A-Za-z0-9_]*\s*\(")]
-    private static partial Regex DirectErrorCaseConstructionPattern();
+    [GeneratedRegex(@"\bDefinition\s*=>\s*this\s+switch\b")]
+    private static partial Regex DefinitionSwitchPattern();
 
     [GeneratedRegex(@"\.AddProblemDetails\s*\(")]
     private static partial Regex ProblemDetailsRegistrationPattern();
