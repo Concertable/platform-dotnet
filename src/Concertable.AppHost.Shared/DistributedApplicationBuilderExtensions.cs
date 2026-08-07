@@ -32,33 +32,6 @@ public static class DistributedApplicationBuilderExtensions
         return (storage, blobs);
     }
 
-    public static IResourceBuilder<ProjectResource> AddAuth<TProject>(
-        this IDistributedApplicationBuilder builder,
-        IResourceBuilder<SqlServerDatabaseResource> authDb,
-        IResourceBuilder<SqlServerDatabaseResource> b2bDb,
-        IResourceBuilder<AzureServiceBusResource> asb)
-        where TProject : IProjectMetadata, new()
-    {
-        var auth = builder.AddProject<TProject>(AppHostConstants.ResourceNames.Auth)
-                          .WithReference(authDb)
-                          .WaitFor(authDb)
-                          .WithReference(b2bDb)
-                          .WithReference(asb)
-                          .WaitFor(asb)
-                          .AddSecrets(builder, "ServiceAuth:B2BClientSecret", "ServiceAuth:CustomerClientSecret", "ServiceAuth:AuthClientSecret");
-
-        auth.WithEnvironment("Auth__Authority", auth.GetEndpoint("https"));
-
-        var lanIp = builder.Configuration["MobileLanIp"];
-        if (!string.IsNullOrEmpty(lanIp))
-        {
-            auth.WithEnvironment("Auth__ExpoGoRedirectUri__Customer", $"exp://{lanIp}:8082");
-            auth.WithEnvironment("Auth__ExpoGoRedirectUri__Business", $"exp://{lanIp}:8083");
-        }
-
-        return auth;
-    }
-
     public static IResourceBuilder<ProjectResource> AddApi<TProject>(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<SqlServerDatabaseResource> sql,
@@ -433,7 +406,7 @@ public static class DistributedApplicationBuilderExtensions
         return resource;
     }
 
-    private static IResourceBuilder<ProjectResource> AddSecrets(
+    public static IResourceBuilder<ProjectResource> AddSecrets(
         this IResourceBuilder<ProjectResource> resource,
         IDistributedApplicationBuilder builder,
         params string[] keys)
