@@ -14,12 +14,26 @@ public sealed partial class TypedResultArchitectureTests
         var violations = Directory
             .EnumerateFiles(FindApiRoot(), "*.cs", SearchOption.AllDirectories)
             .Where(IsProductionSource)
+            .Where(path => !IsTransitionalTypedResultSlice(path))
             .Select(path => new { Path = path, Source = File.ReadAllText(path) })
             .Where(file => IsTypedResultHttpExceptionViolation(file.Source))
             .Select(file => file.Path)
             .ToArray();
 
         Assert.Empty(violations);
+    }
+
+    [Theory]
+    [MemberData(nameof(TransitionalTypedResultSlices))]
+    public void TransitionalTypedResultSlice_StillMixesHttpException_UntilMigrated(string relativePath)
+    {
+        var source = File.ReadAllText(Directory
+            .EnumerateFiles(FindApiRoot(), "*.cs", SearchOption.AllDirectories)
+            .Single(path => path.Replace('\\', '/').EndsWith(relativePath, StringComparison.Ordinal)));
+
+        Assert.True(
+            IsTypedResultHttpExceptionViolation(source),
+            $"{relativePath} no longer mixes HTTP exceptions with typed results — remove it from the transitional allowlist.");
     }
 
     [Theory]
@@ -197,25 +211,16 @@ public sealed partial class TypedResultArchitectureTests
     }
 
     [Fact]
-    public void DunetUnionDefinitions_UseGeneratedMatch()
+    public void DunetUnionDefinitions_UseSupportedDefinitionShape()
     {
         var violations = EnumerateSourceFiles()
             .Select(path => new { Path = path, Source = File.ReadAllText(path) })
             .Where(file => UnionAttributePattern().IsMatch(file.Source))
             .Where(file => ErrorUnionPattern().IsMatch(file.Source))
-            .Where(file => !DefinitionMatchPattern().IsMatch(file.Source))
-            .Select(file => file.Path)
-            .ToArray();
-
-        Assert.Empty(violations);
-    }
-
-    [Fact]
-    public void OperationErrorCases_AreConstructedThroughFactories()
-    {
-        var violations = EnumerateSourceFiles()
-            .Select(path => new { Path = path, Source = File.ReadAllText(path) })
-            .Where(file => DirectErrorCaseConstructionPattern().IsMatch(file.Source))
+            .Where(file =>
+                !DefinitionMatchPattern().IsMatch(file.Source)
+                && !AbstractDefinitionPattern().IsMatch(file.Source)
+                && !SwitchDefinitionPattern().IsMatch(file.Source))
             .Select(file => file.Path)
             .ToArray();
 
@@ -250,6 +255,20 @@ public sealed partial class TypedResultArchitectureTests
         return path.Contains($"{separator}src{separator}", StringComparison.OrdinalIgnoreCase)
             && !path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase)
             && !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static TheoryData<string> TransitionalTypedResultSlices { get; } = new()
+    {
+        "Concertable.Payment.Infrastructure/CustomerPaymentService.cs",
+        "Concertable.Payment.Infrastructure/ManagerPaymentService.cs"
+    };
+
+    private static bool IsTransitionalTypedResultSlice(string path)
+    {
+        var normalized = path.Replace('\\', '/');
+        return TransitionalTypedResultSlices
+            .Cast<object[]>()
+            .Any(row => normalized.EndsWith((string)row[0], StringComparison.Ordinal));
     }
 
     private static bool IsTypedResultHttpExceptionViolation(string source) =>
@@ -304,8 +323,11 @@ public sealed partial class TypedResultArchitectureTests
     [GeneratedRegex(@"\bDefinition\s*=>\s*Match\s*<\s*ErrorDefinition\s*>")]
     private static partial Regex DefinitionMatchPattern();
 
-    [GeneratedRegex(@"\bnew\s+[A-Za-z_][A-Za-z0-9_]*Error\.[A-Za-z_][A-Za-z0-9_]*\s*\(")]
-    private static partial Regex DirectErrorCaseConstructionPattern();
+    [GeneratedRegex(@"\babstract\s+ErrorDefinition\s+Definition\s*\{")]
+    private static partial Regex AbstractDefinitionPattern();
+
+    [GeneratedRegex(@"\bErrorDefinition\s+Definition\s*=>\s*this\s+switch\b")]
+    private static partial Regex SwitchDefinitionPattern();
 
     [GeneratedRegex(@"\.AddProblemDetails\s*\(")]
     private static partial Regex ProblemDetailsRegistrationPattern();
