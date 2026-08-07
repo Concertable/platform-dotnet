@@ -219,7 +219,8 @@ public sealed partial class TypedResultArchitectureTests
             .Where(file => ErrorUnionPattern().IsMatch(file.Source))
             .Where(file =>
                 !DefinitionMatchPattern().IsMatch(file.Source)
-                && !AbstractDefinitionPattern().IsMatch(file.Source))
+                && !AbstractDefinitionPattern().IsMatch(file.Source)
+                && !SwitchDefinitionPattern().IsMatch(file.Source))
             .Select(file => file.Path)
             .ToArray();
 
@@ -324,6 +325,9 @@ public sealed partial class TypedResultArchitectureTests
 
     [GeneratedRegex(@"\babstract\s+ErrorDefinition\s+Definition\s*\{")]
     private static partial Regex AbstractDefinitionPattern();
+
+    [GeneratedRegex(@"\bErrorDefinition\s+Definition\s*=>\s*this\s+switch\b")]
+    private static partial Regex SwitchDefinitionPattern();
 
     [GeneratedRegex(@"\.AddProblemDetails\s*\(")]
     private static partial Regex ProblemDetailsRegistrationPattern();
