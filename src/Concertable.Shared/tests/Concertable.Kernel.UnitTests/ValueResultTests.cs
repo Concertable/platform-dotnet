@@ -1,4 +1,4 @@
-using Reunion;
+using Concertable.Kernel.Functional;
 using System.Reflection;
 
 namespace Concertable.Kernel.UnitTests;
@@ -263,10 +263,9 @@ public sealed class ValueResultTests
         Assert.Equal("Uninitialized", default(Result<int>).ToString());
         Assert.Empty(type.GetConstructors(BindingFlags.Public | BindingFlags.Instance));
         Assert.DoesNotContain(type.GetProperties(), property => property.Name is "Value" or "Error");
-        FunctionalSurfaceAssertions.HasOnlyNamedCaseImplicitConversions(
-            type,
-            typeof(Success<int>),
-            typeof(Failure<string>));
+        Assert.DoesNotContain(
+            type.GetMethods(BindingFlags.Public | BindingFlags.Static),
+            method => method.Name == "op_Implicit");
     }
 
     private sealed class TestException : Exception;
