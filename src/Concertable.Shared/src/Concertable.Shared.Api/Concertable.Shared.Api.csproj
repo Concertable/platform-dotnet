@@ -13,6 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Reunion.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Concertable.Contracts\Concertable.Contracts.csproj" />
     <ProjectReference Include="..\Concertable.Kernel\Concertable.Kernel.csproj" />
   </ItemGroup>

@@ -1,5 +1,5 @@
 using Concertable.Kernel.Errors;
-using Concertable.Kernel.Functional;
+using Reunion;
 using Concertable.Shared.Api.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
