@@ -40,6 +40,29 @@ This is also why `e2e-api-tests` (merge_group-only, added 2026-05-04) was **0/4 
 
 ## MEDIUM
 
+### Shared E2E infrastructure is named like a concrete test suite
+
+`Concertable.Shared/tests/Concertable.E2ETests` is a reusable, non-test harness
+(`IsTestProject=false`), but its project and root namespace are both `Concertable.E2ETests`. That
+name reads as the concrete Concertable-wide test assembly and collides conceptually with the actual
+service suites (`Concertable.B2B.E2ETests`, `Concertable.Customer.E2ETests`, and their UI/mobile
+projects). It also makes ownership easier to obscure: Payment-owned helper types currently declare
+the generic `Concertable.E2ETests` and `Concertable.E2ETests.Support` namespaces.
+
+The existing shared-test hierarchy already expresses the intended distinction through
+`Concertable.Testing` and `Concertable.Testing.Integration`; shared E2E infrastructure should follow
+the same convention.
+
+**Resolves when:**
+
+- Rename the shared project, folder, assembly, and namespaces to `Concertable.Testing.E2E`, then
+  update all project references and imports.
+- Move service-owned E2E helper types into explicit owning namespaces such as
+  `Concertable.Payment.E2ETests.Helpers`; no service-owned type may occupy the shared
+  `Concertable.Testing.E2E` namespace.
+- Keep concrete suite names as `Concertable.<Service>.E2ETests` and verify the full solution builds
+  after the rename.
+
 ### API E2E AppHosts still launch the frontend SPAs
 
 The B2B/Customer AppHosts add the Vite SPAs (`AddVenueSpa`/`AddArtistSpa`/`AddBusinessSpa`, `AddCustomerSpa`) unconditionally, and the API E2E suites reuse those AppHosts. The API suites are headless (they drive services over HTTP and never open a browser), so the SPAs are dead weight — they `FailedToStart` in CI (no Node) and used to be awaited via `WaitForAllServingAsync`, which was removed 2026-06-15. They still sit in the resource graph as failed resources.
