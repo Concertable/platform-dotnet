@@ -175,7 +175,7 @@ public sealed partial class TypedResultArchitectureTests
         Assert.Equal(
             [
                 "Concertable.Kernel:Reunion",
-                "Concertable.Shared.Api:Reunion.AspNetCore"
+                "Concertable.Shared.Api:Reunion"
             ],
             references);
     }
