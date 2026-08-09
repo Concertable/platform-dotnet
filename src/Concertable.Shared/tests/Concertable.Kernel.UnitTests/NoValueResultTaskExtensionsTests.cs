@@ -1,4 +1,4 @@
-using Reunion;
+using Concertable.Kernel.Functional;
 
 namespace Concertable.Kernel.UnitTests;
 

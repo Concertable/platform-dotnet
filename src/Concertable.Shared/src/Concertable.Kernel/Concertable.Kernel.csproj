@@ -28,7 +28,6 @@
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
     <PackageReference Include="NetTopologySuite" />
     <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="Reunion" />
     <PackageReference Include="Refit.HttpClientFactory" />
     <PackageReference Include="Vogen" />
   </ItemGroup>

@@ -1,4 +1,4 @@
-using Reunion;
+using Concertable.Kernel.Functional;
 using System.Reflection;
 
 namespace Concertable.Kernel.UnitTests;
@@ -368,10 +368,7 @@ public sealed class ResultTests
         Assert.Empty(type.GetConstructors(BindingFlags.Public | BindingFlags.Instance));
         Assert.Empty(type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static));
         Assert.DoesNotContain(type.GetProperties(), property => property.Name is "Value" or "Error");
-        FunctionalSurfaceAssertions.HasOnlyNamedCaseImplicitConversions(
-            type,
-            typeof(Success<int>),
-            typeof(Failure<string>));
+        Assert.DoesNotContain(type.GetMethods(BindingFlags.Public | BindingFlags.Static), method => method.Name == "op_Implicit");
     }
 
     [Fact]

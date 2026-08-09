@@ -42,7 +42,7 @@ public sealed partial class TypedResultArchitectureTests
     public void TypedResultSlices_ResultWithHttpException_IsDetected(string resultType)
     {
         var source = $$"""
-            using Reunion;
+            using Concertable.Kernel.Functional;
 
             {{resultType}} Execute() => throw new NotFoundException();
             """;
@@ -63,10 +63,10 @@ public sealed partial class TypedResultArchitectureTests
     }
 
     [Fact]
-    public void ReunionValueResultSlices_OneArityResultWithHttpException_IsIgnored()
+    public void OwnedValueResultSlices_OneArityResultWithHttpException_IsIgnored()
     {
         const string source = """
-            using Reunion;
+            using Concertable.Kernel.Functional;
 
             Result<TestValue> Execute() => throw new NotFoundException();
             """;
@@ -124,7 +124,7 @@ public sealed partial class TypedResultArchitectureTests
     }
 
     [Fact]
-    public void SharedProduction_RetainsTheOwnedFunctionalSurfaceDuringExpansion()
+    public void KernelFunctionalTypes_DoNotReferenceThirdPartyCarriers()
     {
         var functionalSource = Path.Combine(
             FindApiRoot(),
@@ -132,52 +132,23 @@ public sealed partial class TypedResultArchitectureTests
             "src",
             "Concertable.Kernel",
             "Functional");
-        var files = Directory
-            .EnumerateFiles(functionalSource, "*.cs", SearchOption.TopDirectoryOnly)
-            .Select(path => Path.GetFileName(path)!)
-            .Order()
+        var prohibitedNames = new[]
+        {
+            "CSharpFunctionalExtensions",
+            "FluentResults",
+            "OneOf",
+            "ErrorOr",
+            "LanguageExt",
+            "Dunet"
+        };
+        var violations = Directory
+            .EnumerateFiles(functionalSource, "*.cs", SearchOption.AllDirectories)
+            .Where(path => prohibitedNames.Any(name => File.ReadAllText(path).Contains(
+                name,
+                StringComparison.Ordinal)))
             .ToArray();
 
-        Assert.Equal(
-            [
-                "Option.cs",
-                "OptionTaskExtensions.cs",
-                "Result.cs",
-                "ResultCollectionExtensions.cs",
-                "ResultTaskExtensions.cs",
-                "ResultTaskExtensions.NoValue.cs",
-                "UnitResult.cs",
-                "ValueResult.cs",
-                "ValueResultTaskExtensions.cs"
-            ],
-            files);
-    }
-
-    [Fact]
-    public void ReunionPackages_HaveOnlyPlannedDirectOwners()
-    {
-        var references = Directory
-            .EnumerateFiles(FindApiRoot(), "*.csproj", SearchOption.AllDirectories)
-            .Where(path => !IsGeneratedPath(path))
-            .SelectMany(path => XDocument
-                .Load(path)
-                .Descendants("PackageReference")
-                .Select(reference => new
-                {
-                    Project = Path.GetFileNameWithoutExtension(path),
-                    Package = (string?)reference.Attribute("Include")
-                }))
-            .Where(reference => reference.Package is "Reunion" or "Reunion.AspNetCore")
-            .Select(reference => $"{reference.Project}:{reference.Package}")
-            .Order()
-            .ToArray();
-
-        Assert.Equal(
-            [
-                "Concertable.Kernel:Reunion",
-                "Concertable.Shared.Api:Reunion"
-            ],
-            references);
+        Assert.Empty(violations);
     }
 
     [Fact]
