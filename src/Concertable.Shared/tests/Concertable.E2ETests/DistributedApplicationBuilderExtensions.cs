@@ -15,7 +15,7 @@ internal static class DistributedApplicationBuilderExtensions
         this IDistributedApplicationTestingBuilder builder,
         string paymentBaseUrl,
         string authBaseUrl,
-        StripeE2ERun stripeRun)
+        StripeCustomerResolver stripeCustomers)
     {
         var paymentWeb = builder.Resources
             .OfType<ProjectResource>()
@@ -28,7 +28,7 @@ internal static class DistributedApplicationBuilderExtensions
             context.EnvironmentVariables["ASPNETCORE_ENVIRONMENT"] = "E2E";
             context.EnvironmentVariables["ASPNETCORE_URLS"] = paymentBaseUrl;
             context.EnvironmentVariables["Auth__Authority"] = authBaseUrl;
-            AddStripeRunConfiguration(context, stripeRun);
+            AddStripeCustomerConfiguration(context, stripeCustomers);
             if (!string.IsNullOrEmpty(stripeSecretKey))
                 context.EnvironmentVariables["Stripe__SecretKey"] = stripeSecretKey;
         }));
@@ -55,7 +55,7 @@ internal static class DistributedApplicationBuilderExtensions
 
     internal static void PinPaymentWorkers(
         this IDistributedApplicationTestingBuilder builder,
-        StripeE2ERun stripeRun)
+        StripeCustomerResolver stripeCustomers)
     {
         var paymentWorkers = builder.Resources
             .OfType<ProjectResource>()
@@ -64,15 +64,15 @@ internal static class DistributedApplicationBuilderExtensions
         paymentWorkers.Annotations.Add(new EnvironmentCallbackAnnotation(context =>
         {
             context.EnvironmentVariables["DOTNET_ENVIRONMENT"] = "E2E";
-            AddStripeRunConfiguration(context, stripeRun);
+            AddStripeCustomerConfiguration(context, stripeCustomers);
         }));
     }
 
-    private static void AddStripeRunConfiguration(
+    private static void AddStripeCustomerConfiguration(
         EnvironmentCallbackContext context,
-        StripeE2ERun stripeRun)
+        StripeCustomerResolver stripeCustomers)
     {
-        foreach (var (key, value) in stripeRun.GetConfiguration())
+        foreach (var (key, value) in stripeCustomers.GetConfiguration())
             context.EnvironmentVariables[key.Replace(":", "__")] = value;
     }
 
