@@ -40,6 +40,20 @@ This is also why `e2e-api-tests` (merge_group-only, added 2026-05-04) was **0/4 
 
 ## MEDIUM
 
+### E2E fixture teardown is duplicated and can abandon later cleanup
+
+The B2B and Customer `AppFixture` classes manually dispose the same categories of long-lived resources
+in nested `try`/`finally` blocks. Most resources are outside the protected finalizers, so one failing
+client, database, host, application, or logger disposal can prevent later resources from being cleaned
+up. The duplication also makes acquisition and release order difficult to verify across the two suites.
+
+**Resolves when:**
+
+- Fixture initialization and teardown share a lifetime model that guarantees reverse-order cleanup,
+  continues after individual disposal failures, and also handles partial initialization.
+- The call sites remain ordinary resource construction rather than requiring a parallel cleanup callback
+  registration beside every assignment.
+
 ### API E2E AppHosts still launch the frontend SPAs
 
 The B2B/Customer AppHosts add the Vite SPAs (`AddVenueSpa`/`AddArtistSpa`/`AddBusinessSpa`, `AddCustomerSpa`) unconditionally, and the API E2E suites reuse those AppHosts. The API suites are headless (they drive services over HTTP and never open a browser), so the SPAs are dead weight — they `FailedToStart` in CI (no Node) and used to be awaited via `WaitForAllServingAsync`, which was removed 2026-06-15. They still sit in the resource graph as failed resources.

@@ -4,9 +4,8 @@ using Stripe;
 
 namespace Concertable.E2ETests;
 
-public sealed class StripeE2ERun : IAsyncDisposable
+public sealed class StripeCustomerResolver : IAsyncDisposable
 {
-    private const string RunIdKey = "E2EStripe:RunId";
     private const string CustomersKey = "E2EStripe:Customers";
 
     private static readonly Guid[] customerUserIds =
@@ -20,7 +19,7 @@ public sealed class StripeE2ERun : IAsyncDisposable
 
     public string RunId { get; }
 
-    private StripeE2ERun(
+    private StripeCustomerResolver(
         CustomerService customers,
         string runId,
         IReadOnlyDictionary<Guid, string> customerIds)
@@ -30,7 +29,7 @@ public sealed class StripeE2ERun : IAsyncDisposable
         RunId = runId;
     }
 
-    public static async Task<StripeE2ERun> CreateAsync(
+    public static async Task<StripeCustomerResolver> CreateAsync(
         IStripeClient stripeClient,
         CancellationToken ct = default)
     {
@@ -54,7 +53,7 @@ public sealed class StripeE2ERun : IAsyncDisposable
                 customerIds.Add(userId, customer.Id);
             }
 
-            return new StripeE2ERun(customers, runId, customerIds);
+            return new StripeCustomerResolver(customers, runId, customerIds);
         }
         catch (Exception creationException)
         {
@@ -66,17 +65,14 @@ public sealed class StripeE2ERun : IAsyncDisposable
         }
     }
 
-    public string ResolveCustomer(Guid userId) =>
+    public string Resolve(Guid userId) =>
         customerIds.TryGetValue(userId, out var customerId)
             ? customerId
             : throw new InvalidOperationException($"No Stripe customer was provisioned for seed user {userId} in E2E run {RunId}.");
 
     internal IReadOnlyDictionary<string, string> GetConfiguration()
     {
-        var values = new Dictionary<string, string>
-        {
-            [RunIdKey] = RunId,
-        };
+        var values = new Dictionary<string, string>();
 
         foreach (var (userId, customerId) in customerIds)
             values[$"{CustomersKey}:{userId:N}"] = customerId;
@@ -105,9 +101,7 @@ public sealed class StripeE2ERun : IAsyncDisposable
             {
                 await customers.DeleteAsync(customerId, cancellationToken: CancellationToken.None);
             }
-            catch (StripeException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound)
-            {
-            }
+            catch (StripeException ex) when (ex.HttpStatusCode == HttpStatusCode.NotFound) { }
             catch (Exception ex)
             {
                 exceptions.Add(ex);
