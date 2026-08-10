@@ -40,6 +40,43 @@ This is also why `e2e-api-tests` (merge_group-only, added 2026-05-04) was **0/4 
 
 ## MEDIUM
 
+### E2E fixture teardown is duplicated and can abandon later cleanup
+
+The B2B and Customer `AppFixture` classes manually dispose the same categories of long-lived resources
+in nested `try`/`finally` blocks. Most resources are outside the protected finalizers, so one failing
+client, database, host, application, or logger disposal can prevent later resources from being cleaned
+up. The duplication also makes acquisition and release order difficult to verify across the two suites.
+
+**Resolves when:**
+
+- Fixture initialization and teardown share a lifetime model that guarantees reverse-order cleanup,
+  continues after individual disposal failures, and also handles partial initialization.
+- The call sites remain ordinary resource construction rather than requiring a parallel cleanup callback
+  registration beside every assignment.
+
+### Shared E2E infrastructure is named like a concrete test suite
+
+`Concertable.Shared/tests/Concertable.E2ETests` is a reusable, non-test harness
+(`IsTestProject=false`), but its project and root namespace are both `Concertable.E2ETests`. That
+name reads as the concrete Concertable-wide test assembly and collides conceptually with the actual
+service suites (`Concertable.B2B.E2ETests`, `Concertable.Customer.E2ETests`, and their UI/mobile
+projects). It also makes ownership easier to obscure: Payment-owned helper types currently declare
+the generic `Concertable.E2ETests` and `Concertable.E2ETests.Support` namespaces.
+
+The existing shared-test hierarchy already expresses the intended distinction through
+`Concertable.Testing` and `Concertable.Testing.Integration`; shared E2E infrastructure should follow
+the same convention.
+
+**Resolves when:**
+
+- Rename the shared project, folder, assembly, and namespaces to `Concertable.Testing.E2E`, then
+  update all project references and imports.
+- Move service-owned E2E helper types into explicit owning namespaces such as
+  `Concertable.Payment.E2ETests.Helpers`; no service-owned type may occupy the shared
+  `Concertable.Testing.E2E` namespace.
+- Keep concrete suite names as `Concertable.<Service>.E2ETests` and verify the full solution builds
+  after the rename.
+
 ### API E2E AppHosts still launch the frontend SPAs
 
 The B2B/Customer AppHosts add the Vite SPAs (`AddVenueSpa`/`AddArtistSpa`/`AddBusinessSpa`, `AddCustomerSpa`) unconditionally, and the API E2E suites reuse those AppHosts. The API suites are headless (they drive services over HTTP and never open a browser), so the SPAs are dead weight — they `FailedToStart` in CI (no Node) and used to be awaited via `WaitForAllServingAsync`, which was removed 2026-06-15. They still sit in the resource graph as failed resources.
@@ -59,3 +96,31 @@ The 71 demo users are created one `CredentialRegisteredEvent` at a time (Auth re
 **Resolves when:**
 
 - The credential seed is fast enough to finish well inside a 6-minute budget — e.g. tighten the outbox/inbox dispatch interval for the E2E environment, or batch the credential registration — at which point the timeout reverts to 6 and this entry is deleted.
+
+---
+
+## LOW
+
+### Service-owned E2E APIs repeat ownership already expressed by their namespace
+
+The service composition entry points are named `AddCustomerE2E` inside
+`Concertable.Customer.E2ETests` and `AddB2BE2E` inside `Concertable.B2B.E2ETests`. Each has one owning
+suite and one call site, so the service prefix repeats context the project and namespace already make
+unambiguous. Private helpers repeat the same pattern (`PinAuthCustomerApi`, `PinCustomerWeb`,
+`PinAuthB2BApi`, `PinB2BWeb`). This makes APIs longer without adding information and encourages every
+type/member to restate its folder ownership.
+
+The correction is contextual, not a blind removal of every service name. A cross-service composition
+method such as `AddSearchService` or `PinPaymentWeb` is invoked alongside several services and its
+prefix identifies the resource being added; that information remains valuable at the call site.
+
+**Resolves when:**
+
+- Rename the B2B and Customer suite entry points to the same role-based name, such as `AddE2EStack`,
+  within their existing service-owned namespaces, and rename private helpers to roles such as
+  `PinAuthApi` / `PinWeb` where the enclosing namespace already supplies the service identity.
+- Audit service-owned E2E types and members in the same sweep: remove owner prefixes that merely
+  repeat their namespace/project, but retain a service/resource prefix wherever multiple services are
+  composed in the same scope or removing it would make the call ambiguous.
+- Capture that context rule in the E2E conventions so future APIs neither stutter their namespace nor
+  erase meaningful cross-service identity.
