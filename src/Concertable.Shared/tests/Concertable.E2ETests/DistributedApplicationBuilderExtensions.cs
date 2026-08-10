@@ -1,20 +1,26 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
+using Concertable.Payment.Hosting;
 using Microsoft.Extensions.Configuration;
 
 namespace Concertable.E2ETests;
 
 internal static class DistributedApplicationBuilderExtensions
 {
+    internal const string B2BServiceAuthSecret = "concertable-e2e-b2b-service-secret";
+    internal const string CustomerServiceAuthSecret = "concertable-e2e-customer-service-secret";
+    private const string AuthServiceAuthSecret = "concertable-e2e-auth-service-secret";
+
     internal static void PinPaymentWeb(
         this IDistributedApplicationTestingBuilder builder,
         string paymentBaseUrl,
-        string authBaseUrl)
+        string authBaseUrl,
+        StripeCustomerResolver stripeCustomers)
     {
         var paymentWeb = builder.Resources
             .OfType<ProjectResource>()
-            .Single(r => r.Name == AppHostConstants.ResourceNames.PaymentWeb);
+            .Single(r => r.Name == PaymentConstants.WebResource);
 
         var stripeSecretKey = builder.Configuration["Stripe:SecretKey"];
 
@@ -23,6 +29,7 @@ internal static class DistributedApplicationBuilderExtensions
             context.EnvironmentVariables["ASPNETCORE_ENVIRONMENT"] = "E2E";
             context.EnvironmentVariables["ASPNETCORE_URLS"] = paymentBaseUrl;
             context.EnvironmentVariables["Auth__Authority"] = authBaseUrl;
+            AddStripeCustomerConfiguration(context, stripeCustomers);
             if (!string.IsNullOrEmpty(stripeSecretKey))
                 context.EnvironmentVariables["Stripe__SecretKey"] = stripeSecretKey;
         }));
@@ -41,19 +48,33 @@ internal static class DistributedApplicationBuilderExtensions
             context.EnvironmentVariables["ASPNETCORE_ENVIRONMENT"] = "E2E";
             context.EnvironmentVariables["ASPNETCORE_URLS"] = authBaseUrl;
             context.EnvironmentVariables["Auth__Authority"] = authBaseUrl;
+            context.EnvironmentVariables["ServiceAuth__B2BClientSecret"] = B2BServiceAuthSecret;
+            context.EnvironmentVariables["ServiceAuth__CustomerClientSecret"] = CustomerServiceAuthSecret;
+            context.EnvironmentVariables["ServiceAuth__AuthClientSecret"] = AuthServiceAuthSecret;
         }));
     }
 
-    internal static void PinPaymentWorkers(this IDistributedApplicationTestingBuilder builder)
+    internal static void PinPaymentWorkers(
+        this IDistributedApplicationTestingBuilder builder,
+        StripeCustomerResolver stripeCustomers)
     {
         var paymentWorkers = builder.Resources
             .OfType<ProjectResource>()
-            .Single(r => r.Name == AppHostConstants.ResourceNames.PaymentWorkers);
+            .Single(r => r.Name == PaymentConstants.WorkersResource);
 
         paymentWorkers.Annotations.Add(new EnvironmentCallbackAnnotation(context =>
         {
             context.EnvironmentVariables["DOTNET_ENVIRONMENT"] = "E2E";
+            AddStripeCustomerConfiguration(context, stripeCustomers);
         }));
+    }
+
+    private static void AddStripeCustomerConfiguration(
+        EnvironmentCallbackContext context,
+        StripeCustomerResolver stripeCustomers)
+    {
+        foreach (var (key, value) in stripeCustomers.GetConfiguration())
+            context.EnvironmentVariables[key.Replace(":", "__")] = value;
     }
 
     internal static void PinStripeCli(
@@ -61,7 +82,7 @@ internal static class DistributedApplicationBuilderExtensions
         string paymentBaseUrl)
     {
         var stripeCli = builder.Resources
-            .SingleOrDefault(r => r.Name == AppHostConstants.ResourceNames.StripeCli);
+            .SingleOrDefault(r => r.Name == PaymentConstants.StripeCliResource);
 
         if (stripeCli is null) return;
 
