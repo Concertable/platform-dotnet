@@ -40,11 +40,13 @@ public abstract class ReadRepository<TEntity, TContext, TKey>(TContext context)
 {
     protected readonly TContext context = context;
 
+    protected IQueryable<TEntity> Query => context.Set<TEntity>().AsNoTracking();
+
     public virtual async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken ct = default) =>
-        await context.Set<TEntity>().ToListAsync(ct);
+        await Query.ToListAsync(ct);
 
     public virtual Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default) =>
-        context.Set<TEntity>().FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
+        Query.FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
 
     public bool Exists(TKey id) =>
         context.Set<TEntity>().Any(e => e.Id!.Equals(id));
