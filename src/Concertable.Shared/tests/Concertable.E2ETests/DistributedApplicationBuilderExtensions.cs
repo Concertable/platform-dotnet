@@ -1,6 +1,7 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
+using Concertable.Auth.Hosting;
 using Concertable.Payment.Hosting;
 using Microsoft.Extensions.Configuration;
 
