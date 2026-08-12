@@ -39,9 +39,7 @@ public sealed class ValidationErrors : IEquatable<ValidationErrors>
     }
 
     public ValidationErrors(IReadOnlyDictionary<string, string[]> errors)
-        : this(Flatten(errors))
-    {
-    }
+        : this(Flatten(errors)) { }
 
     public IReadOnlyDictionary<string, IReadOnlyList<string>> Errors => this.errors;
 
