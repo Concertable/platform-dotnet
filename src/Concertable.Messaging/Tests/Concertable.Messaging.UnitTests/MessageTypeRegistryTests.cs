@@ -1,4 +1,5 @@
 using Concertable.Messaging.Contracts;
+using Concertable.Messaging.Application.Extensions;
 
 namespace Concertable.Messaging.UnitTests;
 
@@ -75,6 +76,17 @@ public sealed class MessageTypeRegistryTests
         // Assert
         Assert.DoesNotContain(typeof(FakeIntegrationEvent), registry.RegisteredCommandTypes);
         Assert.Contains(typeof(FakeIntegrationCommand), registry.RegisteredCommandTypes);
+    }
+
+    [Fact]
+    public void Sends_AfterRegistration_ResolvesWithoutRegisteringHandler()
+    {
+        var registry = new MessageTypeRegistry();
+
+        registry.Sends<FakeIntegrationCommand>();
+
+        Assert.Equal(typeof(FakeIntegrationCommand), registry.ResolveCommand(MessageTypeAttribute.Resolve(typeof(FakeIntegrationCommand))));
+        Assert.Empty(registry.RegisteredCommandTypes);
     }
 
     [Fact]
