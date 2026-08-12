@@ -1,5 +1,32 @@
 # DataAccess technical debt
 
+## Integration test seam blocks any binary-breaking change to the published base types
+
+Integration tests run consumers **compiled against the feed** `Concertable.DataAccess.*` package while
+the host loads the **source-built** DataAccess.dll (`Seed.Infrastructure` ProjectReferences the source
+project; its higher MinVer wins assembly resolution). So a change to a published base type that consumer
+IL depends on — a moved field's declaring type, a renamed/removed type — makes old-compiled IL meet the
+new assembly and dangle (`FieldAccessException`/`TypeLoadException`), failing the PR's own integration
+suites. It can therefore never reach the platform-sync that would recompile consumers. This is why the
+`Repository : ReadRepository` reparent had to be reverted and why `IBaseRepository`→`IWriteRepository`
+(below) can't ride a normal PR.
+
+The durable fix: make the integration harness build consumers against the **same** DataAccess the host
+loads (compiled == runtime) — a local pack + pin override, or a source ProjectReference gated to the test
+build only. It must not violate the carve rule forbidding a production ProjectReference to source
+DataAccess across the `api/Concertable.B2B/` boundary. Until this lands, every base-type change must be
+binary-additive, or shipped as a deprecate→migrate→remove publish-first sequence.
+
+## Rename `IBaseRepository`/`BaseRepository` → `IWriteRepository`/`WriteRepository`
+
+`IBaseRepository` is a misleading name for what is actually the **write-only facet**
+(Add/AddRange/Insert/Update/Remove/SaveChanges, no reads, no key — Cosmos calls it `IWriteOnlyRepository`).
+The facet is load-bearing (keyless `SequenceRepository`, plus `OpportunitySyncer`/`CollectionSyncer`), so
+it stays — but the name should be honest. Deferred because renaming a published type is binary-breaking
+(feed-compiled consumers reference it by name), so it hits the test-seam wall above. Land it either after
+the seam is fixed (then it's one PR) or as a deprecate→migrate→remove publish-first sequence. Low value on
+its own (cosmetic); best folded into the seam fix.
+
 ## Standardize the duplicate-aware insert (distinct from the plain `InsertAsync`)
 
 The shared repository now has a plain `InsertAsync` (add + save, returns the entity, propagates all
