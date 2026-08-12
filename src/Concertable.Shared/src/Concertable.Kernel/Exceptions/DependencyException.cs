@@ -23,9 +23,7 @@ public sealed class DependencyUnavailableException : DependencyException
         : base(
             dependencyName,
             $"Dependency '{dependencyName}' is unavailable.",
-            innerException)
-    {
-    }
+            innerException) { }
 }
 
 public sealed class DependencyTimeoutException : DependencyException
@@ -36,7 +34,5 @@ public sealed class DependencyTimeoutException : DependencyException
         : base(
             dependencyName,
             $"Dependency '{dependencyName}' did not respond before its deadline.",
-            innerException)
-    {
-    }
+            innerException) { }
 }
