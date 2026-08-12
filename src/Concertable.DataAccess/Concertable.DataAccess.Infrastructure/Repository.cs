@@ -55,32 +55,16 @@ public abstract class ReadRepository<TEntity, TContext, TKey>(TContext context)
 }
 
 public abstract class Repository<TEntity, TContext, TKey>(TContext context)
-    : ReadRepository<TEntity, TContext, TKey>(context), IRepository<TEntity, TKey>
+    : BaseRepository<TEntity, TContext>(context), IRepository<TEntity, TKey>
     where TEntity : class, IEntity<TKey>
     where TContext : DbContextBase
 {
-    public async Task<TEntity> AddAsync(TEntity entity, CancellationToken ct = default)
-    {
-        await context.Set<TEntity>().AddAsync(entity, ct);
-        return entity;
-    }
+    public virtual async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken ct = default) =>
+        await context.Set<TEntity>().ToListAsync(ct);
 
-    public async Task<IEnumerable<TEntity>> AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken ct = default)
-    {
-        await context.Set<TEntity>().AddRangeAsync(entities, ct);
-        return entities;
-    }
+    public virtual Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default) =>
+        context.Set<TEntity>().FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
 
-    public async Task<TEntity> InsertAsync(TEntity entity, CancellationToken ct = default)
-    {
-        await context.Set<TEntity>().AddAsync(entity, ct);
-        await context.SaveChangesAsync(ct);
-        return entity;
-    }
-
-    public void Update(TEntity entity) => context.Set<TEntity>().Update(entity);
-
-    public void Remove(TEntity entity) => context.Set<TEntity>().Remove(entity);
-
-    public Task SaveChangesAsync(CancellationToken ct = default) => context.SaveChangesAsync(ct);
+    public bool Exists(TKey id) =>
+        context.Set<TEntity>().Any(e => e.Id!.Equals(id));
 }
