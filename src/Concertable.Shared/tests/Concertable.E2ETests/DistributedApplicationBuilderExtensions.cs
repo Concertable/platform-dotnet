@@ -1,6 +1,8 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
+using Concertable.Auth.Hosting;
+using Concertable.Payment.Hosting;
 using Microsoft.Extensions.Configuration;
 
 namespace Concertable.E2ETests;
@@ -19,7 +21,7 @@ internal static class DistributedApplicationBuilderExtensions
     {
         var paymentWeb = builder.Resources
             .OfType<ProjectResource>()
-            .Single(r => r.Name == AppHostConstants.ResourceNames.PaymentWeb);
+            .Single(r => r.Name == PaymentConstants.WebResource);
 
         var stripeSecretKey = builder.Configuration["Stripe:SecretKey"];
 
@@ -59,7 +61,7 @@ internal static class DistributedApplicationBuilderExtensions
     {
         var paymentWorkers = builder.Resources
             .OfType<ProjectResource>()
-            .Single(r => r.Name == AppHostConstants.ResourceNames.PaymentWorkers);
+            .Single(r => r.Name == PaymentConstants.WorkersResource);
 
         paymentWorkers.Annotations.Add(new EnvironmentCallbackAnnotation(context =>
         {
@@ -81,7 +83,7 @@ internal static class DistributedApplicationBuilderExtensions
         string paymentBaseUrl)
     {
         var stripeCli = builder.Resources
-            .SingleOrDefault(r => r.Name == AppHostConstants.ResourceNames.StripeCli);
+            .SingleOrDefault(r => r.Name == PaymentConstants.StripeCliResource);
 
         if (stripeCli is null) return;
 
