@@ -1,6 +1,6 @@
 namespace Concertable.DataAccess.Application;
 
-public interface IBaseRepository<TEntity> where TEntity : class
+public interface IWriteRepository<TEntity> where TEntity : class
 {
     Task<TEntity> AddAsync(TEntity entity, CancellationToken ct = default);
     Task<IEnumerable<TEntity>> AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken ct = default);

@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.DataAccess.Infrastructure;
 
-public abstract class BaseRepository<TEntity, TContext> : IBaseRepository<TEntity>
+public abstract class WriteRepository<TEntity, TContext> : IWriteRepository<TEntity>
     where TEntity : class
     where TContext : DbContextBase
 {
     protected readonly TContext context;
 
-    public BaseRepository(TContext context)
+    public WriteRepository(TContext context)
     {
         this.context = context;
     }
@@ -66,7 +66,7 @@ public abstract class Repository<TEntity, TContext, TKey> : IRepository<TEntity,
     where TContext : DbContextBase
 {
     private readonly ReadRepository<TEntity, TKey> readRepository;
-    private readonly BaseRepository<TEntity, TContext> writeRepository;
+    private readonly WriteRepository<TEntity, TContext> writeRepository;
     protected readonly TContext context;
 
     protected Repository(TContext context)
@@ -105,7 +105,7 @@ public abstract class Repository<TEntity, TContext, TKey> : IRepository<TEntity,
             : base(context) { }
     }
 
-    private sealed class WriteFacet : BaseRepository<TEntity, TContext>
+    private sealed class WriteFacet : WriteRepository<TEntity, TContext>
     {
         public WriteFacet(TContext context)
             : base(context) { }
