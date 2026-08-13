@@ -174,12 +174,13 @@ public sealed partial class TypedResultArchitectureTests
     {
         var violations = Directory
             .EnumerateFiles(FindApiRoot(), "Program.cs", SearchOption.AllDirectories)
+            .Where(IsProductionSource)
             .Where(path => Path.GetDirectoryName(path)?
                 .EndsWith(".Web", StringComparison.Ordinal) == true)
             .Select(path => new
             {
                 Path = path,
-                Source = File.ReadAllText(path)
+                Source = ReadHostComposition(path)
             })
             .Select(host => new
             {
@@ -309,6 +310,13 @@ public sealed partial class TypedResultArchitectureTests
         return path.Contains($"{separator}src{separator}", StringComparison.OrdinalIgnoreCase)
             && !path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase)
             && !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ReadHostComposition(string programPath)
+    {
+        var extensions = Path.Combine(Path.GetDirectoryName(programPath)!, "HostExtensions.cs");
+        return File.ReadAllText(programPath)
+            + (File.Exists(extensions) ? File.ReadAllText(extensions) : string.Empty);
     }
 
     public static TheoryData<string> TransitionalTypedResultSlices { get; } = new()
