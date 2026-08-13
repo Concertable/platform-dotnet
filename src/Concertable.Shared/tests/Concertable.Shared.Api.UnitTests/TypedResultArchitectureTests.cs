@@ -217,14 +217,68 @@ public sealed partial class TypedResultArchitectureTests
             .Select(path => new { Path = path, Source = File.ReadAllText(path) })
             .Where(file => UnionAttributePattern().IsMatch(file.Source))
             .Where(file => ErrorUnionPattern().IsMatch(file.Source))
-            .Where(file =>
-                !DefinitionMatchPattern().IsMatch(file.Source)
-                && !AbstractDefinitionPattern().IsMatch(file.Source)
-                && !SwitchDefinitionPattern().IsMatch(file.Source))
+            .Where(file => !UsesSupportedDefinitionShape(file.Source))
             .Select(file => file.Path)
             .ToArray();
 
         Assert.Empty(violations);
+    }
+
+    [Fact]
+    public void DunetUnionDefinition_ExistingSupportedShapes_AreAccepted()
+    {
+        string[] sources =
+        [
+            "public ErrorDefinition Definition => Match<ErrorDefinition>();",
+            "public abstract ErrorDefinition Definition { get; }",
+            """
+            public ErrorDefinition Definition => this switch
+            {
+                Missing => ErrorDefinition.NotFound<Missing>()
+            };
+            """
+        ];
+
+        Assert.All(sources, source => Assert.True(UsesSupportedDefinitionShape(source)));
+    }
+
+    [Theory]
+    [InlineData("_")]
+    [InlineData("default")]
+    [InlineData("var _")]
+    [InlineData("var ignored")]
+    public void DunetUnionDefinition_CatchAllSwitchArm_IsRejected(string pattern)
+    {
+        var source = $$"""
+            public ErrorDefinition Definition => this switch
+            {
+                Missing => ErrorDefinition.NotFound<Missing>(),
+                {{pattern}} => ErrorDefinition.Invalid<Fallback>()
+            };
+            """;
+
+        Assert.False(UsesSupportedDefinitionShape(source));
+    }
+
+    [Theory]
+    [InlineData("_")]
+    [InlineData("var _")]
+    [InlineData("var ignored")]
+    public void DunetUnionDefinition_UnrelatedCatchAllSwitchArm_IsAccepted(string pattern)
+    {
+        var source = $$"""
+            public ErrorDefinition Definition => this switch
+            {
+                Missing => ErrorDefinition.NotFound<Missing>()
+            };
+
+            public string Code => value switch
+            {
+                {{pattern}} => "fallback"
+            };
+            """;
+
+        Assert.True(UsesSupportedDefinitionShape(source));
     }
 
     [Fact]
@@ -274,6 +328,12 @@ public sealed partial class TypedResultArchitectureTests
     private static bool IsTypedResultHttpExceptionViolation(string source) =>
         HttpExceptionPattern().IsMatch(source)
         && TypedErrorResultPattern().IsMatch(source);
+
+    private static bool UsesSupportedDefinitionShape(string source) =>
+        !DefinitionSwitchCatchAllArmPattern().IsMatch(source)
+        && (DefinitionMatchPattern().IsMatch(source)
+            || AbstractDefinitionPattern().IsMatch(source)
+            || SwitchDefinitionPattern().IsMatch(source));
 
     private static IEnumerable<string> EnumerateSourceFiles() =>
         Directory
@@ -328,6 +388,11 @@ public sealed partial class TypedResultArchitectureTests
 
     [GeneratedRegex(@"\bErrorDefinition\s+Definition\s*=>\s*this\s+switch\b")]
     private static partial Regex SwitchDefinitionPattern();
+
+    [GeneratedRegex(
+        @"\bErrorDefinition\s+Definition\s*=>\s*this\s+switch\s*\{(?:(?!^[ \t]*\};).)*?(?:(?<=\{)|(?<=,))\s*(?:var\s+(?:_|@?[A-Za-z_]\w*)|_|default)\b\s*(?:when\b(?:(?!=>).)*)?=>",
+        RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex DefinitionSwitchCatchAllArmPattern();
 
     [GeneratedRegex(@"\.AddProblemDetails\s*\(")]
     private static partial Regex ProblemDetailsRegistrationPattern();
