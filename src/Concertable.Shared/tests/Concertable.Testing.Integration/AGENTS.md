@@ -15,7 +15,6 @@ implementations are not). Current consumers: Auth, B2B, Customer, Search.
 - `SqlFixture` — Testcontainers MsSql + Respawn reset
 - `IntegrationTestHostExtensions` — the shared `ConfigureTestServices` steps (`AddTestAuthentication`,
   `AddXunitLogging`, `RemoveAzureServiceBus`) each fixture composes
-- `TestEnvironments` — `Testing` / `E2E` environment-name constants
 - `TestAuthHandler` — injects `sub` (+ optional `email`) claims via request headers
 - `IResettable` — marker interface for mocks that flush state between tests
 - `Mocks/MockBusTransport` — no-op `IBusTransport` (suppresses real ASB)
