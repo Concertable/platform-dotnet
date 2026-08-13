@@ -10,7 +10,7 @@ public sealed class MessageTypeRegistry
     private readonly HashSet<Type> handledCommands = new();
 
     public IEnumerable<Type> SubscribedEventTypes => subscribedEvents;
-    public IEnumerable<Type> RegisteredCommandTypes => handledCommands;
+    public IEnumerable<Type> HandledCommandTypes => handledCommands;
 
     public Type ResolveEvent(string messageType) => events[messageType];
     public Type ResolveCommand(string messageType) => commands[messageType];
@@ -24,12 +24,12 @@ public sealed class MessageTypeRegistry
         subscribedEvents.Add(typeof(TEvent));
     }
 
-    public void RegisterCommandForSending<TCommand>() where TCommand : IIntegrationCommand =>
+    public void RegisterCommand<TCommand>() where TCommand : IIntegrationCommand =>
         commands[MessageTypeAttribute.Resolve(typeof(TCommand))] = typeof(TCommand);
 
-    public void RegisterCommand<TCommand>() where TCommand : IIntegrationCommand
+    public void RegisterCommandHandler<TCommand>() where TCommand : IIntegrationCommand
     {
-        RegisterCommandForSending<TCommand>();
+        RegisterCommand<TCommand>();
         handledCommands.Add(typeof(TCommand));
     }
 }

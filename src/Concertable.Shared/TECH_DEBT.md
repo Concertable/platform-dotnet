@@ -15,7 +15,7 @@ why several items below are deferred rather than simply fixed.
 
 ### Shared test libraries are ProjectReferenced across the service-folder boundary (carve leak)
 
-`Concertable.Testing`, `Concertable.Testing.Integration`, and the shared `Concertable.E2ETests` harness
+`Concertable.Testing`, `Concertable.Testing.Integration`, and the shared `Concertable.Testing.E2E` harness
 live under `Concertable.Shared/tests/` — i.e. in the Shared "repo" — yet every consuming test project
 reaches them by a `ProjectReference` that **escapes its own service folder**
 (`api/Concertable.B2B/src/Modules/.../Tests/*.csproj → ..\..\..\..\..\..\Concertable.Shared\tests\Concertable.Testing\...`).

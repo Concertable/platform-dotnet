@@ -211,13 +211,13 @@ public sealed partial class TypedResultArchitectureTests
     }
 
     [Fact]
-    public void DunetUnionDefinitions_UseExhaustiveSwitch()
+    public void DunetUnionDefinitions_UseSupportedDefinitionShape()
     {
         var violations = EnumerateSourceFiles()
             .Select(path => new { Path = path, Source = File.ReadAllText(path) })
             .Where(file => UnionAttributePattern().IsMatch(file.Source))
             .Where(file => ErrorUnionPattern().IsMatch(file.Source))
-            .Where(file => !DefinitionSwitchPattern().IsMatch(file.Source))
+            .Where(file => !UsesSupportedDefinitionShape(file.Source))
             .Select(file => file.Path)
             .ToArray();
 
@@ -225,17 +225,60 @@ public sealed partial class TypedResultArchitectureTests
     }
 
     [Fact]
-    public void DunetUnions_DisableImplicitConversions()
+    public void DunetUnionDefinition_ExistingSupportedShapes_AreAccepted()
     {
-        var violations = EnumerateSourceFiles()
-            .Select(path => new { Path = path, Source = File.ReadAllText(path) })
-            .Where(file => UnionAttributePattern().IsMatch(file.Source))
-            .Where(file => !DisabledImplicitConversionsPattern().IsMatch(file.Source))
-            .Where(file => ErrorUnionPattern().IsMatch(file.Source))
-            .Select(file => file.Path)
-            .ToArray();
+        string[] sources =
+        [
+            "public ErrorDefinition Definition => Match<ErrorDefinition>();",
+            "public abstract ErrorDefinition Definition { get; }",
+            """
+            public ErrorDefinition Definition => this switch
+            {
+                Missing => ErrorDefinition.NotFound<Missing>()
+            };
+            """
+        ];
 
-        Assert.Empty(violations);
+        Assert.All(sources, source => Assert.True(UsesSupportedDefinitionShape(source)));
+    }
+
+    [Theory]
+    [InlineData("_")]
+    [InlineData("default")]
+    [InlineData("var _")]
+    [InlineData("var ignored")]
+    public void DunetUnionDefinition_CatchAllSwitchArm_IsRejected(string pattern)
+    {
+        var source = $$"""
+            public ErrorDefinition Definition => this switch
+            {
+                Missing => ErrorDefinition.NotFound<Missing>(),
+                {{pattern}} => ErrorDefinition.Invalid<Fallback>()
+            };
+            """;
+
+        Assert.False(UsesSupportedDefinitionShape(source));
+    }
+
+    [Theory]
+    [InlineData("_")]
+    [InlineData("var _")]
+    [InlineData("var ignored")]
+    public void DunetUnionDefinition_UnrelatedCatchAllSwitchArm_IsAccepted(string pattern)
+    {
+        var source = $$"""
+            public ErrorDefinition Definition => this switch
+            {
+                Missing => ErrorDefinition.NotFound<Missing>()
+            };
+
+            public string Code => value switch
+            {
+                {{pattern}} => "fallback"
+            };
+            """;
+
+        Assert.True(UsesSupportedDefinitionShape(source));
     }
 
     [Fact]
@@ -285,6 +328,12 @@ public sealed partial class TypedResultArchitectureTests
     private static bool IsTypedResultHttpExceptionViolation(string source) =>
         HttpExceptionPattern().IsMatch(source)
         && TypedErrorResultPattern().IsMatch(source);
+
+    private static bool UsesSupportedDefinitionShape(string source) =>
+        !DefinitionSwitchCatchAllArmPattern().IsMatch(source)
+        && (DefinitionMatchPattern().IsMatch(source)
+            || AbstractDefinitionPattern().IsMatch(source)
+            || SwitchDefinitionPattern().IsMatch(source));
 
     private static IEnumerable<string> EnumerateSourceFiles() =>
         Directory
@@ -336,6 +385,11 @@ public sealed partial class TypedResultArchitectureTests
 
     [GeneratedRegex(@"\[\s*Union\s*\(\s*EnableImplicitConversions\s*=\s*false\s*\)\s*\]")]
     private static partial Regex DisabledImplicitConversionsPattern();
+
+    [GeneratedRegex(
+        @"\bErrorDefinition\s+Definition\s*=>\s*this\s+switch\s*\{(?:(?!^[ \t]*\};).)*?(?:(?<=\{)|(?<=,))\s*(?:var\s+(?:_|@?[A-Za-z_]\w*)|_|default)\b\s*(?:when\b(?:(?!=>).)*)?=>",
+        RegexOptions.Multiline | RegexOptions.Singleline)]
+    private static partial Regex DefinitionSwitchCatchAllArmPattern();
 
     [GeneratedRegex(@"\.AddProblemDetails\s*\(")]
     private static partial Regex ProblemDetailsRegistrationPattern();
