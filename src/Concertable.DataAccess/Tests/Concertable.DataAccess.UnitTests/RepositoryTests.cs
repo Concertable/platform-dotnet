@@ -18,7 +18,7 @@ public sealed class RepositoryTests
             .ToArray();
 
         Assert.Contains(typeof(ReadRepository<TestEntity, int>), fields);
-        Assert.Contains(typeof(BaseRepository<TestEntity, TestDbContext>), fields);
+        Assert.Contains(typeof(WriteRepository<TestEntity, TestDbContext>), fields);
     }
 
     [Fact]
