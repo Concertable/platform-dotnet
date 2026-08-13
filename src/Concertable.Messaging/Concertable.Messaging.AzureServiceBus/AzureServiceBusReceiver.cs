@@ -48,7 +48,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
             logger.EventProcessorStarted(topic, options.ServiceName);
         }
 
-        foreach (var commandType in registry.RegisteredCommandTypes)
+        foreach (var commandType in registry.HandledCommandTypes)
         {
             var queue = options.QueueNameFor(commandType);
             var processor = client.CreateProcessor(queue, new ServiceBusProcessorOptions { AutoCompleteMessages = false });
