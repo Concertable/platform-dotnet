@@ -1,3 +1,4 @@
+using Concertable.DataAccess.Application;
 using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -5,8 +6,10 @@ using MessagingSchema = Concertable.Messaging.Infrastructure.Schema;
 
 namespace Concertable.DataAccess.Infrastructure;
 
-public abstract class DbContextBase(DbContextOptions options) : DbContext(options)
+public abstract class DbContextBase(DbContextOptions options) : DbContext(options), IReadDbContext
 {
+    public IQueryable<TEntity> Query<TEntity>() where TEntity : class => Set<TEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
