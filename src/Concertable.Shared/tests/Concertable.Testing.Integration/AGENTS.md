@@ -10,14 +10,17 @@ Integration-test conventions (fixtures, `Respawn`, `TestAuthHandler`, test-seedi
 
 Only add something here if it is used by **two or more microservices**, *or* it is a **service-agnostic
 contract** that services implement with their own service-specific types (the contract is shared; the
-implementations are not). Current consumers: B2B, Customer, Search.
+implementations are not). Current consumers: Auth, B2B, Customer, Search.
 
 - `SqlFixture` — Testcontainers MsSql + Respawn reset
-- `TestAuthHandler` — injects `sub` / `role` / `email` claims via request headers
+- `IntegrationTestHostExtensions` — the shared `ConfigureTestServices` steps (`AddTestAuthentication`,
+  `AddXunitLogging`, `RemoveAzureServiceBus`) each fixture composes
+- `TestEnvironments` — `Testing` / `E2E` environment-name constants
+- `TestAuthHandler` — injects `sub` (+ optional `email`) claims via request headers
 - `IResettable` — marker interface for mocks that flush state between tests
 - `Mocks/MockBusTransport` — no-op `IBusTransport` (suppresses real ASB)
 - `Mocks/MockEmailSender` / `IMockEmailSender` — captures sent emails, exposes `Sent` list
-- `Mocks/MockGeocodingService` / `MockGeocodingServiceFail` — stub geocoding
+- `Mocks/MockGeocodingClient` / `MockGeocodingClientFail` — stub geocoding
 - `Mocks/MockImageService` — stub image upload/replace/delete
 - `IWebhookSimulator` — service-agnostic contract for driving an inbound payment webhook in-process
   (e.g. dispatching `PaymentSucceededEvent` to its handlers). The **implementations**
