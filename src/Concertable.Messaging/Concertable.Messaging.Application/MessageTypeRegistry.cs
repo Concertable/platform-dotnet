@@ -7,9 +7,10 @@ public sealed class MessageTypeRegistry
     private readonly Dictionary<string, Type> events = new();
     private readonly Dictionary<string, Type> commands = new();
     private readonly HashSet<Type> subscribedEvents = new();
+    private readonly HashSet<Type> handledCommands = new();
 
     public IEnumerable<Type> SubscribedEventTypes => subscribedEvents;
-    public IEnumerable<Type> RegisteredCommandTypes => commands.Values;
+    public IEnumerable<Type> HandledCommandTypes => handledCommands;
 
     public Type ResolveEvent(string messageType) => events[messageType];
     public Type ResolveCommand(string messageType) => commands[messageType];
@@ -25,4 +26,10 @@ public sealed class MessageTypeRegistry
 
     public void RegisterCommand<TCommand>() where TCommand : IIntegrationCommand =>
         commands[MessageTypeAttribute.Resolve(typeof(TCommand))] = typeof(TCommand);
+
+    public void RegisterCommandHandler<TCommand>() where TCommand : IIntegrationCommand
+    {
+        RegisterCommand<TCommand>();
+        handledCommands.Add(typeof(TCommand));
+    }
 }
