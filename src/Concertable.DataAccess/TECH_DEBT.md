@@ -6,11 +6,11 @@ The shared repository now has a plain `InsertAsync` (add + save, returns the ent
 failures as exceptions — the create-and-persist / Cosmos `CreateAsync` shape). That name is therefore
 taken.
 
-Customer Review and Preference Phase 8 introduces a *different* primitive: immediate, **duplicate-aware**
+Customer Review and Preference currently duplicate a *different* primitive: immediate, **duplicate-aware**
 insert — add, save, return `false` only for the recognized duplicate-key conflict, propagate unrelated
-failures. When that feature lands, hoist that primitive to the shared generic DataAccess repository under
-a distinct name (e.g. `TryInsertAsync`, matching its `bool` Try-pattern return) so it coexists with
-`InsertAsync`, and remove both module-local copies. Do the hoist as a published-package cutover.
+failures. Hoist that primitive to the shared generic DataAccess repository under a distinct name (e.g.
+`TryInsertAsync`, matching its `bool` Try-pattern return) so it coexists with `InsertAsync`, and remove
+both module-local copies. Do the hoist as a published-package cutover.
 
 ## `IReadRepository.GetByIdAsync` should not be `virtual`
 
