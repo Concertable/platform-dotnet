@@ -174,12 +174,13 @@ public sealed partial class TypedResultArchitectureTests
     {
         var violations = Directory
             .EnumerateFiles(FindApiRoot(), "Program.cs", SearchOption.AllDirectories)
+            .Where(IsProductionSource)
             .Where(path => Path.GetDirectoryName(path)?
                 .EndsWith(".Web", StringComparison.Ordinal) == true)
             .Select(path => new
             {
                 Path = path,
-                Source = File.ReadAllText(path)
+                Source = ReadHostComposition(path)
             })
             .Select(host => new
             {
@@ -311,6 +312,13 @@ public sealed partial class TypedResultArchitectureTests
             && !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static string ReadHostComposition(string programPath)
+    {
+        var extensions = Path.Combine(Path.GetDirectoryName(programPath)!, "HostExtensions.cs");
+        return File.ReadAllText(programPath)
+            + (File.Exists(extensions) ? File.ReadAllText(extensions) : string.Empty);
+    }
+
     public static TheoryData<string> TransitionalTypedResultSlices { get; } = new()
     {
         "Concertable.Payment.Infrastructure/CustomerPaymentService.cs",
@@ -380,11 +388,14 @@ public sealed partial class TypedResultArchitectureTests
     [GeneratedRegex(@"\bpartial\s+record\s+\w+Error\s*:\s*IError\b")]
     private static partial Regex ErrorUnionPattern();
 
-    [GeneratedRegex(@"\bDefinition\s*=>\s*this\s+switch\s*\{")]
-    private static partial Regex DefinitionSwitchPattern();
+    [GeneratedRegex(@"\bDefinition\s*=>\s*Match\s*<\s*ErrorDefinition\s*>")]
+    private static partial Regex DefinitionMatchPattern();
 
-    [GeneratedRegex(@"\[\s*Union\s*\(\s*EnableImplicitConversions\s*=\s*false\s*\)\s*\]")]
-    private static partial Regex DisabledImplicitConversionsPattern();
+    [GeneratedRegex(@"\babstract\s+ErrorDefinition\s+Definition\s*\{")]
+    private static partial Regex AbstractDefinitionPattern();
+
+    [GeneratedRegex(@"\bErrorDefinition\s+Definition\s*=>\s*this\s+switch\b")]
+    private static partial Regex SwitchDefinitionPattern();
 
     [GeneratedRegex(
         @"\bErrorDefinition\s+Definition\s*=>\s*this\s+switch\s*\{(?:(?!^[ \t]*\};).)*?(?:(?<=\{)|(?<=,))\s*(?:var\s+(?:_|@?[A-Za-z_]\w*)|_|default)\b\s*(?:when\b(?:(?!=>).)*)?=>",
