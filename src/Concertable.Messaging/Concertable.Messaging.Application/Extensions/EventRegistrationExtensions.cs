@@ -21,6 +21,13 @@ public static class EventRegistrationExtensions
     public static MessageTypeRegistry HandleCommand<TCommand>(this MessageTypeRegistry registry)
         where TCommand : IIntegrationCommand
     {
+        registry.RegisterCommandHandler<TCommand>();
+        return registry;
+    }
+
+    public static MessageTypeRegistry Sends<TCommand>(this MessageTypeRegistry registry)
+        where TCommand : IIntegrationCommand
+    {
         registry.RegisterCommand<TCommand>();
         return registry;
     }
