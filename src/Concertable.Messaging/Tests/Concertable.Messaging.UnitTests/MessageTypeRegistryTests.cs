@@ -64,18 +64,18 @@ public sealed class MessageTypeRegistryTests
     }
 
     [Fact]
-    public void RegisteredCommandTypes_AfterCommandRegistration_DoesNotContainEvents()
+    public void HandledCommandTypes_AfterHandlerRegistration_DoesNotContainEvents()
     {
         // Arrange
         var registry = new MessageTypeRegistry();
 
         // Act
         registry.RegisterEvent<FakeIntegrationEvent>();
-        registry.RegisterCommand<FakeIntegrationCommand>();
+        registry.RegisterCommandHandler<FakeIntegrationCommand>();
 
         // Assert
-        Assert.DoesNotContain(typeof(FakeIntegrationEvent), registry.RegisteredCommandTypes);
-        Assert.Contains(typeof(FakeIntegrationCommand), registry.RegisteredCommandTypes);
+        Assert.DoesNotContain(typeof(FakeIntegrationEvent), registry.HandledCommandTypes);
+        Assert.Contains(typeof(FakeIntegrationCommand), registry.HandledCommandTypes);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public sealed class MessageTypeRegistryTests
         registry.Sends<FakeIntegrationCommand>();
 
         Assert.Equal(typeof(FakeIntegrationCommand), registry.ResolveCommand(MessageTypeAttribute.Resolve(typeof(FakeIntegrationCommand))));
-        Assert.Empty(registry.RegisteredCommandTypes);
+        Assert.Empty(registry.HandledCommandTypes);
     }
 
     [Fact]
