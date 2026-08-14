@@ -15,7 +15,7 @@ public interface IDevSeeder : IDbSeeder { }
 
 /// <summary>
 /// Runs in integration tests ONLY — never in dev or E2E.
-/// Uses fake/stub IDs (e.g. "acct_test_venue1") that only work with E2EStripeAccountClient.
+/// Uses fake/stub IDs (e.g. "acct_test_venue1") that only work with the E2E Stripe adapter.
 /// Do NOT reach for this to fix E2E failures.
 /// </summary>
 public interface ITestSeeder : IDbSeeder { }

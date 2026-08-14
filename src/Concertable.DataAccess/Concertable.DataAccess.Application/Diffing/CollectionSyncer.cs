@@ -8,9 +8,9 @@ public abstract class CollectionSyncer<TEntity, TDto>
     where TEntity : class, IIdEntity
     where TDto : ISyncRequest
 {
-    private readonly IBaseRepository<TEntity> repo;
+    private readonly IWriteRepository<TEntity> repository;
 
-    protected CollectionSyncer(IBaseRepository<TEntity> repo) => this.repo = repo;
+    protected CollectionSyncer(IWriteRepository<TEntity> repository) => this.repository = repository;
 
     public async Task SyncAsync(
         int ownerId,
@@ -31,12 +31,12 @@ public abstract class CollectionSyncer<TEntity, TDto>
         var creates = new List<TEntity>();
         foreach (var dto in desired.Where(d => !d.Id.HasValue))
             creates.Add(await CreateAsync(ownerId, dto));
-        await repo.AddRangeAsync(creates);
+        await repository.AddRangeAsync(creates);
 
         foreach (var entity in current.Except(matched))
             await DeleteAsync(entity);
 
-        await repo.SaveChangesAsync();
+        await repository.SaveChangesAsync();
     }
 
     protected abstract Task<TEntity> CreateAsync(int ownerId, TDto dto);
@@ -44,7 +44,7 @@ public abstract class CollectionSyncer<TEntity, TDto>
 
     protected virtual Task DeleteAsync(TEntity entity)
     {
-        repo.Remove(entity);
+        repository.Remove(entity);
         return Task.CompletedTask;
     }
 }
