@@ -1,6 +1,7 @@
 using System.Reflection;
 using Concertable.DataAccess.Application;
 using Concertable.DataAccess.Infrastructure;
+using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Kernel;
 using Concertable.Messaging.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -189,7 +190,7 @@ public sealed class RepositoryTests
         var options = new DbContextOptionsBuilder<TestReadDbContext>()
             .UseInMemoryDatabase(databaseName, root)
             .Options;
-        return new TestReadDbContext(options);
+        return new TestReadDbContext(options, new TestConfigurationProvider());
     }
 
     private sealed class TestRepository : Repository<TestEntity, TestDbContext, int>
@@ -221,9 +222,17 @@ public sealed class RepositoryTests
         public DbSet<TestEntity> Entities => Set<TestEntity>();
     }
 
-    private sealed class TestReadDbContext(DbContextOptions<TestReadDbContext> options) : ReadDbContext(options)
+    private sealed class TestReadDbContext(
+        DbContextOptions<TestReadDbContext> options,
+        IEntityTypeConfigurationProvider provider)
+        : ReadDbContext(options, provider, "test")
     {
         public DbSet<TestEntity> Entities => Set<TestEntity>();
+    }
+
+    private sealed class TestConfigurationProvider : IEntityTypeConfigurationProvider
+    {
+        public void Configure(ModelBuilder modelBuilder) => modelBuilder.Entity<TestEntity>();
     }
 
     private sealed class TestEntity : IIdEntity
