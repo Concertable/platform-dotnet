@@ -4,7 +4,7 @@ using Scriban;
 
 namespace Concertable.Shared.Email.Infrastructure;
 
-internal sealed class MjmlEmailRenderer : IEmailRenderer
+internal sealed class MjmlEmailRenderer : IMjmlEmailRenderer
 {
     private readonly MjmlRenderer mjml = new();
 
