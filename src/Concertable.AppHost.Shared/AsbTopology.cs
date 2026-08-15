@@ -11,6 +11,7 @@ public sealed class AsbTopology
     private readonly IResourceBuilder<AzureServiceBusResource> asb;
     private readonly AzureServiceBusOptions options = new();
     private readonly Dictionary<string, IResourceBuilder<AzureServiceBusTopicResource>> topics = new();
+    private readonly HashSet<string> subscribedTopics = [];
 
     public AsbTopology(IResourceBuilder<AzureServiceBusResource> asb) => this.asb = asb;
 
@@ -24,6 +25,7 @@ public sealed class AsbTopology
     {
         var topicBuilder = GetOrAddTopic<TEvent>();
         topicBuilder.AddServiceBusSubscription($"{serviceName}-{KebabCase(typeof(TEvent))}", serviceName);
+        subscribedTopics.Add(topicBuilder.Resource.TopicName);
         return this;
     }
 
@@ -31,6 +33,21 @@ public sealed class AsbTopology
     {
         asb.AddServiceBusQueue(options.QueueNameFor(serviceName, typeof(TCommand)));
         return this;
+    }
+
+    public IResourceBuilder<AzureServiceBusResource> RunAsEmulator()
+    {
+        foreach (var (topic, topicBuilder) in topics)
+        {
+            if (subscribedTopics.Contains(topic))
+                continue;
+
+            topicBuilder
+                .AddServiceBusSubscription($"{topic}-emulator-sink", "emulator-sink")
+                .WithProperties(subscription => subscription.DefaultMessageTimeToLive = TimeSpan.FromMinutes(1));
+        }
+
+        return asb.RunAsEmulator();
     }
 
     private IResourceBuilder<AzureServiceBusTopicResource> GetOrAddTopic<TEvent>()

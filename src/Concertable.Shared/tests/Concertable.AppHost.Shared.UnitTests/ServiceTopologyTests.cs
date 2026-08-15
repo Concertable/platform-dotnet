@@ -27,14 +27,32 @@ public sealed class ServiceTopologyTests
         builder.AddAzureServiceBus("messaging")
             .Topology()
             .Publish<ConcertPostedEvent>()
-            .Subscribe<ConcertPostedEvent>("consumer");
+            .Subscribe<ConcertPostedEvent>("consumer")
+            .RunAsEmulator();
 
         var topicName = new AzureServiceBusOptions().TopicNameFor(typeof(ConcertPostedEvent));
         var topics = builder.Resources
             .OfType<AzureServiceBusTopicResource>()
             .Where(resource => resource.Name == topicName);
+        var subscription = Assert.Single(builder.Resources.OfType<AzureServiceBusSubscriptionResource>());
 
         Assert.Single(topics);
+        Assert.Equal("consumer", subscription.SubscriptionName);
+    }
+
+    [Fact]
+    public void PublishWithoutSubscriber_ProvisionsExpiringEmulatorSink()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        builder.AddAzureServiceBus("messaging")
+            .Topology()
+            .Publish<ConcertPostedEvent>()
+            .RunAsEmulator();
+
+        var subscription = Assert.Single(builder.Resources.OfType<AzureServiceBusSubscriptionResource>());
+
+        Assert.Equal("emulator-sink", subscription.SubscriptionName);
+        Assert.Equal(TimeSpan.FromMinutes(1), subscription.DefaultMessageTimeToLive);
     }
 
     [Fact]
@@ -82,6 +100,7 @@ public sealed class ServiceTopologyTests
         var builder = DistributedApplication.CreateBuilder();
         var topology = builder.AddAzureServiceBus("messaging").Topology();
         configure(topology);
+        topology.RunAsEmulator();
 
         var topics = builder.Resources
             .OfType<AzureServiceBusTopicResource>()
