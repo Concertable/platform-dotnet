@@ -14,12 +14,15 @@ public sealed class AsbTopology
 
     public AsbTopology(IResourceBuilder<AzureServiceBusResource> asb) => this.asb = asb;
 
+    public AsbTopology Publish<TEvent>()
+    {
+        GetOrAddTopic<TEvent>();
+        return this;
+    }
+
     public AsbTopology Subscribe<TEvent>(string serviceName)
     {
-        var topic = options.TopicNameFor(typeof(TEvent));
-        if (!topics.TryGetValue(topic, out var topicBuilder))
-            topics[topic] = topicBuilder = asb.AddServiceBusTopic(topic);
-
+        var topicBuilder = GetOrAddTopic<TEvent>();
         topicBuilder.AddServiceBusSubscription($"{serviceName}-{KebabCase(typeof(TEvent))}", serviceName);
         return this;
     }
@@ -28,6 +31,15 @@ public sealed class AsbTopology
     {
         asb.AddServiceBusQueue(options.QueueNameFor(serviceName, typeof(TCommand)));
         return this;
+    }
+
+    private IResourceBuilder<AzureServiceBusTopicResource> GetOrAddTopic<TEvent>()
+    {
+        var topic = options.TopicNameFor(typeof(TEvent));
+        if (!topics.TryGetValue(topic, out var topicBuilder))
+            topics[topic] = topicBuilder = asb.AddServiceBusTopic(topic);
+
+        return topicBuilder;
     }
 
     private static string KebabCase(Type eventType)
