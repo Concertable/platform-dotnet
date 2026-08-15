@@ -8,7 +8,7 @@ internal sealed class MjmlEmailRenderer : IEmailRenderer
 {
     private readonly MjmlRenderer mjml = new();
 
-    public string Render(string mjmlTemplate, object model)
+    public string Render<TModel>(string mjmlTemplate, TModel model)
     {
         var mjmlSource = Template.Parse(mjmlTemplate).Render(model, member => member.Name);
         return mjml.Render(mjmlSource).Html;

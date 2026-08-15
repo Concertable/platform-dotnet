@@ -4,49 +4,42 @@ namespace Concertable.Shared.Email.UnitTests;
 
 public sealed class EmailRendererTests
 {
+    private readonly MjmlEmailRenderer renderer = new();
+
+    private sealed record Party(string LegalName, string? Vat);
+    private sealed record Model(Party Venue, Party Artist);
+
     private const string Template =
         """
         <mjml><mj-body><mj-section><mj-column>
-        <mj-text>Booking confirmed: {{ Artist.Name }} at {{ Venue.Name }}</mj-text>
-        <mj-text>{{ Venue.LegalName }}</mj-text>
+        <mj-text>{{ Venue.LegalName }}{{ if Venue.Vat }} — VAT {{ Venue.Vat }}{{ end }}</mj-text>
+        <mj-text>{{ Artist.LegalName }}</mj-text>
         </mj-column></mj-section></mj-body></mjml>
         """;
 
-    private readonly MjmlEmailRenderer renderer = new();
-
     [Fact]
-    public void Render_BindsModelAndCompilesMjmlToHtml()
+    public void Render_BindsTypedModel_AndCompilesMjmlToHtml()
     {
-        var html = renderer.Render(Template, new
-        {
-            Artist = new { Name = "Aretha" },
-            Venue = new { Name = "The Roundhouse", LegalName = "Roundhouse Trust Ltd" },
-        });
+        var html = renderer.Render(Template, new Model(
+            Venue: new Party("Roundhouse Trust Ltd", "GB123"),
+            Artist: new Party("Aretha Live Ltd", null)));
 
-        Assert.Contains("Booking confirmed: Aretha at The Roundhouse", html);
-        Assert.Contains("Roundhouse Trust Ltd", html);
-        // MJML compiled to Outlook-safe HTML, not passed through raw.
+        Assert.Contains("Roundhouse Trust Ltd — VAT GB123", html);
+        Assert.Contains("Aretha Live Ltd", html);
+        // MJML compiled to Outlook-safe HTML, model fully bound.
         Assert.Contains("<table", html);
         Assert.DoesNotContain("<mjml", html);
         Assert.DoesNotContain("{{", html);
     }
 
     [Fact]
-    public void Render_OmitsSectionForFalsyModelBranch()
+    public void Render_OmitsConditionalBranch_WhenModelValueFalsy()
     {
-        var template =
-            """
-            <mjml><mj-body><mj-section><mj-column>
-            {{ if Vat }}<mj-text>VAT number: {{ Vat }}</mj-text>{{ end }}
-            <mj-text>{{ LegalName }}</mj-text>
-            </mj-column></mj-section></mj-body></mjml>
-            """;
+        var html = renderer.Render(Template, new Model(
+            Venue: new Party("Roundhouse Trust Ltd", Vat: null),
+            Artist: new Party("Aretha Live Ltd", null)));
 
-        var withVat = renderer.Render(template, new { Vat = "GB123", LegalName = "Aretha Live Ltd" });
-        var withoutVat = renderer.Render(template, new { Vat = (string?)null, LegalName = "Aretha Live Ltd" });
-
-        Assert.Contains("VAT number: GB123", withVat);
-        Assert.DoesNotContain("VAT number", withoutVat);
-        Assert.Contains("Aretha Live Ltd", withoutVat);
+        Assert.DoesNotContain("VAT", html);
+        Assert.Contains("Roundhouse Trust Ltd", html);
     }
 }
