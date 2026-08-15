@@ -27,6 +27,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIntegrationCommandHandler<SendEmailCommand>, SendEmailCommandHandler>();
         services.AddScoped<IIntegrationCommandHandler<SendVerificationEmailCommand>, SendVerificationEmailCommandHandler>();
 
+        services.AddSingleton<IEmailRenderer, MjmlEmailRenderer>();
+
         return services;
     }
 
