@@ -1,45 +1,56 @@
+using Concertable.Shared.Email.Application;
 using Concertable.Shared.Email.Infrastructure;
 
 namespace Concertable.Shared.Email.UnitTests;
 
 public sealed class EmailRendererTests
 {
-    private readonly MjmlEmailRenderer renderer = new();
+    private readonly EmailRenderer renderer = new();
 
     private sealed record Party(string LegalName, string? Vat);
-    private sealed record Model(Party Venue, Party Artist);
 
-    private const string Template =
-        """
-        <mjml><mj-body><mj-section><mj-column>
-        <mj-text>{{ Venue.LegalName }}{{ if Venue.Vat }} — VAT {{ Venue.Vat }}{{ end }}</mj-text>
-        <mj-text>{{ Artist.LegalName }}</mj-text>
-        </mj-column></mj-section></mj-body></mjml>
-        """;
-
-    [Fact]
-    public void Render_BindsTypedModel_AndCompilesMjmlToHtml()
+    private sealed class BookingEmail : IEmailContent
     {
-        var html = renderer.Render(Template, new Model(
-            Venue: new Party("Roundhouse Trust Ltd", "GB123"),
-            Artist: new Party("Aretha Live Ltd", null)));
+        public required Party Venue { get; init; }
+        public required Party Artist { get; init; }
 
-        Assert.Contains("Roundhouse Trust Ltd — VAT GB123", html);
-        Assert.Contains("Aretha Live Ltd", html);
-        // MJML compiled to Outlook-safe HTML, model fully bound.
-        Assert.Contains("<table", html);
-        Assert.DoesNotContain("<mjml", html);
-        Assert.DoesNotContain("{{", html);
+        public string Subject => $"Booking confirmed with {Venue.LegalName}";
+
+        public string Template =>
+            """
+            <mjml><mj-body><mj-section><mj-column>
+            <mj-text>{{ Venue.LegalName }}{{ if Venue.Vat }} — VAT {{ Venue.Vat }}{{ end }}</mj-text>
+            <mj-text>{{ Artist.LegalName }}</mj-text>
+            </mj-column></mj-section></mj-body></mjml>
+            """;
     }
 
     [Fact]
-    public void Render_OmitsConditionalBranch_WhenModelValueFalsy()
+    public void Render_BindsContent_AndCompilesMjmlToHtml()
     {
-        var html = renderer.Render(Template, new Model(
-            Venue: new Party("Roundhouse Trust Ltd", Vat: null),
-            Artist: new Party("Aretha Live Ltd", null)));
+        var result = renderer.Render(new BookingEmail
+        {
+            Venue = new Party("Roundhouse Trust Ltd", "GB123"),
+            Artist = new Party("Aretha Live Ltd", null),
+        });
 
-        Assert.DoesNotContain("VAT", html);
-        Assert.Contains("Roundhouse Trust Ltd", html);
+        Assert.Equal("Booking confirmed with Roundhouse Trust Ltd", result.Subject);
+        Assert.Contains("Roundhouse Trust Ltd — VAT GB123", result.HtmlBody);
+        Assert.Contains("Aretha Live Ltd", result.HtmlBody);
+        Assert.Contains("<table", result.HtmlBody);
+        Assert.DoesNotContain("{{", result.HtmlBody);
+    }
+
+    [Fact]
+    public void Render_OmitsConditional_WhenModelValueFalsy()
+    {
+        var result = renderer.Render(new BookingEmail
+        {
+            Venue = new Party("Roundhouse Trust Ltd", Vat: null),
+            Artist = new Party("Aretha Live Ltd", null),
+        });
+
+        Assert.DoesNotContain("VAT", result.HtmlBody);
+        Assert.Contains("Roundhouse Trust Ltd", result.HtmlBody);
     }
 }
