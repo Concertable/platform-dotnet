@@ -12,11 +12,37 @@ public sealed class AzureServiceBusTransportTests
     };
     private readonly MessageSerializer serializer = new();
 
-    private AzureServiceBusTransport CreateSut()
+    private AzureServiceBusTransport CreateSut(string? destinationServiceName = "payment")
     {
-        // ServiceBusClient ctor accepts a fake connection string without opening a network connection.
+        var registry = new MessageTypeRegistry();
+        if (destinationServiceName is not null)
+            registry.RegisterCommandSender<FakeIntegrationCommand>(destinationServiceName);
         var client = new ServiceBusClient(options.ConnectionString);
-        return new AzureServiceBusTransport(client, Microsoft.Extensions.Options.Options.Create(options), serializer);
+        return new AzureServiceBusTransport(
+            client,
+            Microsoft.Extensions.Options.Options.Create(options),
+            serializer,
+            registry);
+    }
+
+    [Fact]
+    public void QueueNameForCommand_RegisteredDestination_UsesDestinationService()
+    {
+        var sut = CreateSut();
+
+        var queue = sut.QueueNameForCommand(typeof(FakeIntegrationCommand));
+
+        Assert.Equal("command-payment-fakeintegrationcommand", queue);
+    }
+
+    [Fact]
+    public void QueueNameForCommand_NoRegisteredDestination_UsesCurrentService()
+    {
+        var sut = CreateSut(destinationServiceName: null);
+
+        var queue = sut.QueueNameForCommand(typeof(FakeIntegrationCommand));
+
+        Assert.Equal("command-b2b-fakeintegrationcommand", queue);
     }
 
     [Fact]

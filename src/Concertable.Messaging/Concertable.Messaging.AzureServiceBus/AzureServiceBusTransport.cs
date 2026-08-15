@@ -12,16 +12,19 @@ internal sealed class AzureServiceBusTransport : IBusTransport, IAsyncDisposable
     private readonly ServiceBusClient client;
     private readonly AzureServiceBusOptions options;
     private readonly MessageSerializer serializer;
+    private readonly MessageTypeRegistry registry;
     private readonly ConcurrentDictionary<string, ServiceBusSender> senders = new();
 
     public AzureServiceBusTransport(
         ServiceBusClient client,
         IOptions<AzureServiceBusOptions> options,
-        MessageSerializer serializer)
+        MessageSerializer serializer,
+        MessageTypeRegistry registry)
     {
         this.client = client;
         this.options = options.Value;
         this.serializer = serializer;
+        this.registry = registry;
     }
 
     public async Task PublishAsync<TEvent>(TEvent @event, MessageEnvelope envelope, CancellationToken ct = default)
@@ -35,10 +38,15 @@ internal sealed class AzureServiceBusTransport : IBusTransport, IAsyncDisposable
     public async Task SendAsync<TCommand>(TCommand command, MessageEnvelope envelope, CancellationToken ct = default)
         where TCommand : IIntegrationCommand
     {
-        var queue = options.QueueNameFor(typeof(TCommand));
+        var queue = QueueNameForCommand(typeof(TCommand));
         var sender = senders.GetOrAdd(queue, name => client.CreateSender(name));
         await sender.SendMessageAsync(BuildMessage(command, envelope), ct);
     }
+
+    internal string QueueNameForCommand(Type commandType) =>
+        registry.TryResolveCommandDestination(commandType, out var destinationServiceName)
+            ? options.QueueNameFor(destinationServiceName!, commandType)
+            : options.QueueNameFor(commandType);
 
     internal ServiceBusMessage BuildMessage<T>(T payload, MessageEnvelope envelope)
     {
