@@ -9,22 +9,23 @@ namespace Concertable.Shared.Api.Extensions;
 
 public static class ControllerBuilderExtensions
 {
-    public static IMvcBuilder AddApplicationJson(
-        this IMvcBuilder builder,
-        Action<JsonSerializerOptions>? configure = null)
-        => builder.AddJsonOptions(options =>
-        {
-            options.JsonSerializerOptions.Converters.Add(
-                new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
-            configure?.Invoke(options.JsonSerializerOptions);
-        });
-
-    public static IMvcBuilder AddInternalControllers(this IMvcBuilder builder, Assembly assembly)
-        => builder
-            .AddApplicationPart(assembly)
-            .ConfigureApplicationPartManager(apm =>
+    extension(IMvcBuilder builder)
+    {
+        public IMvcBuilder AddApplicationJson(Action<JsonSerializerOptions>? configure = null)
+            => builder.AddJsonOptions(options =>
             {
-                if (!apm.FeatureProviders.OfType<InternalControllerFeatureProvider>().Any())
-                    apm.FeatureProviders.Add(new InternalControllerFeatureProvider());
+                options.JsonSerializerOptions.Converters.Add(
+                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
+                configure?.Invoke(options.JsonSerializerOptions);
             });
+
+        public IMvcBuilder AddInternalControllers(Assembly assembly)
+            => builder
+                .AddApplicationPart(assembly)
+                .ConfigureApplicationPartManager(apm =>
+                {
+                    if (!apm.FeatureProviders.OfType<InternalControllerFeatureProvider>().Any())
+                        apm.FeatureProviders.Add(new InternalControllerFeatureProvider());
+                });
+    }
 }
