@@ -86,7 +86,32 @@ public sealed class MessageTypeRegistryTests
         registry.Sends<FakeIntegrationCommand>();
 
         Assert.Equal(typeof(FakeIntegrationCommand), registry.ResolveCommand(MessageTypeAttribute.Resolve(typeof(FakeIntegrationCommand))));
+        Assert.False(registry.TryResolveCommandDestination(typeof(FakeIntegrationCommand), out _));
         Assert.Empty(registry.HandledCommandTypes);
+    }
+
+    [Fact]
+    public void SendsTo_AfterRegistration_ResolvesDestinationWithoutRegisteringHandler()
+    {
+        var registry = new MessageTypeRegistry();
+
+        registry.SendsTo<FakeIntegrationCommand>("payment");
+
+        Assert.True(registry.TryResolveCommandDestination(typeof(FakeIntegrationCommand), out var destination));
+        Assert.Equal("payment", destination);
+        Assert.Empty(registry.HandledCommandTypes);
+    }
+
+    [Fact]
+    public void SendsTo_WhenCommandAlreadyTargetsAnotherService_Throws()
+    {
+        var registry = new MessageTypeRegistry();
+        registry.SendsTo<FakeIntegrationCommand>("payment");
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => registry.SendsTo<FakeIntegrationCommand>("b2b"));
+
+        Assert.Contains("already routed to service 'payment'", exception.Message);
     }
 
     [Fact]
