@@ -15,7 +15,7 @@ public sealed class AzureServiceBusTransportTests
     private AzureServiceBusTransport CreateSut()
     {
         // ServiceBusClient ctor accepts a fake connection string without opening a network connection.
-        var client = new ServiceBusClient(options.ConnectionString!);
+        var client = new ServiceBusClient(options.ConnectionString);
         return new AzureServiceBusTransport(client, Microsoft.Extensions.Options.Options.Create(options), serializer);
     }
 
