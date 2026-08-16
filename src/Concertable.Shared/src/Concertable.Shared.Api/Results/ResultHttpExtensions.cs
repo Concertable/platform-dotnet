@@ -28,7 +28,10 @@ public static class ResultHttpExtensions
         where TValue : notnull
         where TError : IError =>
         result.ToActionResult(
-            value => new OkObjectResult(value));
+            value => new OkObjectResult(value)
+            {
+                DeclaredType = typeof(TValue)
+            });
 
     public static ActionResult<TValue> ToCreatedAtActionResult<TValue, TError>(
         this Result<TValue, TError> result,
@@ -41,7 +44,10 @@ public static class ResultHttpExtensions
                 actionName,
                 controllerName: null,
                 routeValues,
-                value));
+                value)
+            {
+                DeclaredType = typeof(TValue)
+            });
 
     public static IActionResult ToNoContentActionResult<TError>(
         this UnitResult<TError> result)
