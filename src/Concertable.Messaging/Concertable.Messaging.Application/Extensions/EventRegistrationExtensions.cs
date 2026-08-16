@@ -31,4 +31,14 @@ public static class EventRegistrationExtensions
         registry.RegisterCommand<TCommand>();
         return registry;
     }
+
+    public static MessageTypeRegistry SendsTo<TCommand>(
+        this MessageTypeRegistry registry,
+        string destinationServiceName)
+        where TCommand : IIntegrationCommand
+    {
+        registry.RegisterCommandSender<TCommand>(destinationServiceName);
+        return registry;
+    }
+
 }
