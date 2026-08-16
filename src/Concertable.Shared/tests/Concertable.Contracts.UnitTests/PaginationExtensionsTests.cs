@@ -22,6 +22,8 @@ public sealed class PaginationExtensionsTests
         Assert.Equal(57, mapped.TotalCount);
         Assert.Equal(2, mapped.PageNumber);
         Assert.Equal(3, mapped.PageSize);
+        // The one member Map does not copy — Pagination<T> re-derives it — so it is the one a rewrite breaks.
+        Assert.Equal(19, mapped.TotalPages);
     }
 
     [Fact]
