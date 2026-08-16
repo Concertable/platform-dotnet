@@ -31,7 +31,7 @@ public static class ServiceCollectionExtensions
             var opts = sp.GetRequiredService<IOptions<AzureServiceBusOptions>>().Value;
             if (string.IsNullOrWhiteSpace(opts.ConnectionString))
                 throw new InvalidOperationException(
-                    "AzureServiceBusOptions.ConnectionString is required — bind the 'asb' connection string on the host. It is validated here, on first resolution of the Service Bus client, so a host that swaps the transport in tests and never resolves the client can leave it unset.");
+                    "AzureServiceBusOptions.ConnectionString is required — bind the 'asb' connection string.");
             return new ServiceBusClient(opts.ConnectionString);
         });
 
