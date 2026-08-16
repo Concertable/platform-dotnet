@@ -15,7 +15,7 @@ public static class DistributedApplicationBuilderExtensions
 
     public static IResourceBuilder<AzureServiceBusResource> AddServiceBus(
         this IDistributedApplicationBuilder builder) =>
-        builder.AddAzureServiceBus("asb").RunAsEmulator();
+        builder.AddAzureServiceBus("asb");
 
     public static AsbTopology Topology(this IResourceBuilder<AzureServiceBusResource> asb) => new(asb);
 

@@ -151,6 +151,7 @@ public sealed class ResultHttpExtensionsTests
 
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
         Assert.Equal("value", okResult.Value);
+        Assert.Equal(typeof(string), okResult.DeclaredType);
     }
 
     [Fact]
@@ -166,6 +167,7 @@ public sealed class ResultHttpExtensionsTests
         Assert.Equal("Get", createdResult.ActionName);
         Assert.Equal(42, createdResult.RouteValues!["id"]);
         Assert.Equal("value", createdResult.Value);
+        Assert.Equal(typeof(string), createdResult.DeclaredType);
     }
 
     [Fact]
