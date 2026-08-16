@@ -16,4 +16,21 @@ public static class PaginationExtensions
 
         return new Pagination<T>(data, totalCount, pageParams.PageNumber, pageParams.PageSize);
     }
+
+    /// <summary>
+    /// Superseded by <c>Concertable.Contracts.PaginationExtensions.Map</c>, which lives beside
+    /// <see cref="IPagination{T}"/> where every layer — including <c>*.Api</c>, which cannot reference
+    /// this package — can reach it. Kept only until consumers move onto the published <c>Map</c>; the
+    /// pin has to carry it before a call site can migrate.
+    /// </summary>
+    public static IPagination<TDestination> Select<TSource, TDestination>(
+        this IPagination<TSource> source,
+        Func<TSource, TDestination> selector)
+    {
+        return new Pagination<TDestination>(
+            source.Data.Select(selector).ToList(),
+            source.TotalCount,
+            source.PageNumber,
+            source.PageSize);
+    }
 }
