@@ -6,13 +6,14 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Shouldly;
 
-namespace Concertable.ServiceDefaults.Tests;
+namespace Concertable.ServiceDefaults.IntegrationTests;
 
 public sealed class RateLimitingTests
 {
     [Fact]
-    public async Task Apply_policy_rejects_with_429_and_retry_after_once_the_limit_is_exceeded()
+    public async Task Apply_OverLimit_Returns429WithRetryAfter()
     {
         const int permitLimit = 3;
         await using var app = await StartAppAsync(permitLimit);
@@ -21,13 +22,13 @@ public sealed class RateLimitingTests
         for (var i = 0; i < permitLimit; i++)
         {
             using var allowed = await client.GetAsync("/apply");
-            Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
+            allowed.StatusCode.ShouldBe(HttpStatusCode.OK);
         }
 
         using var rejected = await client.GetAsync("/apply");
 
-        Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
-        Assert.NotNull(rejected.Headers.RetryAfter);
+        rejected.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+        rejected.Headers.RetryAfter.ShouldNotBeNull();
     }
 
     private static async Task<WebApplication> StartAppAsync(int permitLimit)
