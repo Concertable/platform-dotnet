@@ -15,7 +15,9 @@
   </PropertyGroup>
 
   <!-- Source-level fingerprints a PackageReference check cannot see, because the symbol can arrive
-       through a transitive reference. Unit tier only, which is why the shared list cannot hold it. -->
+       through a transitive reference - which is the usual shape here, a unit project referencing a
+       *.Fixtures or *.Helpers library. Unit tier only, which is why the shared list cannot hold it.
+       RS0030 fires on a symbol being USED, so a project may still reference the package. -->
   <ItemGroup Condition="'$(ConcertableTestTier)' == 'Unit'">
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.UnitTests.txt"
                      Condition="Exists('$(MSBuildThisFileDirectory)BannedSymbols.UnitTests.txt')" />
