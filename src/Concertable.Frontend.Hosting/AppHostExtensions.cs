@@ -35,6 +35,12 @@ public static class AppHostExtensions
         IResourceBuilder<ProjectResource> auth) =>
         AddSpaSurface(builder, backend, auth, "business", 5177, "b2b");
 
+    public static IResourceBuilder<NodeAppResource> AddAdminSpa(
+        this IDistributedApplicationBuilder builder,
+        IResourceBuilder<ProjectResource> backend,
+        IResourceBuilder<ProjectResource> auth) =>
+        AddSpaSurface(builder, backend, auth, "admin", 5178);
+
     private static IResourceBuilder<NodeAppResource> AddSpaSurface(
         IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> backend,
