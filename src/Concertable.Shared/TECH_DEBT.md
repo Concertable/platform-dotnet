@@ -66,3 +66,16 @@ new version is on the feed).
 **Resolves when:** a repo-wide sweep drops the `Shared` prefix from every shared DI extension as a
 publish-first package cut-over (rename in the package, publish, migrate consumers in the sync PR) — done
 as one consistency pass, not piecemeal, so the codebase never mixes `AddPdf` next to `AddSharedEmail`.
+
+### `GenreController` puts an HTTP surface in a shared library
+
+`Concertable.Shared/src/Concertable.Shared.Api/Controllers/GenreController.cs` is one of only three
+`public` controllers in the repo (36 are `internal`), and it sits in a shared library. The
+`module-structure` skill's layer table says the opposite: "**Modules only** - a shared library exposes no
+HTTP."
+
+So either the rule needs a stated exception for a shared reference-vocabulary endpoint, or the controller
+belongs in a service. Tommy's call; raised during the guidance-docs review 2026-08-18.
+
+Resolves when: the controller moves to an owning service, or the `module-structure` skill states the
+exception and this entry is deleted.
