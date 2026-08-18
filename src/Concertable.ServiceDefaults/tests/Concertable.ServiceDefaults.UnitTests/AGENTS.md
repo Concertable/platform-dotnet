@@ -1,5 +1,6 @@
 # Concertable.ServiceDefaults.UnitTests — unit tests
 
-Conventions: [UNIT_CONVENTIONS.md](../../../agents/UNIT_CONVENTIONS.md)
+**Unit-only: a test that needs a host, HTTP, a container or a database belongs in an
+`*.IntegrationTests` project, not here.**
 
-@../../../agents/UNIT_CONVENTIONS.md
+Conventions: the `unit-testing` skill.
