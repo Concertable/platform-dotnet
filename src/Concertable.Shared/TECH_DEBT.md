@@ -39,6 +39,17 @@ publish-first cycle.
 
 ## LOW
 
+### Calendar-boundary helpers are missing from Kernel
+
+The Artist and Venue dashboard services each construct the UTC start of the current month with the
+same `new DateTime(year, month, 1, ...)` expression. A generic `StartOfMonth()` operation belongs in
+Kernel; implementing an identical extension independently inside each feature module would create two
+owners for the same calendar rule.
+
+**Resolves when:** Kernel exposes one C# 14 `DateTime.StartOfMonth()` extension that preserves the input
+`DateTime.Kind`, the shared package is published, and all consumers migrate to it through the platform
+sync rather than adding module-local copies.
+
 ### Shared DI extension methods carry a redundant `Shared` prefix (`AddSharedPdf`, not `AddPdf`)
 
 The `IServiceCollection` extensions that wire the shared platform packages —
