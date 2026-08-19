@@ -1,6 +1,10 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace Concertable.ServiceDefaults.UnitTests;
 
@@ -55,6 +59,25 @@ public sealed class RateLimitingTests
         var key = RateLimitingExtensions.ResolvePartitionKey(AuthenticatedContext("user-a"), perUser: false);
 
         Assert.StartsWith("ip:", key);
+    }
+
+    [Fact]
+    public void AddRateLimitPolicy_BindsNamedWindowFromConfigLayeredAfterRegistration_OverDefaults()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.AddDefaultRateLimiting();
+        builder.AddRateLimitPolicy("apply", new RateLimitWindow { PermitLimit = 10, WindowSeconds = 60 }, perUser: true);
+
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["RateLimiting:apply:PermitLimit"] = "7"
+        });
+
+        using var host = builder.Build();
+        var window = host.Services.GetRequiredService<IOptionsMonitor<RateLimitWindow>>().Get("apply");
+
+        Assert.Equal(7, window.PermitLimit);
+        Assert.Equal(60, window.WindowSeconds);
     }
 
     private static DefaultHttpContext AuthenticatedContext(string sub)
