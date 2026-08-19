@@ -6,7 +6,7 @@ libs). Debt spanning multiple *services*, host `Program.cs` files, or repo-wide 
 
 Everything here sits behind the published-package boundary: these libs are consumed cross-service by
 `PackageReference` pinned to `$(ConcertablePlatformVersion)`, so a breaking change can't land atomically —
-it needs a publish-first cut-over (see `plans/CLAUDE.md`, "Boundary-blocked refactors"). That constraint is
+it needs a publish-first cut-over (see [`plans/agents/PLAN.md`](../../plans/agents/PLAN.md), "Boundary-blocked refactors"). That constraint is
 why several items below are deferred rather than simply fixed.
 
 ---
