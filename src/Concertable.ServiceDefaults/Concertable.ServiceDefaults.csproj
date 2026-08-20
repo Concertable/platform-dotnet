@@ -7,6 +7,7 @@
     <IsAspireSharedProject>true</IsAspireSharedProject>
     <IsPackable>true</IsPackable>
     <Description>Concertable service defaults: shared Aspire host configuration (telemetry, health checks, service discovery, resilience).</Description>
+    <DefaultItemExcludes>$(DefaultItemExcludes);tests/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +27,10 @@
 
   <ItemGroup>
     <EmbeddedResource Include="SharedDefaults\appsettings.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Concertable.ServiceDefaults.UnitTests" />
   </ItemGroup>
 
 </Project>

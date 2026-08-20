@@ -12,18 +12,6 @@ namespace Concertable.DataAccess.UnitTests;
 public sealed class RepositoryTests
 {
     [Fact]
-    public void LegacyRepository_FacetFields_RemainAvailableDuringExpansion()
-    {
-        var fields = typeof(Repository<TestEntity, TestDbContext, int>)
-            .GetFields(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Select(field => field.FieldType)
-            .ToArray();
-
-        Assert.Contains(typeof(ReadRepository<TestEntity, int>), fields);
-        Assert.Contains(typeof(WriteRepository<TestEntity, TestDbContext>), fields);
-    }
-
-    [Fact]
     public void Repository_ContextField_UsesCombinedCapabilityOnly()
     {
         var repositoryType = typeof(Repository<TestEntity, int>);
@@ -46,14 +34,13 @@ public sealed class RepositoryTests
     }
 
     [Fact]
-    public void ReadRepository_ContextProperty_AddsCapabilityWithoutRemovingLegacyField()
+    public void ReadRepository_ContextField_UsesReadCapabilityOnly()
     {
         var repositoryType = typeof(ReadRepository<TestEntity, int>);
         var fields = repositoryType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
-        var property = repositoryType.GetProperty("Context", BindingFlags.Instance | BindingFlags.NonPublic);
-
-        Assert.Contains(fields, field => field.Name == "context" && field.FieldType == typeof(IReadDbContext));
-        Assert.Equal(typeof(IReadDbContext), property!.PropertyType);
+        Assert.Equal(typeof(object), repositoryType.BaseType);
+        Assert.Single(fields);
+        Assert.Equal(typeof(IReadDbContext), fields[0].FieldType);
     }
 
     [Fact]
@@ -97,7 +84,7 @@ public sealed class RepositoryTests
         var root = new InMemoryDatabaseRoot();
         var databaseName = Guid.NewGuid().ToString();
         await using var trackedContext = CreateContext(databaseName, root);
-        var trackedRepository = new TestRepository(trackedContext);
+        var trackedRepository = new TestCapabilityRepository(trackedContext);
         var entity = new TestEntity { Name = "Persisted" };
         await trackedRepository.InsertAsync(entity);
         entity.Name = "Unsaved";
@@ -191,12 +178,6 @@ public sealed class RepositoryTests
             .UseInMemoryDatabase(databaseName, root)
             .Options;
         return new TestReadDbContext(options, new TestConfigurationProvider());
-    }
-
-    private sealed class TestRepository : Repository<TestEntity, TestDbContext, int>
-    {
-        public TestRepository(TestDbContext context)
-            : base(context) { }
     }
 
     private sealed class TestCapabilityRepository : Repository<TestEntity, int>
