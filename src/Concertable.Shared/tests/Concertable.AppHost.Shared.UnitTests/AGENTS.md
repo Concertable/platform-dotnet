@@ -1,4 +1,4 @@
-# Concertable.Messaging.AzureServiceBus.UnitTests — unit tests
+# Concertable.AppHost.Shared.UnitTests — unit tests
 
 **Unit-only: a test that needs a host, HTTP, a container or a database belongs in this
 service's `*.IntegrationTests` project, not here.**
