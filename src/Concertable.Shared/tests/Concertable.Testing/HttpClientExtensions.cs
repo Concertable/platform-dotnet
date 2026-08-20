@@ -9,7 +9,7 @@ public static class HttpClientExtensions
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
-        Converters = { new JsonStringEnumConverter() }
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
     public static async Task<HttpResponseMessage> PostAsync<T>(this HttpClient client, string url, T body)
