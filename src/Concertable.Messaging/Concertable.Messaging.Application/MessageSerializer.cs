@@ -1,10 +1,14 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Concertable.Messaging.Application;
 
 public sealed class MessageSerializer
 {
-    private static readonly JsonSerializerOptions options = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions options = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false) },
+    };
 
     public BinaryData Serialize<T>(T payload) =>
         new(JsonSerializer.SerializeToUtf8Bytes(payload, options));
