@@ -29,4 +29,8 @@
     <EmbeddedResource Include="SharedDefaults\appsettings.json" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Concertable.ServiceDefaults.UnitTests" />
+  </ItemGroup>
+
 </Project>

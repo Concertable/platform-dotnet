@@ -4,39 +4,60 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace Concertable.ServiceDefaults;
 
 /// <summary>
 /// The shared, web-only rate-limiting seam. Kept separate from <c>AddServiceDefaults</c> because
-/// non-web hosts (Workers, Seed simulators) also call that and have no HTTP pipeline. Web hosts opt in
-/// with <see cref="AddDefaultRateLimiting"/> + <see cref="UseDefaultRateLimiting"/>; each service then
-/// applies the named <see cref="RateLimitPolicies"/> to the endpoints it owns.
+/// non-web hosts (Workers, Seed simulators) also call that and have no HTTP pipeline. A web host opts in
+/// with <see cref="AddDefaultRateLimiting"/> + <see cref="UseDefaultRateLimiting"/>, then declares each
+/// abuse surface it owns with <see cref="AddRateLimitPolicy"/>. There is deliberately no global limiter:
+/// only the handful of endpoints that are genuine abuse surfaces carry a named policy; everything else is
+/// unthrottled, the correct default for authenticated, workflow-bounded domain endpoints.
 /// </summary>
 public static class RateLimitingExtensions
 {
     public static IHostApplicationBuilder AddDefaultRateLimiting(this IHostApplicationBuilder builder)
     {
-        var options = new RateLimitingOptions();
-        builder.Configuration.GetSection(RateLimitingOptions.SectionName).Bind(options);
-
         builder.Services.AddRateLimiter(limiter =>
         {
             limiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-            limiter.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
-                context => CreatePartition(context, options.Global, preferUser: true));
-
-            limiter.AddPolicy(RateLimitPolicies.Login, context => CreatePartition(context, options.Login, preferUser: false));
-            limiter.AddPolicy(RateLimitPolicies.Apply, context => CreatePartition(context, options.Apply, preferUser: true));
-            limiter.AddPolicy(RateLimitPolicies.Messaging, context => CreatePartition(context, options.Messaging, preferUser: true));
-            limiter.AddPolicy(RateLimitPolicies.Upload, context => CreatePartition(context, options.Upload, preferUser: false));
-
             limiter.OnRejected = OnRejectedAsync;
         });
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Declares one named fixed-window policy for an abuse surface. The window binds from
+    /// <c>RateLimiting:&lt;policyName&gt;</c> over <paramref name="defaults"/>, resolved lazily per request
+    /// so a host or test that layers configuration after builder creation still wins. <paramref name="perUser"/>
+    /// partitions on the authenticated <c>sub</c> (falling back to IP); pass <see langword="false"/> for an
+    /// anonymous surface, which always partitions on client IP.
+    /// </summary>
+    public static IHostApplicationBuilder AddRateLimitPolicy(
+        this IHostApplicationBuilder builder, string policyName, RateLimitWindow defaults, bool perUser)
+    {
+        builder.Services.AddOptions<RateLimitWindow>(policyName)
+            .Configure(window =>
+            {
+                window.PermitLimit = defaults.PermitLimit;
+                window.WindowSeconds = defaults.WindowSeconds;
+                window.QueueLimit = defaults.QueueLimit;
+            })
+            .BindConfiguration($"{RateLimitWindow.ConfigRoot}:{policyName}");
+
+        builder.Services.Configure<RateLimiterOptions>(limiter =>
+            limiter.AddPolicy(policyName, context =>
+            {
+                var window = context.RequestServices
+                    .GetRequiredService<IOptionsMonitor<RateLimitWindow>>()
+                    .Get(policyName);
+                return CreatePartition(context, window, perUser);
+            }));
 
         return builder;
     }
@@ -51,9 +72,9 @@ public static class RateLimitingExtensions
         return app;
     }
 
-    private static RateLimitPartition<string> CreatePartition(HttpContext context, RateLimitWindow window, bool preferUser) =>
+    internal static RateLimitPartition<string> CreatePartition(HttpContext context, RateLimitWindow window, bool perUser) =>
         RateLimitPartition.GetFixedWindowLimiter(
-            ResolvePartitionKey(context, preferUser),
+            ResolvePartitionKey(context, perUser),
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = window.PermitLimit,
@@ -61,9 +82,9 @@ public static class RateLimitingExtensions
                 QueueLimit = window.QueueLimit
             });
 
-    private static string ResolvePartitionKey(HttpContext context, bool preferUser)
+    internal static string ResolvePartitionKey(HttpContext context, bool perUser)
     {
-        if (preferUser && context.User.Identity?.IsAuthenticated == true)
+        if (perUser && context.User.Identity?.IsAuthenticated == true)
         {
             var sub = context.User.FindFirstValue("sub") ?? context.User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!string.IsNullOrEmpty(sub))
