@@ -1,9 +1,5 @@
-using System.Text.Json.Serialization;
-using Concertable.Contracts.Serialization;
-
 namespace Concertable.Contracts.Enums;
 
-[JsonConverter(typeof(StrictCamelCaseEnumConverter<Genre>))]
 public enum Genre
 {
     Rock = 1,
