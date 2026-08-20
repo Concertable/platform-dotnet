@@ -14,6 +14,7 @@ using Concertable.Messaging.AzureServiceBus.Options;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Events;
 using Concertable.Payment.Hosting;
+using Concertable.Shared.Email.Application;
 using B2BPayoutOwnerRegisteredEvent = Concertable.B2B.Tenant.Contracts.Events.PayoutOwnerRegisteredEvent;
 using TenantActivityRecordedEvent = Concertable.B2B.Tenant.Contracts.Events.TenantActivityRecordedEvent;
 
@@ -75,6 +76,19 @@ public sealed class ServiceTopologyTests
             typeof(ConcertRatingUpdatedEvent),
             typeof(B2BPayoutOwnerRegisteredEvent),
             typeof(TenantActivityRecordedEvent));
+
+    [Fact]
+    public void AddB2BTopology_ProvisionsEmailCommandQueue()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        var topology = builder.AddAzureServiceBus("messaging").Topology();
+        topology.AddB2BTopology();
+
+        var queue = Assert.Single(builder.Resources.OfType<AzureServiceBusQueueResource>());
+        var expected = new AzureServiceBusOptions().QueueNameFor(B2BConstants.ServiceName, typeof(SendEmailCommand));
+
+        Assert.Equal(expected, queue.Name);
+    }
 
     [Fact]
     public void AddCustomerTopology_ProvisionsPublishedEventTopics() =>
