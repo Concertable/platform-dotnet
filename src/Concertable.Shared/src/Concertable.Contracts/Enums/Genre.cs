@@ -1,8 +1,5 @@
-using System.Text.Json.Serialization;
-
 namespace Concertable.Contracts.Enums;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum Genre
 {
     Rock = 1,
