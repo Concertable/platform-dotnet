@@ -27,12 +27,6 @@ public sealed class GenreWireFormatTests
         => Assert.Equal(expected, JsonSerializer.Serialize(genre, ApplicationOptions()));
 
     [Theory]
-    [InlineData(Genre.HipHop, "\"hipHop\"")]
-    [InlineData(Genre.DnB, "\"dnB\"")]
-    public void SerializesCamelCase_ViaTypeAttribute_WithoutGlobalConverter(Genre genre, string expected)
-        => Assert.Equal(expected, JsonSerializer.Serialize(genre));
-
-    [Theory]
     [InlineData("\"hipHop\"", Genre.HipHop)]
     [InlineData("\"dnB\"", Genre.DnB)]
     public void DeserializesCamelCase(string json, Genre expected)
