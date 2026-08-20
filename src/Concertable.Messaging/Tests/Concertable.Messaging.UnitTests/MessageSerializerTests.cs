@@ -1,8 +1,34 @@
+using System.Text;
+using System.Text.Json;
+
 namespace Concertable.Messaging.UnitTests;
 
 public sealed class MessageSerializerTests
 {
     private readonly MessageSerializer sut = new();
+
+    [Fact]
+    public void Serialize_WritesEnumsAsCamelCaseStrings()
+    {
+        // Arrange
+        var payload = new FakeEnumEvent(FakeKind.FirstChoice);
+
+        // Act
+        var json = Encoding.UTF8.GetString(sut.Serialize(payload).ToArray());
+
+        // Assert
+        Assert.Contains("\"kind\":\"firstChoice\"", json);
+    }
+
+    [Fact]
+    public void Deserialize_RejectsNumericEnumValues()
+    {
+        // Arrange
+        var json = BinaryData.FromString("{\"kind\":0}");
+
+        // Act + Assert
+        Assert.Throws<JsonException>(() => sut.Deserialize(json, typeof(FakeEnumEvent)));
+    }
 
     [Fact]
     public void Serialize_ProducesNonEmptyBinaryData()
