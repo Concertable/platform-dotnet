@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsTestProject>false</IsTestProject>
+    <IsPackable>true</IsPackable>
+    <Description>Side-effect-free executable host composition validation.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Concertable.Kernel\Concertable.Kernel.csproj" />
+    <ProjectReference Include="..\..\..\Concertable.Messaging\Concertable.Messaging.Contracts\Concertable.Messaging.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>
