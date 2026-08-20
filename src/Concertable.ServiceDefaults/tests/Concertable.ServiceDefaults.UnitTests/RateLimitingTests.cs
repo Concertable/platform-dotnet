@@ -1,7 +1,6 @@
-using System.Globalization;
+using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,10 +11,12 @@ namespace Concertable.ServiceDefaults.UnitTests;
 public sealed class RateLimitingTests
 {
     [Fact]
-    public async Task AddDefaultRateLimiting_OverLimit_RejectsWithRetryAfter()
+    public async Task Partition_OverLimit_RejectsWithRetryAfter()
     {
         const int permitLimit = 3;
-        var limiter = BuildGlobalLimiter(permitLimit);
+        var window = new RateLimitWindow { PermitLimit = permitLimit, WindowSeconds = 60 };
+        using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(
+            context => RateLimitingExtensions.CreatePartition(context, window, perUser: false));
         var context = new DefaultHttpContext();
 
         for (var i = 0; i < permitLimit; i++)
@@ -30,19 +31,59 @@ public sealed class RateLimitingTests
         Assert.True(rejected.TryGetMetadata(MetadataName.RetryAfter, out _));
     }
 
-    private static PartitionedRateLimiter<HttpContext> BuildGlobalLimiter(int permitLimit)
+    [Fact]
+    public async Task Partition_PerUser_KeysDistinctUsersSeparately()
+    {
+        var window = new RateLimitWindow { PermitLimit = 1, WindowSeconds = 60 };
+        using var limiter = PartitionedRateLimiter.Create<HttpContext, string>(
+            context => RateLimitingExtensions.CreatePartition(context, window, perUser: true));
+
+        using var first = await limiter.AcquireAsync(AuthenticatedContext("user-a"), permitCount: 1);
+        using var second = await limiter.AcquireAsync(AuthenticatedContext("user-b"), permitCount: 1);
+
+        Assert.True(first.IsAcquired);
+        Assert.True(second.IsAcquired);
+    }
+
+    [Fact]
+    public void ResolvePartitionKey_PerUser_UsesSubClaim()
+    {
+        var key = RateLimitingExtensions.ResolvePartitionKey(AuthenticatedContext("user-a"), perUser: true);
+
+        Assert.Equal("user:user-a", key);
+    }
+
+    [Fact]
+    public void ResolvePartitionKey_Anonymous_UsesClientIp()
+    {
+        var key = RateLimitingExtensions.ResolvePartitionKey(AuthenticatedContext("user-a"), perUser: false);
+
+        Assert.StartsWith("ip:", key);
+    }
+
+    [Fact]
+    public void AddRateLimitPolicy_BindsNamedWindowFromConfigLayeredAfterRegistration_OverDefaults()
     {
         var builder = Host.CreateApplicationBuilder();
+        builder.AddDefaultRateLimiting();
+        builder.AddRateLimitPolicy("apply", new RateLimitWindow { PermitLimit = 10, WindowSeconds = 60 }, perUser: true);
+
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            [$"{RateLimitingOptions.SectionName}:Global:PermitLimit"] = permitLimit.ToString(CultureInfo.InvariantCulture),
-            [$"{RateLimitingOptions.SectionName}:Global:WindowSeconds"] = "60"
+            ["RateLimiting:apply:PermitLimit"] = "7"
         });
-        builder.AddDefaultRateLimiting();
 
         using var host = builder.Build();
-        var options = host.Services.GetRequiredService<IOptions<RateLimiterOptions>>().Value;
-        return options.GlobalLimiter
-            ?? throw new InvalidOperationException("AddDefaultRateLimiting did not configure a GlobalLimiter.");
+        var window = host.Services.GetRequiredService<IOptionsMonitor<RateLimitWindow>>().Get("apply");
+
+        Assert.Equal(7, window.PermitLimit);
+        Assert.Equal(60, window.WindowSeconds);
+    }
+
+    private static DefaultHttpContext AuthenticatedContext(string sub)
+    {
+        var context = new DefaultHttpContext();
+        context.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", sub)], authenticationType: "test"));
+        return context;
     }
 }

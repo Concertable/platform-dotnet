@@ -10,3 +10,12 @@ public sealed record FakeIntegrationCommand(Guid Id, string Reason) : IIntegrati
 
 [MessageType("concertable.messaging.other-fake-event.v1")]
 public sealed record OtherFakeEvent(string Tag) : IIntegrationEvent;
+
+public enum FakeKind
+{
+    FirstChoice,
+    SecondChoice
+}
+
+[MessageType("concertable.messaging.fake-enum-event.v1")]
+public sealed record FakeEnumEvent(FakeKind Kind) : IIntegrationEvent;

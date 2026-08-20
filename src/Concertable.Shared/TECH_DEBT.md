@@ -6,7 +6,7 @@ libs). Debt spanning multiple *services*, host `Program.cs` files, or repo-wide 
 
 Everything here sits behind the published-package boundary: these libs are consumed cross-service by
 `PackageReference` pinned to `$(ConcertablePlatformVersion)`, so a breaking change can't land atomically —
-it needs a publish-first cut-over (see `plans/CLAUDE.md`, "Boundary-blocked refactors"). That constraint is
+it needs a publish-first cut-over (see the `plans` skill, "Breaking published-contract changes"). That constraint is
 why several items below are deferred rather than simply fixed.
 
 ---
@@ -66,3 +66,41 @@ new version is on the feed).
 **Resolves when:** a repo-wide sweep drops the `Shared` prefix from every shared DI extension as a
 publish-first package cut-over (rename in the package, publish, migrate consumers in the sync PR) — done
 as one consistency pass, not piecemeal, so the codebase never mixes `AddPdf` next to `AddSharedEmail`.
+
+### `GenreController` puts an HTTP surface in a shared library
+
+`Concertable.Shared/src/Concertable.Shared.Api/Controllers/GenreController.cs` is one of only three
+`public` controllers in the repo (36 are `internal`), and it sits in a shared library. The
+`module-structure` skill's layer table says the opposite: "**Modules only** - a shared library exposes no
+HTTP."
+
+So either the rule needs a stated exception for a shared reference-vocabulary endpoint, or the controller
+belongs in a service. Tommy's call; raised during the guidance-docs review 2026-08-18.
+
+Resolves when: the controller moves to an owning service, or the `module-structure` skill states the
+exception and this entry is deleted.
+
+### Kernel still ships FluentResults, and two package references it never uses
+
+`Concertable.Kernel.csproj` references `FluentResults`, `Newtonsoft.Json` and `Dapper`. Every service
+consumes Kernel by pinned `PackageReference`, so all three land in every service's closure.
+
+Verified, not assumed:
+
+- **`Newtonsoft.Json` and `Dapper` are used by no `.cs` file** anywhere under
+  `Concertable.Shared/src/`. Two direct references buying nothing, one of them a serializer every
+  consumer then inherits alongside `System.Text.Json`.
+- **FluentResults survives in exactly two Kernel files**, both at the Kernel root:
+  `ErrorExtensions.SelectMessages` (an `IEnumerable<IError>` extension with **no callers in the repo** —
+  its only occurrence is its own definition) and `BadRequestException`'s `IEnumerable<IError>` overload.
+  The current terminal is already on the repo's own `Concertable.Kernel.Errors.IError`
+  (`ErrorHttpExtensions.ToProblemActionResult<TError>`), so these two are the legacy carrier, not the
+  live one.
+- **The guard that bans it does not reach them.** `TypedResultArchitectureTests
+  .KernelFunctionalTypes_DoNotReferenceThirdPartyCarriers` lists `FluentResults` as prohibited but
+  enumerates `Concertable.Kernel/Functional` only, and both survivors sit outside that folder.
+
+**Resolves when:** `SelectMessages` is deleted, `BadRequestException`'s FluentResults overload is
+retyped or removed with its callers, the three package references are dropped, and the arch guard is
+widened from `Functional/` to the whole Kernel so the carrier cannot come back. Publish-first: the
+overload removal is breaking, so it migrates through a platform sync.
