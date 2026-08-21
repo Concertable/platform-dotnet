@@ -180,18 +180,25 @@ public sealed partial class TypedResultArchitectureTests
             .Select(path => new
             {
                 Path = path,
-                Source = ReadHostComposition(path)
+                Sources = ReadHostCompositionSources(path)
             })
             .Select(host => new
             {
                 host.Path,
-                ProblemDetails = ProblemDetailsRegistrationPattern().Match(host.Source),
-                Mvc = MvcRegistrationPattern().Match(host.Source)
+                Registrations = host.Sources
+                    .Select(source => new
+                    {
+                        ProblemDetails = ProblemDetailsRegistrationPattern().Match(source),
+                        Mvc = MvcRegistrationPattern().Match(source)
+                    })
+                    .Where(registration => registration.Mvc.Success)
+                    .ToArray()
             })
             .Where(host =>
-                !host.ProblemDetails.Success
-                || !host.Mvc.Success
-                || host.ProblemDetails.Index > host.Mvc.Index)
+                host.Registrations.Length == 0
+                || host.Registrations.Any(registration =>
+                    !registration.ProblemDetails.Success
+                    || registration.ProblemDetails.Index > registration.Mvc.Index))
             .Select(host => host.Path)
             .ToArray();
 
@@ -312,11 +319,17 @@ public sealed partial class TypedResultArchitectureTests
             && !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string ReadHostComposition(string programPath)
+    private static string[] ReadHostCompositionSources(string programPath)
     {
-        var extensions = Path.Combine(Path.GetDirectoryName(programPath)!, "HostExtensions.cs");
-        return File.ReadAllText(programPath)
-            + (File.Exists(extensions) ? File.ReadAllText(extensions) : string.Empty);
+        var directory = Path.GetDirectoryName(programPath)!;
+        return
+        [
+            File.ReadAllText(programPath),
+            .. Directory
+                .EnumerateFiles(directory, "*HostExtensions.cs", SearchOption.TopDirectoryOnly)
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .Select(File.ReadAllText)
+        ];
     }
 
     public static TheoryData<string> TransitionalTypedResultSlices { get; } = new()
