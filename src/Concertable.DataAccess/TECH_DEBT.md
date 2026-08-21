@@ -12,6 +12,16 @@ failures. Hoist that primitive to the shared generic DataAccess repository under
 `TryInsertAsync`, matching its `bool` Try-pattern return) so it coexists with `InsertAsync`, and remove
 both module-local copies. Do the hoist as a published-package cutover.
 
+## Standardize the duplicate-aware save (distinct from `TryInsertAsync` above)
+
+`Concertable.B2B.Admin.Infrastructure.Services.AdminService.TrySaveGrantAsync` hand-rolls the same
+duplicate-aware shape as the `TryInsertAsync` primitive above — `SaveChangesAsync`, catch
+`DbUpdateException` via `IsDuplicateKey()`, `DiscardFailedChanges()`, return `false` — but for a
+*save* of already-tracked changes (a race between two calls granting the same admin), not an insert
+of a fresh entity. One call site today, so not worth hoisting yet; once a second one shows up,
+generalize both into one `TrySaveAsync`/`TryInsertAsync` pair on the shared repository, with the
+duplicate-branch behavior as a caller-supplied delegate rather than a fixed `false`.
+
 ## `IReadRepository.GetByIdAsync` should not be `virtual`
 
 `GetByIdAsync` is `virtual` on the read base, and repos override it to eager-load a relation
