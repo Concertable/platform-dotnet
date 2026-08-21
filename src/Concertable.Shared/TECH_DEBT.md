@@ -39,6 +39,22 @@ publish-first cycle.
 
 ## LOW
 
+### Assembly-reference boundary guards are hand-rolled per service instead of one shared helper
+
+Composition/contract tests assert a host or contract assembly does not reference forbidden sibling
+assemblies by matching `AssemblyName` strings by hand — `Concertable.Payment.UnitTests` forbids
+`Concertable.B2B`/`Concertable.Customer` references, `Concertable.Customer.CompositionTests` forbids
+sibling `*.Infrastructure` references, and `Composition.Testing` itself filters `Concertable.` names.
+Each re-encodes the same `GetReferencedAssemblies()` + prefix/suffix convention, so a rename or
+layer-suffix change touches several files. A negative reference check is inherently name-based (you
+cannot `typeof` an absent assembly), but the convention should live once.
+
+**Resolves when:** `Concertable.Composition.Testing` exposes one `extension(Assembly)` query (e.g.
+`ModuleInfrastructureReferences(params string[] allowedModules)` deriving the service prefix from the
+host assembly name) and every service's guard calls it. Publish-first: `Composition.Testing` is a
+published package (`IsPackable=true`) consumed cross-service, so the helper publishes and consumers
+migrate through the platform sync rather than in one edit.
+
 ### Calendar-boundary helpers are missing from Kernel
 
 The Artist and Venue dashboard services each construct the UTC start of the current month with the
