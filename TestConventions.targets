@@ -9,6 +9,7 @@
        project for an E2E helper library - would resolve as E2E. -->
   <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
     <ConcertableTestTier Condition="$(MSBuildProjectName.EndsWith('.UnitTests'))">Unit</ConcertableTestTier>
+    <ConcertableTestTier Condition="'$(ConcertableTestTier)' == '' And $(MSBuildProjectName.EndsWith('.CompositionTests'))">Composition</ConcertableTestTier>
     <ConcertableTestTier Condition="'$(ConcertableTestTier)' == '' And $(MSBuildProjectName.EndsWith('.IntegrationTests'))">Integration</ConcertableTestTier>
     <ConcertableTestTier Condition="'$(ConcertableTestTier)' == '' And $(MSBuildProjectName.Contains('.E2ETests'))">E2E</ConcertableTestTier>
     <ConcertableTestTier Condition="'$(ConcertableTestTier)' == '' And $(MSBuildProjectName.EndsWith('.ArchitectureTests'))">Architecture</ConcertableTestTier>
@@ -26,7 +27,7 @@
   <Target Name="ValidateTestConventions" BeforeTargets="BeforeBuild" Condition="'$(IsTestProject)' == 'true'">
 
     <Error Condition="'$(ConcertableTestTier)' == ''"
-           Text="Test-tier violation: '$(MSBuildProjectName)' declares &lt;IsTestProject&gt;true&lt;/IsTestProject&gt; but its name states no tier. Rename it to end in .UnitTests or .IntegrationTests, to contain .E2ETests, or to end in .ArchitectureTests. Answer the question the name is asking: a test needing a host, HTTP or a database is an integration test, not a unit test. A support library that is not itself a test suite sets &lt;IsTestProject&gt;false&lt;/IsTestProject&gt; (see the *.Fixtures and *.Helpers projects). Skills: dotnet-standards:unit-testing, dotnet:unit-testing, dotnet-standards:integration-testing." />
+           Text="Test-tier violation: '$(MSBuildProjectName)' declares &lt;IsTestProject&gt;true&lt;/IsTestProject&gt; but its name states no tier. Rename it to end in .UnitTests, .CompositionTests, .IntegrationTests, or .ArchitectureTests, or to contain .E2ETests. Answer the question the name is asking: a test needing a host, HTTP or a database is an integration test, not a unit test. A support library that is not itself a test suite sets &lt;IsTestProject&gt;false&lt;/IsTestProject&gt; (see the *.Fixtures and *.Helpers projects). Skills: dotnet-standards:unit-testing, dotnet:unit-testing, dotnet-standards:integration-testing." />
 
     <ItemGroup>
       <_ConcertableHostPackage Include="@(PackageReference)"
