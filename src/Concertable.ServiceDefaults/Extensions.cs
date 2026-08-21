@@ -23,12 +23,7 @@ public static class Extensions
     {
         builder.AddSharedDefaults();
         builder.AddAzureAppConfiguration();
-
-        builder.ConfigureContainer(new DefaultServiceProviderFactory(new ServiceProviderOptions
-        {
-            ValidateOnBuild = true,
-            ValidateScopes = true
-        }));
+        builder.UseStrictServiceProviderValidation();
 
         builder.ConfigureOpenTelemetry();
 
@@ -51,6 +46,12 @@ public static class Extensions
         //     options.AllowedSchemes = ["https"];
         // });
 
+        return builder;
+    }
+
+    public static IHostApplicationBuilder UseStrictServiceProviderValidation(this IHostApplicationBuilder builder)
+    {
+        builder.ConfigureContainer(ServiceProviderValidation.CreateFactory());
         return builder;
     }
 
@@ -174,4 +175,13 @@ public static class Extensions
 
         return app;
     }
+}
+
+public static class ServiceProviderValidation
+{
+    public static DefaultServiceProviderFactory CreateFactory() => new(new ServiceProviderOptions
+    {
+        ValidateOnBuild = true,
+        ValidateScopes = true
+    });
 }
