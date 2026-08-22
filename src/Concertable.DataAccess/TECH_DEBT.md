@@ -55,6 +55,20 @@ be pure churn; the fix reads better as one pass over every test in the file, not
 `private (InMemoryDatabaseRoot, string) NewDatabase()` helper if a fresh pair is ever needed mid-test),
 and every existing test's arrange section drops its own copy of those two lines.
 
+## `PaginationExtensions.ToPaginationAsync` takes no `CancellationToken`
+
+Every other async repository method reaching I/O threads a `CancellationToken` per the `persistence`
+standard; `ToPaginationAsync` (`Concertable.DataAccess.Infrastructure.PaginationExtensions`) does not, so
+every paginated repository method built on it inherits the gap — `ModerationController`'s report queue,
+both Venue/Artist review repositories, all three Customer review repositories, and
+`VenuePrivilegedRepository.GetPendingApprovalAsync` (added for the admin-console venue-approval queue,
+`plans/launch/ADMIN_CONSOLE_PLAN.md` Phase 4) are today's known instances.
+
+**Resolves when:** `ToPaginationAsync` gains a `CancellationToken ct = default` parameter, threaded
+through to its underlying query execution, and every caller listed above (plus any added meanwhile) is
+updated to pass its own `ct` through. A shared-package change spanning every consuming service, so it
+ships as its own published-package cutover, not a drive-by on any one caller's PR.
+
 ## `IReadRepository.GetByIdAsync` should not be `virtual`
 
 `GetByIdAsync` is `virtual` on the read base, and repos override it to eager-load a relation
