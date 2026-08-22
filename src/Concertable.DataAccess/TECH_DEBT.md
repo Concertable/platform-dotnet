@@ -36,6 +36,21 @@ of a fresh entity. One call site today, so not worth hoisting yet; once a second
 generalize both into one `TrySaveAsync`/`TryInsertAsync` pair on the shared repository, with the
 duplicate-branch behavior as a caller-supplied delegate rather than a fixed `false`.
 
+## `RepositoryTests` repeats `InMemoryDatabaseRoot`/`databaseName` arrange lines per test
+
+Every database-touching test in `Concertable.DataAccess.UnitTests/RepositoryTests.cs` opens with the
+same two lines — `var root = new InMemoryDatabaseRoot(); var databaseName = Guid.NewGuid().ToString();`
+— before calling `CreateContext`/`CreateReadContext`. xUnit gives every `[Fact]` a fresh instance of the
+test class, so this pair is safe to hoist into constructor-initialized fields without any cross-test
+isolation risk; it would just sit unused (cheaply) in the handful of reflection-only tests
+(`Repository_ContextField_UsesCombinedCapabilityOnly` and its two siblings) that touch no database at
+all. Not fixed here because the pair repeats across essentially the whole file — a one-line change would
+be pure churn; the fix reads better as one pass over every test in the file, not a drive-by edit.
+
+**Resolves when:** `root` and `databaseName` become constructor-initialized fields (or a small
+`private (InMemoryDatabaseRoot, string) NewDatabase()` helper if a fresh pair is ever needed mid-test),
+and every existing test's arrange section drops its own copy of those two lines.
+
 ## `IReadRepository.GetByIdAsync` should not be `virtual`
 
 `GetByIdAsync` is `virtual` on the read base, and repos override it to eager-load a relation
