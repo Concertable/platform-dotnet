@@ -34,7 +34,11 @@ duplicate-aware shape as the `TryInsertAsync` primitive above — `SaveChangesAs
 *save* of already-tracked changes (a race between two calls granting the same admin), not an insert
 of a fresh entity. One call site today, so not worth hoisting yet; once a second one shows up,
 generalize both into one `TrySaveAsync`/`TryInsertAsync` pair on the shared repository, with the
-duplicate-branch behavior as a caller-supplied delegate rather than a fixed `false`.
+duplicate-branch behavior as a caller-supplied delegate rather than a fixed `false`. Same shape as
+`TryInsertAsync`: `TrySaveAsync` needs nothing but the already-public `SaveChangesAsync`, so it belongs
+in `WriteRepositoryExtensions` as an extension too, not a member hand-copied onto
+`WriteRepository<TEntity>` / `Repository<TEntity, TKey>` — bolting it onto either base directly would
+reintroduce the exact duplication `TryInsertAsync` was hoisted to avoid.
 
 ## `RepositoryTests` repeats `InMemoryDatabaseRoot`/`databaseName` arrange lines per test
 
