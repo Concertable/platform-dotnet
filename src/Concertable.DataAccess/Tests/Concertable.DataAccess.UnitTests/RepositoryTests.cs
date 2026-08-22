@@ -12,6 +12,15 @@ namespace Concertable.DataAccess.UnitTests;
 
 public sealed class RepositoryTests
 {
+    private readonly InMemoryDatabaseRoot root;
+    private readonly string databaseName;
+
+    public RepositoryTests()
+    {
+        this.root = new InMemoryDatabaseRoot();
+        this.databaseName = Guid.NewGuid().ToString();
+    }
+
     [Fact]
     public void Repository_ContextField_UsesCombinedCapabilityOnly()
     {
@@ -47,41 +56,35 @@ public sealed class RepositoryTests
     [Fact]
     public async Task WriteRepository_AddThenSave_PersistsThroughWriteCapability()
     {
-        var root = new InMemoryDatabaseRoot();
-        var databaseName = Guid.NewGuid().ToString();
-        await using var context = CreateContext(databaseName, root);
+        await using var context = CreateContext(this.databaseName, this.root);
         var repository = new TestWriteRepository(context);
         var entity = new TestEntity { Name = "Persisted" };
 
         Assert.Same(entity, await repository.AddAsync(entity));
         await repository.SaveChangesAsync();
 
-        await using var verificationContext = CreateReadContext(databaseName, root);
+        await using var verificationContext = CreateReadContext(this.databaseName, this.root);
         Assert.Equal("Persisted", (await verificationContext.Entities.SingleAsync()).Name);
     }
 
     [Fact]
     public async Task WriteRepository_TryInsertAsync_NoConflict_PersistsAndReturnsTrue()
     {
-        var root = new InMemoryDatabaseRoot();
-        var databaseName = Guid.NewGuid().ToString();
-        await using var context = CreateContext(databaseName, root);
+        await using var context = CreateContext(this.databaseName, this.root);
         var repository = new TestWriteRepository(context);
         var entity = new TestEntity { Name = "Persisted" };
 
         var inserted = await repository.TryInsertAsync(entity);
 
         Assert.True(inserted);
-        await using var verificationContext = CreateReadContext(databaseName, root);
+        await using var verificationContext = CreateReadContext(this.databaseName, this.root);
         Assert.Equal("Persisted", (await verificationContext.Entities.SingleAsync()).Name);
     }
 
     [Fact]
     public async Task Repository_ReadThenSave_PreservesOneTrackedUnitOfWork()
     {
-        var root = new InMemoryDatabaseRoot();
-        var databaseName = Guid.NewGuid().ToString();
-        await using var context = CreateContext(databaseName, root);
+        await using var context = CreateContext(this.databaseName, this.root);
         var repository = new TestCapabilityRepository(context);
         var entity = new TestEntity { Name = "Original" };
         await repository.InsertAsync(entity);
@@ -91,21 +94,20 @@ public sealed class RepositoryTests
         await repository.SaveChangesAsync();
 
         Assert.Same(entity, loaded);
-        await using var verificationContext = CreateContext(databaseName, root, QueryTrackingBehavior.NoTracking);
+        await using var verificationContext =
+            CreateContext(this.databaseName, this.root, QueryTrackingBehavior.NoTracking);
         Assert.Equal("Updated", (await verificationContext.Entities.SingleAsync()).Name);
     }
 
     [Fact]
     public async Task ReadRepository_DedicatedNoTrackingContext_IsolatedFromTrackedChanges()
     {
-        var root = new InMemoryDatabaseRoot();
-        var databaseName = Guid.NewGuid().ToString();
-        await using var trackedContext = CreateContext(databaseName, root);
+        await using var trackedContext = CreateContext(this.databaseName, this.root);
         var trackedRepository = new TestCapabilityRepository(trackedContext);
         var entity = new TestEntity { Name = "Persisted" };
         await trackedRepository.InsertAsync(entity);
         entity.Name = "Unsaved";
-        await using var readContext = CreateReadContext(databaseName, root);
+        await using var readContext = CreateReadContext(this.databaseName, this.root);
         var readRepository = new TestReadRepository(readContext);
 
         var isolated = await readRepository.GetByIdAsync(entity.Id);
@@ -118,8 +120,7 @@ public sealed class RepositoryTests
     [Fact]
     public async Task ReadDbContext_SaveOverloads_RejectWrites()
     {
-        var root = new InMemoryDatabaseRoot();
-        using var context = CreateReadContext(Guid.NewGuid().ToString(), root);
+        using var context = CreateReadContext(this.databaseName, this.root);
 
         Assert.Throws<InvalidOperationException>(() => context.SaveChanges());
         Assert.Throws<InvalidOperationException>(() => context.SaveChanges(acceptAllChangesOnSuccess: false));
@@ -131,8 +132,7 @@ public sealed class RepositoryTests
     [Fact]
     public void ReadDbContext_Model_ExcludesMessagingEntities()
     {
-        var root = new InMemoryDatabaseRoot();
-        using var context = CreateReadContext(Guid.NewGuid().ToString(), root);
+        using var context = CreateReadContext(this.databaseName, this.root);
 
         Assert.Null(context.Model.FindEntityType(typeof(InboxMessageEntity)));
         Assert.Null(context.Model.FindEntityType(typeof(OutboxMessageEntity)));
