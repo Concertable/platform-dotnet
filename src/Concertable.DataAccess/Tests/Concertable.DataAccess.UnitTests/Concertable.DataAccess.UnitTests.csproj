@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Concertable.DataAccess.Application\Concertable.DataAccess.Application.csproj" />
     <ProjectReference Include="..\..\Concertable.DataAccess.Infrastructure\Concertable.DataAccess.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Concertable.Shared\tests\Concertable.Testing.Unit\Concertable.Testing.Unit.csproj" />
   </ItemGroup>
 
   <ItemGroup>
