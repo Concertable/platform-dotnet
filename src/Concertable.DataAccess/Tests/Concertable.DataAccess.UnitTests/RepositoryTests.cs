@@ -2,6 +2,7 @@ using System.Reflection;
 using Concertable.DataAccess.Application;
 using Concertable.DataAccess.Infrastructure;
 using Concertable.DataAccess.Infrastructure.Data;
+using Concertable.DataAccess.Infrastructure.Extensions;
 using Concertable.Kernel;
 using Concertable.Messaging.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -55,6 +56,22 @@ public sealed class RepositoryTests
         Assert.Same(entity, await repository.AddAsync(entity));
         await repository.SaveChangesAsync();
 
+        await using var verificationContext = CreateReadContext(databaseName, root);
+        Assert.Equal("Persisted", (await verificationContext.Entities.SingleAsync()).Name);
+    }
+
+    [Fact]
+    public async Task WriteRepository_TryInsertAsync_NoConflict_PersistsAndReturnsTrue()
+    {
+        var root = new InMemoryDatabaseRoot();
+        var databaseName = Guid.NewGuid().ToString();
+        await using var context = CreateContext(databaseName, root);
+        var repository = new TestWriteRepository(context);
+        var entity = new TestEntity { Name = "Persisted" };
+
+        var inserted = await repository.TryInsertAsync(entity);
+
+        Assert.True(inserted);
         await using var verificationContext = CreateReadContext(databaseName, root);
         Assert.Equal("Persisted", (await verificationContext.Entities.SingleAsync()).Name);
     }
