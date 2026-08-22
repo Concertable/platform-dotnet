@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Azure;
@@ -6,11 +8,27 @@ using Microsoft.Extensions.Configuration;
 
 public static class DistributedApplicationBuilderExtensions
 {
+    /// <summary>Suffixes <paramref name="dataVolumeName"/> with a short hash of the AppHost assembly's own
+    /// build output path, so every git worktree gets its own SQL data volume automatically. Without this,
+    /// two worktrees running the same service's AppHost at once share one Docker volume — a fresh
+    /// worktree's migrations collide with whatever schema an older worktree already applied to it.
+    /// Hashes <see cref="AppContext.BaseDirectory"/> rather than <see cref="Directory.GetCurrentDirectory"/>
+    /// — the process working directory varies with how the AppHost is launched (a developer's `dotnet run`
+    /// from inside the AppHost folder versus a script that `cd`s to the repo root first), which would give
+    /// the same worktree two different volumes depending on invocation style. The build output path is
+    /// fixed per checkout regardless of invocation.</summary>
     public static IResourceBuilder<SqlServerServerResource> AddSqlServerContainer(
         this IDistributedApplicationBuilder builder,
         string dataVolumeName = "concertable-sql-data")
     {
-        return builder.AddSqlServer("sql").WithDataVolume(dataVolumeName);
+        var checkoutSuffix = CheckoutSuffix();
+        return builder.AddSqlServer("sql").WithDataVolume($"{dataVolumeName}-{checkoutSuffix}");
+    }
+
+    private static string CheckoutSuffix()
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(AppContext.BaseDirectory));
+        return Convert.ToHexStringLower(hash)[..8];
     }
 
     public static IResourceBuilder<AzureServiceBusResource> AddServiceBus(
