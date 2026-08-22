@@ -16,6 +16,7 @@ using Concertable.Payment.Contracts.Events;
 using Concertable.Payment.Hosting;
 using Concertable.Shared.Email.Application;
 using B2BPayoutOwnerRegisteredEvent = Concertable.B2B.Tenant.Contracts.Events.PayoutOwnerRegisteredEvent;
+using TenantActivityRecordedEvent = Concertable.B2B.Tenant.Contracts.Events.TenantActivityRecordedEvent;
 
 namespace Concertable.AppHost.Shared.UnitTests;
 
@@ -73,7 +74,8 @@ public sealed class ServiceTopologyTests
             typeof(ConcertChangedEvent),
             typeof(ConcertPostedEvent),
             typeof(ConcertRatingUpdatedEvent),
-            typeof(B2BPayoutOwnerRegisteredEvent));
+            typeof(B2BPayoutOwnerRegisteredEvent),
+            typeof(TenantActivityRecordedEvent));
 
     [Fact]
     public void AddB2BTopology_ProvisionsEmailCommandQueue()
