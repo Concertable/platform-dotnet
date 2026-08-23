@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Concertable.Composition.Testing;
+namespace Concertable.Testing.Architecture;
 
 public static class ServiceValidationExtensions
 {

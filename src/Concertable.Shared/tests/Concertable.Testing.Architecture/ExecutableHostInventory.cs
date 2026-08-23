@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 
-namespace Concertable.Composition.Testing;
+namespace Concertable.Testing.Architecture;
 
 public static class ExecutableHostInventory
 {
