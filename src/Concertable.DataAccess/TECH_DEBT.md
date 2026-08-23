@@ -40,20 +40,19 @@ in `WriteRepositoryExtensions` as an extension too, not a member hand-copied ont
 `WriteRepository<TEntity>` / `Repository<TEntity, TKey>` — bolting it onto either base directly would
 reintroduce the exact duplication `TryInsertAsync` was hoisted to avoid.
 
-## `RepositoryTests` repeats `InMemoryDatabaseRoot`/`databaseName` arrange lines per test
+## `PaginationExtensions.ToPaginationAsync` takes no `CancellationToken`
 
-Every database-touching test in `Concertable.DataAccess.UnitTests/RepositoryTests.cs` opens with the
-same two lines — `var root = new InMemoryDatabaseRoot(); var databaseName = Guid.NewGuid().ToString();`
-— before calling `CreateContext`/`CreateReadContext`. xUnit gives every `[Fact]` a fresh instance of the
-test class, so this pair is safe to hoist into constructor-initialized fields without any cross-test
-isolation risk; it would just sit unused (cheaply) in the handful of reflection-only tests
-(`Repository_ContextField_UsesCombinedCapabilityOnly` and its two siblings) that touch no database at
-all. Not fixed here because the pair repeats across essentially the whole file — a one-line change would
-be pure churn; the fix reads better as one pass over every test in the file, not a drive-by edit.
+Every other async repository method reaching I/O threads a `CancellationToken` per the `persistence`
+standard; `ToPaginationAsync` (`Concertable.DataAccess.Infrastructure.PaginationExtensions`) does not, so
+every paginated repository method built on it inherits the gap — `ModerationController`'s report queue,
+both Venue/Artist review repositories, all three Customer review repositories, and
+`VenuePrivilegedRepository.GetPendingApprovalAsync` (added for the admin-console venue-approval queue,
+`plans/launch/ADMIN_CONSOLE_PLAN.md` Phase 4) are today's known instances.
 
-**Resolves when:** `root` and `databaseName` become constructor-initialized fields (or a small
-`private (InMemoryDatabaseRoot, string) NewDatabase()` helper if a fresh pair is ever needed mid-test),
-and every existing test's arrange section drops its own copy of those two lines.
+**Resolves when:** `ToPaginationAsync` gains a `CancellationToken ct = default` parameter, threaded
+through to its underlying query execution, and every caller listed above (plus any added meanwhile) is
+updated to pass its own `ct` through. A shared-package change spanning every consuming service, so it
+ships as its own published-package cutover, not a drive-by on any one caller's PR.
 
 ## `IReadRepository.GetByIdAsync` should not be `virtual`
 
