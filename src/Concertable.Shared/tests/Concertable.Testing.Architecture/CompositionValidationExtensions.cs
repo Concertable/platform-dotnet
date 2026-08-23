@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace Concertable.Composition.Testing;
+namespace Concertable.Testing.Architecture;
 
 public static class CompositionValidationExtensions
 {
