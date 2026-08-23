@@ -1,31 +1,5 @@
 # DataAccess technical debt
 
-## Standardize the duplicate-aware insert (distinct from the plain `InsertAsync`)
-
-The shared repository now has a plain `InsertAsync` (add + save, returns the entity, propagates all
-failures as exceptions — the create-and-persist / Cosmos `CreateAsync` shape). That name is therefore
-taken.
-
-Customer Review and Preference currently duplicate a *different* primitive: immediate, **duplicate-aware**
-insert — add, save, return `false` only for the recognized duplicate-key conflict, propagate unrelated
-failures. Hoist that primitive to the shared generic DataAccess repository under a distinct name (e.g.
-`TryInsertAsync`, matching its `bool` Try-pattern return) so it coexists with `InsertAsync`, and remove
-both module-local copies. Do the hoist as a published-package cutover.
-
-**Progress — PR1 (`Chore/TechDebt-dataaccess-tryinsert`) landed the producer half:** `TryInsertAsync`
-exists as a `WriteRepositoryExtensions` extension on `IWriteRepository<TEntity>`
-(`Concertable.DataAccess.Infrastructure/Extensions/WriteRepositoryExtensions.cs`) — an extension rather
-than a new interface member or a third hand-copied implementation on `WriteRepository<TEntity>` /
-`Repository<TEntity, TKey>`, since it needs nothing but the two members (`AddAsync` +
-`SaveChangesAsync`) those bases already expose publicly; adding it as a class member would have meant
-writing the same try/catch twice, compounding the "Repository bases repeat CRUD" item in
-[`api/TECH_DEBT.md`](../TECH_DEBT.md) instead of avoiding it. Unit-covered in `RepositoryTests`.
-**Remaining — PR2 (delivery-gated on the republish + `platform-sync` pin bump):** migrate
-`PreferenceRepository.InsertAsync` and `ConcertReviewRepository.InsertAsync` (Customer) to call the
-shared `TryInsertAsync` and delete both module-local copies — `ConcertReviewRepository` doesn't inherit
-`Repository<TEntity>`, so it calls the extension directly off its own `context`-backed CRUD, not
-through inheritance.
-
 ## Standardize the duplicate-aware save (distinct from `TryInsertAsync` above)
 
 `Concertable.B2B.Admin.Infrastructure.Services.AdminService.TrySaveGrantAsync` hand-rolls the same
