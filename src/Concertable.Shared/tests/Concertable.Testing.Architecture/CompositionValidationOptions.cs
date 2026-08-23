@@ -2,7 +2,7 @@ using System.Reflection;
 using Concertable.Kernel;
 using Concertable.Messaging.Contracts;
 
-namespace Concertable.Composition.Testing;
+namespace Concertable.Testing.Architecture;
 
 public sealed class CompositionValidationOptions
 {

@@ -1,4 +1,4 @@
-namespace Concertable.Composition.Testing;
+namespace Concertable.Testing.Architecture;
 
 public static class CompositionTestArguments
 {
