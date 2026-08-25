@@ -4,6 +4,8 @@ using Aspire.Hosting.Azure;
 using Concertable.Auth.Contracts.Events;
 using Concertable.Auth.Hosting;
 using Concertable.B2B.Artist.Contracts.Events;
+using Concertable.B2B.Booking.Contracts.Events;
+using Concertable.B2B.Concert.Contracts.Commands;
 using Concertable.B2B.Concert.Contracts.Events;
 using Concertable.B2B.Hosting;
 using Concertable.B2B.Venue.Contracts.Events;
@@ -74,20 +76,28 @@ public sealed class ServiceTopologyTests
             typeof(ConcertChangedEvent),
             typeof(ConcertPostedEvent),
             typeof(ConcertRatingUpdatedEvent),
+            typeof(BookingCancelledEvent),
+            typeof(ConcertCancelledEvent),
+            typeof(ConcertCreatedEvent),
             typeof(B2BPayoutOwnerRegisteredEvent),
             typeof(TenantActivityRecordedEvent));
 
     [Fact]
-    public void AddB2BTopology_ProvisionsEmailCommandQueue()
+    public void AddB2BTopology_ProvisionsCommandQueues()
     {
         var builder = DistributedApplication.CreateBuilder();
         var topology = builder.AddAzureServiceBus("messaging").Topology();
         topology.AddB2BTopology();
 
-        var queue = Assert.Single(builder.Resources.OfType<AzureServiceBusQueueResource>());
-        var expected = new AzureServiceBusOptions().QueueNameFor(B2BConstants.ServiceName, typeof(SendEmailCommand));
+        var queues = builder.Resources
+            .OfType<AzureServiceBusQueueResource>()
+            .Select(queue => queue.Name)
+            .ToHashSet();
+        var options = new AzureServiceBusOptions();
 
-        Assert.Equal(expected, queue.Name);
+        Assert.Equal(2, queues.Count);
+        Assert.Contains(options.QueueNameFor(B2BConstants.ServiceName, typeof(SendEmailCommand)), queues);
+        Assert.Contains(options.QueueNameFor(B2BConstants.ServiceName, typeof(NotifyConcertDraftCreatedCommand)), queues);
     }
 
     [Fact]
