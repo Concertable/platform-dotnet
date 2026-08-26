@@ -19,9 +19,9 @@ reintroduce the exact duplication `TryInsertAsync` was hoisted to avoid.
 Every other async repository method reaching I/O threads a `CancellationToken` per the `persistence`
 standard; `ToPaginationAsync` (`Concertable.DataAccess.Infrastructure.PaginationExtensions`) does not, so
 every paginated repository method built on it inherits the gap — `ModerationController`'s report queue,
-both Venue/Artist review repositories, all three Customer review repositories, and
-`VenuePrivilegedRepository.GetPendingApprovalAsync` (added for the admin-console venue-approval queue,
-`plans/launch/ADMIN_CONSOLE_PLAN.md` Phase 4) are today's known instances.
+both Venue/Artist review repositories, all three Customer review repositories,
+`VenuePrivilegedRepository.GetPendingApprovalAsync` (the admin-console venue-approval queue), and
+`VerificationRepository.GetPendingAsync` (the tenant-verification admin queue) are today's known instances.
 
 **Resolves when:** `ToPaginationAsync` gains a `CancellationToken ct = default` parameter, threaded
 through to its underlying query execution, and every caller listed above (plus any added meanwhile) is
