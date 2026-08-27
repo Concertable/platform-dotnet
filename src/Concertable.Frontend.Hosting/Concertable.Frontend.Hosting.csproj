@@ -11,4 +11,8 @@
     <PackageReference Include="Aspire.Hosting.NodeJs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Concertable.AppHost.Shared\Concertable.AppHost.Shared.csproj" IsAspireProjectResource="false" />
+  </ItemGroup>
+
 </Project>
