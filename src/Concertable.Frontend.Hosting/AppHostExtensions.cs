@@ -13,7 +13,7 @@ public static class AppHostExtensions
         IResourceBuilder<ProjectResource> backend,
         IResourceBuilder<ProjectResource> customerWeb,
         IResourceBuilder<ProjectResource> auth) =>
-        AddSpaSurface(builder, backend, auth, "customer", 5174)
+        AddSpaSurface(builder, backend, auth, LocalSpaSurfaces.Customer)
             .WithReference(customerWeb)
             .WaitFor(customerWeb);
 
@@ -21,35 +21,34 @@ public static class AppHostExtensions
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> backend,
         IResourceBuilder<ProjectResource> auth) =>
-        AddSpaSurface(builder, backend, auth, "venue", 5175, "b2b");
+        AddSpaSurface(builder, backend, auth, LocalSpaSurfaces.Venue, "b2b");
 
     public static IResourceBuilder<NodeAppResource> AddArtistSpa(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> backend,
         IResourceBuilder<ProjectResource> auth) =>
-        AddSpaSurface(builder, backend, auth, "artist", 5176, "b2b");
+        AddSpaSurface(builder, backend, auth, LocalSpaSurfaces.Artist, "b2b");
 
     public static IResourceBuilder<NodeAppResource> AddBusinessSpa(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> backend,
         IResourceBuilder<ProjectResource> auth) =>
-        AddSpaSurface(builder, backend, auth, "business", 5177, "b2b");
+        AddSpaSurface(builder, backend, auth, LocalSpaSurfaces.Business, "b2b");
 
     public static IResourceBuilder<NodeAppResource> AddAdminSpa(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> backend,
         IResourceBuilder<ProjectResource> auth) =>
-        AddSpaSurface(builder, backend, auth, "admin", 5178);
+        AddSpaSurface(builder, backend, auth, LocalSpaSurfaces.Admin);
 
     private static IResourceBuilder<NodeAppResource> AddSpaSurface(
         IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> backend,
         IResourceBuilder<ProjectResource> auth,
-        string surface,
-        int port,
+        LocalSpaSurface surface,
         params string[] tierSegments) =>
-        builder.AddNpmApp(surface, RepoPath(builder, ["app", "web", .. tierSegments, surface]), "dev")
-               .WithHttpsEndpoint(port: port, isProxied: false)
+        builder.AddNpmApp(surface.ResourceName, RepoPath(builder, ["app", "web", .. tierSegments, surface.ResourceName]), "dev")
+               .WithHttpsEndpoint(port: surface.HttpsPort, isProxied: false)
                .WithReference(backend)
                .WithReference(auth)
                .WaitFor(backend);

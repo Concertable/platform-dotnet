@@ -40,7 +40,7 @@ public sealed class AuditInterceptor : SaveChangesInterceptor
         ArgumentNullException.ThrowIfNull(context);
 
         var entries = context.ChangeTracker.Entries<IAuditable>();
-        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var now = timeProvider.GetUtcNow();
         var userId = currentUser.Id?.ToString() ?? SystemActor;
 
         foreach (var entry in entries)
