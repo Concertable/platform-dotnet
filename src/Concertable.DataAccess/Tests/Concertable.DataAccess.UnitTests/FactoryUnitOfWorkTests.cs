@@ -1,21 +1,24 @@
 using Concertable.DataAccess.Infrastructure;
-using Concertable.Testing.Unit;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Concertable.DataAccess.UnitTests;
 
-public sealed class FactoryUnitOfWorkTests
+public sealed class FactoryUnitOfWorkTests : IDisposable
 {
-    private readonly InMemoryDatabaseRoot root;
-    private readonly string databaseName;
+    private readonly SqliteConnection connection;
     private readonly TestDbContextFactory dbContextFactory;
     private readonly FactoryUnitOfWork<TestDbContext> unitOfWork;
 
     public FactoryUnitOfWorkTests()
     {
-        (this.root, this.databaseName) = InMemoryDatabaseFactory.Create();
-        this.dbContextFactory = new TestDbContextFactory(this.root, this.databaseName);
+        this.connection = new SqliteConnection("Data Source=:memory:");
+        this.connection.Open();
+
+        using var context = this.CreateContext();
+        context.Database.EnsureCreated();
+
+        this.dbContextFactory = new TestDbContextFactory(this.connection);
         this.unitOfWork = new FactoryUnitOfWork<TestDbContext>(this.dbContextFactory);
     }
 
@@ -57,8 +60,15 @@ public sealed class FactoryUnitOfWorkTests
         Assert.Equal(2, await verificationContext.Entities.CountAsync());
     }
 
-    private TestDbContext CreateVerificationContext() =>
-        this.root.CreateContext(this.databaseName, options => new TestDbContext(options));
+    public void Dispose() => this.connection.Dispose();
+
+    private TestDbContext CreateVerificationContext() => this.CreateContext();
+
+    private TestDbContext CreateContext() =>
+        new(
+            new DbContextOptionsBuilder<TestDbContext>()
+                .UseSqlite(this.connection)
+                .Options);
 
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options)
     {
@@ -75,27 +85,31 @@ public sealed class FactoryUnitOfWorkTests
 
     private sealed class TestDbContextFactory : IDbContextFactory<TestDbContext>
     {
-        private readonly InMemoryDatabaseRoot root;
-        private readonly string databaseName;
+        private readonly SqliteConnection connection;
 
-        public TestDbContextFactory(InMemoryDatabaseRoot root, string databaseName)
+        public TestDbContextFactory(SqliteConnection connection)
         {
-            this.root = root;
-            this.databaseName = databaseName;
+            this.connection = connection;
         }
 
         public int AsyncCreateCount { get; private set; }
         public List<TestDbContext> Contexts { get; } = [];
 
-        public TestDbContext CreateDbContext() => throw new NotSupportedException();
+        public TestDbContext CreateDbContext() => this.CreateContext();
 
         public Task<TestDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
         {
             this.AsyncCreateCount++;
-            var context = this.root.CreateContext(this.databaseName, options => new TestDbContext(options));
+            var context = this.CreateContext();
             this.Contexts.Add(context);
             return Task.FromResult(context);
         }
+
+        private TestDbContext CreateContext() =>
+            new(
+                new DbContextOptionsBuilder<TestDbContext>()
+                    .UseSqlite(this.connection)
+                    .Options);
     }
 
     private sealed class TestEntity
@@ -104,4 +118,3 @@ public sealed class FactoryUnitOfWorkTests
         public string Name { get; set; } = null!;
     }
 }
-
