@@ -6,8 +6,8 @@ Debt local to the reusable Aspire hosting and topology helpers.
 
 ## LOW
 
-### `AsbTopology` repeats the service identity for every subscription and queue
+### `AsbTopology.Subscribe<TEvent>(serviceName)` / `Queue<TCommand>(serviceName)` are superseded but still the live call sites
 
-`Subscribe<TEvent>(serviceName)` and `Queue<TCommand>(serviceName)` require every service topology to repeat the same service name for each registration. The identity is necessary because it gives each service its own durable event subscription and names its command queues, but it is a property of the consuming service topology rather than an individual message registration. The current API adds noise across B2B, Customer, Payment, Search, and Auth, and permits one registration in a chain to accidentally use a different service identity.
+`AsbTopology` now also exposes `WithService(serviceName)`, scoping subsequent `Subscribe<TEvent>()`/`Queue<TCommand>()` calls to one service identity instead of repeating it per registration. The five service topologies (`AddAuthTopology`, `AddB2BTopology`, `AddCustomerTopology`, `AddPaymentTopology`, `AddSearchTopology`) still call the older `Subscribe<TEvent>(serviceName)`/`Queue<TCommand>(serviceName)` overloads, because they consume `Concertable.AppHost.Shared` as a published package pinned per service — migrating them can only land once that package has republished with `WithService` and each service's pin has bumped.
 
-**Resolves when:** `AsbTopology` can be scoped once to a service, with message registrations made through that scoped builder, for example `topology.ForService(B2BConstants.ServiceName).Subscribe<CredentialRegisteredEvent>().Queue<SomeCommand>()`. Preserve independent per-service Azure Service Bus subscriptions and the existing topic, subscription, and queue names. Add focused topology tests covering naming and isolation before migrating every service topology.
+**Resolves when:** every `AddXTopology()` method is migrated to `.WithService(XConstants.ServiceName).Subscribe<...>()...Queue<...>()`, and the now-unused `Subscribe<TEvent>(string)`/`Queue<TCommand>(string)` overloads are deleted from `AsbTopology`.

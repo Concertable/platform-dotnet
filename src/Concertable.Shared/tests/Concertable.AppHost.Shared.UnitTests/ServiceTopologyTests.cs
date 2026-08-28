@@ -29,7 +29,8 @@ public sealed class ServiceTopologyTests
         builder.AddAzureServiceBus("messaging")
             .Topology()
             .Publish<ConcertPostedEvent>()
-            .Subscribe<ConcertPostedEvent>("consumer")
+            .WithService("consumer")
+            .Subscribe<ConcertPostedEvent>()
             .RunAsEmulator();
 
         var topicName = new AzureServiceBusOptions().TopicNameFor(typeof(ConcertPostedEvent));
@@ -40,6 +41,44 @@ public sealed class ServiceTopologyTests
 
         Assert.Single(topics);
         Assert.Equal("consumer", subscription.SubscriptionName);
+    }
+
+    [Fact]
+    public void Subscribe_WithoutServiceScope_Throws()
+    {
+        var topology = DistributedApplication.CreateBuilder().AddAzureServiceBus("messaging").Topology();
+
+        Assert.Throws<InvalidOperationException>(() => topology.Subscribe<ConcertPostedEvent>());
+    }
+
+    [Fact]
+    public void Queue_WithoutServiceScope_Throws()
+    {
+        var topology = DistributedApplication.CreateBuilder().AddAzureServiceBus("messaging").Topology();
+
+        Assert.Throws<InvalidOperationException>(() => topology.Queue<SendEmailCommand>());
+    }
+
+    [Fact]
+    public void WithService_CalledAgainMidChain_ScopesEachSubscriptionToItsOwnServiceName()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        builder.AddAzureServiceBus("messaging")
+            .Topology()
+            .Publish<ConcertPostedEvent>()
+            .Publish<ConcertChangedEvent>()
+            .WithService("service-a")
+            .Subscribe<ConcertPostedEvent>()
+            .WithService("service-b")
+            .Subscribe<ConcertChangedEvent>()
+            .RunAsEmulator();
+
+        var subscriptionNames = builder.Resources
+            .OfType<AzureServiceBusSubscriptionResource>()
+            .Select(subscription => subscription.SubscriptionName)
+            .ToHashSet();
+
+        Assert.Equal(["service-a", "service-b"], subscriptionNames.Order());
     }
 
     [Fact]
