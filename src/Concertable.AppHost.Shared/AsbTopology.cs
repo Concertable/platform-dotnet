@@ -30,17 +30,25 @@ public sealed class AsbTopology
 
     public AsbTopology Subscribe<TEvent>()
     {
-        var currentServiceName = RequireServiceName();
-        var topicBuilder = GetOrAddTopic<TEvent>();
-        topicBuilder.AddServiceBusSubscription($"{currentServiceName}-{KebabCase(typeof(TEvent))}", currentServiceName);
-        subscribedTopics.Add(topicBuilder.Resource.TopicName);
+        SubscribeCore<TEvent>(RequireServiceName());
         return this;
     }
 
     public AsbTopology Queue<TCommand>()
     {
-        var currentServiceName = RequireServiceName();
-        asb.AddServiceBusQueue(options.QueueNameFor(currentServiceName, typeof(TCommand)));
+        QueueCore<TCommand>(RequireServiceName());
+        return this;
+    }
+
+    public AsbTopology Subscribe<TEvent>(string serviceName)
+    {
+        SubscribeCore<TEvent>(serviceName);
+        return this;
+    }
+
+    public AsbTopology Queue<TCommand>(string serviceName)
+    {
+        QueueCore<TCommand>(serviceName);
         return this;
     }
 
@@ -61,6 +69,16 @@ public sealed class AsbTopology
 
     private string RequireServiceName() =>
         serviceName ?? throw new InvalidOperationException($"Call {nameof(ForService)} before Subscribe or Queue.");
+
+    private void SubscribeCore<TEvent>(string forServiceName)
+    {
+        var topicBuilder = GetOrAddTopic<TEvent>();
+        topicBuilder.AddServiceBusSubscription($"{forServiceName}-{KebabCase(typeof(TEvent))}", forServiceName);
+        subscribedTopics.Add(topicBuilder.Resource.TopicName);
+    }
+
+    private void QueueCore<TCommand>(string forServiceName) =>
+        asb.AddServiceBusQueue(options.QueueNameFor(forServiceName, typeof(TCommand)));
 
     private IResourceBuilder<AzureServiceBusTopicResource> GetOrAddTopic<TEvent>()
     {
