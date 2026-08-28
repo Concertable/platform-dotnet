@@ -22,7 +22,7 @@ public sealed class AsbTopology
         return this;
     }
 
-    public AsbTopology ForService(string serviceName)
+    public AsbTopology WithService(string serviceName)
     {
         this.serviceName = serviceName;
         return this;
@@ -68,7 +68,7 @@ public sealed class AsbTopology
     }
 
     private string RequireServiceName() =>
-        serviceName ?? throw new InvalidOperationException($"Call {nameof(ForService)} before Subscribe or Queue.");
+        serviceName ?? throw new InvalidOperationException($"Call {nameof(WithService)} before Subscribe or Queue.");
 
     private void SubscribeCore<TEvent>(string forServiceName)
     {
