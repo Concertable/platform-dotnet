@@ -12,6 +12,7 @@ public sealed class AsbTopology
     private readonly AzureServiceBusOptions options = new();
     private readonly Dictionary<string, IResourceBuilder<AzureServiceBusTopicResource>> topics = new();
     private readonly HashSet<string> subscribedTopics = [];
+    private string? serviceName;
 
     public AsbTopology(IResourceBuilder<AzureServiceBusResource> asb) => this.asb = asb;
 
@@ -21,17 +22,25 @@ public sealed class AsbTopology
         return this;
     }
 
-    public AsbTopology Subscribe<TEvent>(string serviceName)
+    public AsbTopology ForService(string serviceName)
     {
+        this.serviceName = serviceName;
+        return this;
+    }
+
+    public AsbTopology Subscribe<TEvent>()
+    {
+        var currentServiceName = RequireServiceName();
         var topicBuilder = GetOrAddTopic<TEvent>();
-        topicBuilder.AddServiceBusSubscription($"{serviceName}-{KebabCase(typeof(TEvent))}", serviceName);
+        topicBuilder.AddServiceBusSubscription($"{currentServiceName}-{KebabCase(typeof(TEvent))}", currentServiceName);
         subscribedTopics.Add(topicBuilder.Resource.TopicName);
         return this;
     }
 
-    public AsbTopology Queue<TCommand>(string serviceName)
+    public AsbTopology Queue<TCommand>()
     {
-        asb.AddServiceBusQueue(options.QueueNameFor(serviceName, typeof(TCommand)));
+        var currentServiceName = RequireServiceName();
+        asb.AddServiceBusQueue(options.QueueNameFor(currentServiceName, typeof(TCommand)));
         return this;
     }
 
@@ -49,6 +58,9 @@ public sealed class AsbTopology
 
         return asb.RunAsEmulator();
     }
+
+    private string RequireServiceName() =>
+        serviceName ?? throw new InvalidOperationException($"Call {nameof(ForService)} before Subscribe or Queue.");
 
     private IResourceBuilder<AzureServiceBusTopicResource> GetOrAddTopic<TEvent>()
     {
