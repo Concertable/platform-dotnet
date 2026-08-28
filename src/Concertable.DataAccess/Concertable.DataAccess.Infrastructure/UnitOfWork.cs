@@ -1,4 +1,5 @@
 using Concertable.DataAccess.Application;
+using Concertable.DataAccess.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -9,6 +10,9 @@ public class UnitOfWork<TContext>(TContext context) : IUnitOfWork<TContext>
 {
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);
+
+    public Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default) =>
+        context.TrySaveChangesAsync(cancellationToken);
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) =>
         context.Database.BeginTransactionAsync(cancellationToken);

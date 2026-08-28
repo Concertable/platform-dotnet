@@ -82,6 +82,55 @@ public sealed class RepositoryTests
     }
 
     [Fact]
+    public async Task UnitOfWork_TrySaveChangesAsync_Success_PersistsAndReturnsTrue()
+    {
+        await using var context = this.CreateContext();
+        await context.AddAsync(new TestEntity { Name = "Persisted" });
+        IUnitOfWork<TestDbContext> unitOfWork = new UnitOfWork<TestDbContext>(context);
+
+        var saved = await unitOfWork.TrySaveChangesAsync();
+
+        Assert.True(saved);
+        Assert.Equal("Persisted", (await context.Entities.SingleAsync()).Name);
+    }
+
+    [Fact]
+    public async Task UnitOfWork_TrySaveChangesAsync_ConcurrencyFailure_ClearsChangeTracker()
+    {
+        await using (var seed = this.CreateContext())
+        {
+            await seed.AddRangeAsync(
+                new TestEntity { Name = "Original" },
+                new TestEntity { Name = "Unrelated" });
+            await seed.SaveChangesAsync();
+        }
+        await using var winnerContext = this.CreateContext();
+        await using var loserContext = this.CreateContext();
+        var winner = await winnerContext.Entities.SingleAsync(entity => entity.Name == "Original");
+        var loser = await loserContext.Entities.SingleAsync(entity => entity.Name == "Original");
+        _ = await loserContext.Entities.SingleAsync(entity => entity.Name == "Unrelated");
+        winner.Name = "Winner";
+        loser.Name = "Loser";
+        await winnerContext.SaveChangesAsync();
+        IUnitOfWork<TestDbContext> unitOfWork = new UnitOfWork<TestDbContext>(loserContext);
+
+        var saved = await unitOfWork.TrySaveChangesAsync();
+
+        Assert.False(saved);
+        Assert.Empty(loserContext.ChangeTracker.Entries());
+    }
+
+    [Fact]
+    public async Task UnitOfWork_TrySaveChangesAsync_NonConcurrencyFailure_Propagates()
+    {
+        var options = new DbContextOptionsBuilder<FailingDbContext>().Options;
+        await using var context = new FailingDbContext(options);
+        IUnitOfWork<FailingDbContext> unitOfWork = new UnitOfWork<FailingDbContext>(context);
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => unitOfWork.TrySaveChangesAsync());
+    }
+
+    [Fact]
     public async Task Repository_ReadThenSave_PreservesOneTrackedUnitOfWork()
     {
         await using var context = this.CreateContext();
@@ -204,6 +253,18 @@ public sealed class RepositoryTests
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options)
     {
         public DbSet<TestEntity> Entities => Set<TestEntity>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<TestEntity>().Property(entity => entity.Name).IsConcurrencyToken();
+        }
+    }
+
+    private sealed class FailingDbContext(DbContextOptions<FailingDbContext> options) : DbContextBase(options)
+    {
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
+            throw new DbUpdateException();
     }
 
     private sealed class TestReadDbContext(
