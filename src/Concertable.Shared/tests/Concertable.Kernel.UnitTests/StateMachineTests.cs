@@ -2,11 +2,11 @@ namespace Concertable.Kernel.UnitTests;
 
 public sealed class StateMachineTests
 {
-    private readonly StateMachine<State, Trigger> stateMachine;
+    private readonly ConfiguredStateMachine<State, Trigger> stateMachine;
 
     public StateMachineTests()
     {
-        this.stateMachine = new StateMachine<State, Trigger>(
+        this.stateMachine = new ConfiguredStateMachine<State, Trigger>(
         [
             (State.Pending, Trigger.Confirm, State.Confirmed),
             (State.Confirmed, Trigger.Cancel, State.Cancelled)
@@ -40,7 +40,7 @@ public sealed class StateMachineTests
             (State.Pending, Trigger.Confirm, State.Cancelled)
         };
 
-        Assert.Throws<ArgumentException>(() => new StateMachine<State, Trigger>(transitions));
+        Assert.Throws<ArgumentException>(() => new ConfiguredStateMachine<State, Trigger>(transitions));
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public sealed class StateMachineTests
         {
             (State.Pending, Trigger.Confirm, State.Confirmed)
         };
-        var stateMachine = new StateMachine<State, Trigger>(transitions);
+        var stateMachine = new ConfiguredStateMachine<State, Trigger>(transitions);
 
         transitions.Clear();
         transitions.Add((State.Pending, Trigger.Confirm, State.Cancelled));
