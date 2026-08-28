@@ -2,25 +2,20 @@
 
 ## Standardize the duplicate-aware save (distinct from `TryInsertAsync` above)
 
-`Concertable.B2B.Admin.Infrastructure.Services.AdminService.TrySaveGrantAsync` hand-rolls the same
-duplicate-aware shape as the `TryInsertAsync` primitive above — `SaveChangesAsync`, catch
-`DbUpdateException` via `IsDuplicateKey()`, `DiscardFailedChanges()`, return `false` — but for a
-*save* of already-tracked changes (a race between two calls granting the same admin), not an insert
-of a fresh entity. One call site today, so not worth hoisting yet; once a second one shows up,
-generalize both into one `TrySaveAsync`/`TryInsertAsync` pair on the shared repository, with the
-duplicate-branch behavior as a caller-supplied delegate rather than a fixed `false`. Same shape as
-`TryInsertAsync`: `TrySaveAsync` needs nothing but the already-public `SaveChangesAsync`, so it belongs
-in `WriteRepositoryExtensions` as an extension too, not a member hand-copied onto
-`WriteRepository<TEntity>` / `Repository<TEntity, TKey>` — bolting it onto either base directly would
-reintroduce the exact duplication `TryInsertAsync` was hoisted to avoid.
+`Concertable.B2B.Admin.Infrastructure.Services.AdminService.TrySaveGrantAsync` still hand-rolls the
+duplicate-key save path. The shared `TrySaveChangesAsync` handles EF concurrency only; it must not swallow
+every `DbUpdateException` or accept a caller-supplied exception-policy delegate merely to absorb this
+provider-specific case.
+
+**Resolves when:** duplicate-key save handling has a clean shared primitive and B2B deletes its private
+method.
 
 ## `PaginationExtensions.ToPaginationAsync` takes no `CancellationToken`
 
 Every other async repository method reaching I/O threads a `CancellationToken` per the `persistence`
 standard; `ToPaginationAsync` (`Concertable.DataAccess.Infrastructure.PaginationExtensions`) does not, so
 every paginated repository method built on it inherits the gap — `ModerationController`'s report queue,
-both Venue/Artist review repositories, all three Customer review repositories,
-`VenuePrivilegedRepository.GetPendingApprovalAsync` (the admin-console venue-approval queue), and
+both Venue/Artist review repositories, all three Customer review repositories, and
 `VerificationRepository.GetPendingAsync` (the tenant-verification admin queue) are today's known instances.
 
 **Resolves when:** `ToPaginationAsync` gains a `CancellationToken ct = default` parameter, threaded

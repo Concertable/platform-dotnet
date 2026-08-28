@@ -12,6 +12,12 @@ namespace Concertable.DataAccess.Application;
 public interface IUnitOfWork<TContext>
 {
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Saves pending changes. Returns <see langword="false"/> after a concurrency conflict and clears the
+    /// complete tracked unit of work; every other failure propagates.
+    /// </summary>
+    Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default);
     Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
