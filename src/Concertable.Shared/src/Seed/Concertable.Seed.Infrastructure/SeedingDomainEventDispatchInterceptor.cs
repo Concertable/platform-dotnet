@@ -43,6 +43,14 @@ public sealed class SeedingDomainEventDispatchInterceptor : SaveChangesIntercept
         return await base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
+    public override Task SaveChangesFailedAsync(
+        DbContextErrorEventData eventData,
+        CancellationToken cancellationToken = default)
+    {
+        pendingEventsStack.TryPop(out _);
+        return base.SaveChangesFailedAsync(eventData, cancellationToken);
+    }
+
     public override async ValueTask<int> SavedChangesAsync(
         SaveChangesCompletedEventData eventData,
         int result,
