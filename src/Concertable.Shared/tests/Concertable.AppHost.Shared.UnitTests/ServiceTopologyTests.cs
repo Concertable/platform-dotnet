@@ -29,7 +29,7 @@ public sealed class ServiceTopologyTests
         builder.AddAzureServiceBus("messaging")
             .Topology()
             .Publish<ConcertPostedEvent>()
-            .ForService("consumer")
+            .WithService("consumer")
             .Subscribe<ConcertPostedEvent>()
             .RunAsEmulator();
 
@@ -44,7 +44,7 @@ public sealed class ServiceTopologyTests
     }
 
     [Fact]
-    public void Subscribe_WithoutForService_Throws()
+    public void Subscribe_WithoutServiceScope_Throws()
     {
         var topology = DistributedApplication.CreateBuilder().AddAzureServiceBus("messaging").Topology();
 
@@ -52,7 +52,7 @@ public sealed class ServiceTopologyTests
     }
 
     [Fact]
-    public void Queue_WithoutForService_Throws()
+    public void Queue_WithoutServiceScope_Throws()
     {
         var topology = DistributedApplication.CreateBuilder().AddAzureServiceBus("messaging").Topology();
 
@@ -60,16 +60,16 @@ public sealed class ServiceTopologyTests
     }
 
     [Fact]
-    public void ForService_CalledAgainMidChain_ScopesEachSubscriptionToItsOwnServiceName()
+    public void WithService_CalledAgainMidChain_ScopesEachSubscriptionToItsOwnServiceName()
     {
         var builder = DistributedApplication.CreateBuilder();
         builder.AddAzureServiceBus("messaging")
             .Topology()
             .Publish<ConcertPostedEvent>()
             .Publish<ConcertChangedEvent>()
-            .ForService("service-a")
+            .WithService("service-a")
             .Subscribe<ConcertPostedEvent>()
-            .ForService("service-b")
+            .WithService("service-b")
             .Subscribe<ConcertChangedEvent>()
             .RunAsEmulator();
 
