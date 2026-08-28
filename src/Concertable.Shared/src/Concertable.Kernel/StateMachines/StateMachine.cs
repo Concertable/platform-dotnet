@@ -9,7 +9,7 @@ public class StateMachine<TState, TTrigger> : IStateMachine<TState, TTrigger>
 {
     private readonly FrozenDictionary<(TState State, TTrigger Trigger), TState> transitions;
 
-    protected StateMachine(IEnumerable<(TState Current, TTrigger Trigger, TState Next)> transitions)
+    public StateMachine(IEnumerable<(TState Current, TTrigger Trigger, TState Next)> transitions)
     {
         this.transitions = transitions.ToFrozenDictionary(
             transition => (transition.Current, transition.Trigger),
