@@ -3,7 +3,7 @@ using Reunion;
 
 namespace Concertable.Kernel;
 
-public sealed class StateMachine<TState, TTrigger> : IStateMachine<TState, TTrigger>
+public class StateMachine<TState, TTrigger> : IStateMachine<TState, TTrigger>
     where TState : notnull
     where TTrigger : notnull
 {
@@ -23,3 +23,9 @@ public sealed class StateMachine<TState, TTrigger> : IStateMachine<TState, TTrig
             ? next
             : new TransitionError<TState, TTrigger>(current, trigger);
 }
+
+public sealed class ConfiguredStateMachine<TState, TTrigger>(
+    IEnumerable<(TState Current, TTrigger Trigger, TState Next)> transitions)
+    : StateMachine<TState, TTrigger>(transitions)
+    where TState : notnull
+    where TTrigger : notnull;

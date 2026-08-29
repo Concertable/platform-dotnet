@@ -12,6 +12,7 @@ public sealed class AsbTopology
     private readonly AzureServiceBusOptions options = new();
     private readonly Dictionary<string, IResourceBuilder<AzureServiceBusTopicResource>> topics = new();
     private readonly HashSet<string> subscribedTopics = [];
+    private string? serviceName;
 
     public AsbTopology(IResourceBuilder<AzureServiceBusResource> asb) => this.asb = asb;
 
@@ -21,17 +22,33 @@ public sealed class AsbTopology
         return this;
     }
 
+    public AsbTopology WithService(string serviceName)
+    {
+        this.serviceName = serviceName;
+        return this;
+    }
+
+    public AsbTopology Subscribe<TEvent>()
+    {
+        SubscribeCore<TEvent>(RequireServiceName());
+        return this;
+    }
+
+    public AsbTopology Queue<TCommand>()
+    {
+        QueueCore<TCommand>(RequireServiceName());
+        return this;
+    }
+
     public AsbTopology Subscribe<TEvent>(string serviceName)
     {
-        var topicBuilder = GetOrAddTopic<TEvent>();
-        topicBuilder.AddServiceBusSubscription($"{serviceName}-{KebabCase(typeof(TEvent))}", serviceName);
-        subscribedTopics.Add(topicBuilder.Resource.TopicName);
+        SubscribeCore<TEvent>(serviceName);
         return this;
     }
 
     public AsbTopology Queue<TCommand>(string serviceName)
     {
-        asb.AddServiceBusQueue(options.QueueNameFor(serviceName, typeof(TCommand)));
+        QueueCore<TCommand>(serviceName);
         return this;
     }
 
@@ -49,6 +66,19 @@ public sealed class AsbTopology
 
         return asb.RunAsEmulator();
     }
+
+    private string RequireServiceName() =>
+        serviceName ?? throw new InvalidOperationException($"Call {nameof(WithService)} before Subscribe or Queue.");
+
+    private void SubscribeCore<TEvent>(string forServiceName)
+    {
+        var topicBuilder = GetOrAddTopic<TEvent>();
+        topicBuilder.AddServiceBusSubscription($"{forServiceName}-{KebabCase(typeof(TEvent))}", forServiceName);
+        subscribedTopics.Add(topicBuilder.Resource.TopicName);
+    }
+
+    private void QueueCore<TCommand>(string forServiceName) =>
+        asb.AddServiceBusQueue(options.QueueNameFor(forServiceName, typeof(TCommand)));
 
     private IResourceBuilder<AzureServiceBusTopicResource> GetOrAddTopic<TEvent>()
     {
