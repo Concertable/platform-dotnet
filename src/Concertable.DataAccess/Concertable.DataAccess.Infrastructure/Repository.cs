@@ -56,7 +56,7 @@ public abstract class Repository<TEntity, TKey> : IRepository<TEntity, TKey>
     public virtual async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken ct = default) =>
         await Context.Query<TEntity>().ToListAsync(ct);
 
-    public virtual Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default) =>
+    public Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default) =>
         Context.Query<TEntity>().FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
 
     public bool Exists(TKey id) => Context.Query<TEntity>().Any(e => e.Id!.Equals(id));
@@ -103,7 +103,7 @@ public abstract class ReadRepository<TEntity, TKey> : IReadRepository<TEntity, T
     public virtual async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken ct = default) =>
         await Context.Query<TEntity>().ToListAsync(ct);
 
-    public virtual Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default) =>
+    public Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default) =>
         Context.Query<TEntity>().FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
 
     public bool Exists(TKey id) =>
