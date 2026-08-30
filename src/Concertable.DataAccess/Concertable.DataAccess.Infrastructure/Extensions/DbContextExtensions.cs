@@ -6,16 +6,16 @@ public static class DbContextExtensions
 {
     extension(DbContext context)
     {
-        /// <summary>Saves pending changes. An EF update failure returns <c>false</c> and clears the complete
-        /// change tracker; every other failure propagates.</summary>
-        public async Task<bool> TrySaveChangesAsync(CancellationToken ct = default)
+        public async Task<bool> TrySaveChangesAsync(
+            Func<DbUpdateException, bool> isExpected,
+            CancellationToken ct = default)
         {
             try
             {
                 await context.SaveChangesAsync(ct);
                 return true;
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException exception) when (isExpected(exception))
             {
                 context.ChangeTracker.Clear();
                 return false;
