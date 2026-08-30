@@ -121,13 +121,19 @@ public sealed class RepositoryTests
     }
 
     [Fact]
-    public async Task UnitOfWork_TrySaveChangesAsync_NonConcurrencyFailure_Propagates()
+    public async Task UnitOfWork_TrySaveChangesAsync_UpdateFailure_ClearsChangeTracker()
     {
-        var options = new DbContextOptionsBuilder<FailingDbContext>().Options;
+        var options = new DbContextOptionsBuilder<FailingDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
         await using var context = new FailingDbContext(options);
+        await context.AddAsync(new TestEntity { Name = "Failed" });
         IUnitOfWork<FailingDbContext> unitOfWork = new UnitOfWork<FailingDbContext>(context);
 
-        await Assert.ThrowsAsync<DbUpdateException>(() => unitOfWork.TrySaveChangesAsync());
+        var saved = await unitOfWork.TrySaveChangesAsync();
+
+        Assert.False(saved);
+        Assert.Empty(context.ChangeTracker.Entries());
     }
 
     [Fact]
@@ -263,6 +269,8 @@ public sealed class RepositoryTests
 
     private sealed class FailingDbContext(DbContextOptions<FailingDbContext> options) : DbContextBase(options)
     {
+        public DbSet<TestEntity> Entities => Set<TestEntity>();
+
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
             throw new DbUpdateException();
     }
