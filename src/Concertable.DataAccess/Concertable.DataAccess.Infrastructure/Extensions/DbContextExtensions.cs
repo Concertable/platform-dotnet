@@ -6,7 +6,7 @@ public static class DbContextExtensions
 {
     extension(DbContext context)
     {
-        /// <summary>Saves pending changes. A concurrency conflict returns <c>false</c> and clears the complete
+        /// <summary>Saves pending changes. An EF update failure returns <c>false</c> and clears the complete
         /// change tracker; every other failure propagates.</summary>
         public async Task<bool> TrySaveChangesAsync(CancellationToken ct = default)
         {
@@ -15,7 +15,7 @@ public static class DbContextExtensions
                 await context.SaveChangesAsync(ct);
                 return true;
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateException)
             {
                 context.ChangeTracker.Clear();
                 return false;
