@@ -1,0 +1,286 @@
+using System.Linq.Expressions;
+using Concertable.DataAccess.Application;
+using Concertable.DataAccess.Infrastructure;
+using Concertable.DataAccess.Infrastructure.Data;
+using Concertable.Kernel;
+using Concertable.Kernel.Specifications;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+
+namespace Concertable.DataAccess.IntegrationTests;
+
+public sealed class RepositoryTests : IDisposable
+{
+    private readonly SqliteConnection connection;
+
+    public RepositoryTests()
+    {
+        this.connection = new SqliteConnection("Data Source=:memory:");
+        this.connection.Open();
+    }
+
+    #region GetByIdAsync
+
+    [Fact]
+    public async Task GetByIdAsync_ShapeSpecification_LoadsNestedIncludedNavigation()
+    {
+        int id;
+        await using (var seed = this.CreateContext())
+        {
+            var entity = new TestEntity
+            {
+                Name = "Included",
+                Detail = new TestEntityDetail
+                {
+                    Value = "Loaded",
+                    Owner = new TestEntityOwner { Name = "Nested" }
+                }
+            };
+            await seed.AddAsync(entity);
+            await seed.SaveChangesAsync();
+            id = entity.Id;
+        }
+
+        await using var context = this.CreateContext(QueryTrackingBehavior.NoTracking);
+        var repository = new TestRepository(context);
+
+        var result = await repository.GetByIdAsync(id, new TestEntityWithDetailOwnerSpecification());
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Detail);
+        Assert.Equal("Loaded", result.Detail.Value);
+        Assert.NotNull(result.Detail.Owner);
+        Assert.Equal("Nested", result.Detail.Owner.Name);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ProjectionSpecification_ProjectsMatchingEntity()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        var entity = new TestEntity { Name = "Projected" };
+        await repository.InsertAsync(entity);
+
+        var result = await repository.GetByIdAsync(entity.Id, new TestEntityNameSpecification());
+
+        Assert.Equal(new TestEntityName(entity.Id, "Projected"), result);
+    }
+
+    #endregion
+
+    #region GetAllAsync
+
+    [Fact]
+    public async Task GetAllAsync_OrderedSpecification_AppliesAllOrders()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        await repository.InsertAsync(new TestEntity { Name = "B" });
+        await repository.InsertAsync(new TestEntity { Name = "A" });
+        await repository.InsertAsync(new TestEntity { Name = "C" });
+
+        var result = await repository.GetAllAsync(new TestEntitiesByNameSpecification());
+
+        Assert.Equal(["A", "B", "C"], result.Select(entity => entity.Name));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_OrderedProjectionSpecification_AppliesOrderBeforeProjection()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        await repository.InsertAsync(new TestEntity { Name = "B" });
+        await repository.InsertAsync(new TestEntity { Name = "A" });
+
+        var result = await repository.GetAllAsync(new TestEntityNamesByNameSpecification());
+
+        Assert.Equal(["A", "B"], result.Select(entity => entity.Name));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_DateOrderSpecification_AppliesDateOrder()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        await repository.InsertAsync(new TestEntity { Name = "Later", CreatedAt = new DateTime(2026, 9, 2) });
+        await repository.InsertAsync(new TestEntity { Name = "Earlier", CreatedAt = new DateTime(2026, 9, 1) });
+
+        var result = await repository.GetAllAsync(new TestEntitiesByCreatedAtSpecification());
+
+        Assert.Equal(["Earlier", "Later"], result.Select(entity => entity.Name));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_CancelledToken_CancelsDatabaseOperation()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => repository.GetAllAsync(new TestEntityWithDetailSpecification(), cancellation.Token));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ShapeSpecificationAlsoImplementingPredicate_DoesNotApplyPredicate()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        await repository.InsertAsync(new TestEntity { Name = "Returned" });
+
+        ISpecification<TestEntity> specification = new ShapeAndPredicateSpecification();
+        var result = await repository.GetAllAsync(specification);
+
+        Assert.Single(result);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_NonMemberInclude_ThrowsArgumentException()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => repository.GetAllAsync(new TestEntityWithInvalidIncludeSpecification()));
+    }
+
+    #endregion
+
+    public void Dispose()
+    {
+        this.connection.Dispose();
+    }
+
+    private TestDbContext CreateContext(QueryTrackingBehavior trackingBehavior = QueryTrackingBehavior.TrackAll)
+    {
+        var options = new DbContextOptionsBuilder<TestDbContext>()
+            .UseSqlite(this.connection)
+            .UseQueryTrackingBehavior(trackingBehavior)
+            .Options;
+        var context = new TestDbContext(options);
+        context.Database.EnsureCreated();
+        return context;
+    }
+
+    private sealed class TestRepository : Repository<TestEntity, int>
+    {
+        public TestRepository(IDbContext context)
+            : base(context) { }
+    }
+
+    private sealed class TestEntityWithDetailSpecification : Specification<TestEntity>
+    {
+        public TestEntityWithDetailSpecification()
+        {
+            this.Include(entity => entity.Detail);
+        }
+    }
+
+    private sealed class TestEntityWithDetailOwnerSpecification : Specification<TestEntity>
+    {
+        public TestEntityWithDetailOwnerSpecification()
+        {
+            this.Include(entity => entity.Detail!.Owner);
+        }
+    }
+
+    private sealed class TestEntityWithInvalidIncludeSpecification : Specification<TestEntity>
+    {
+        public TestEntityWithInvalidIncludeSpecification()
+        {
+            this.Include(entity => entity.Name.ToUpper());
+        }
+    }
+
+    private sealed class TestEntityNameSpecification : Specification<TestEntity, TestEntityName>
+    {
+        public TestEntityNameSpecification()
+            : base(entity => new TestEntityName(entity.Id, entity.Name)) { }
+    }
+
+    private sealed class TestEntitiesByNameSpecification : Specification<TestEntity>, IOrderedSpecification<TestEntity>
+    {
+        public IReadOnlyList<SpecificationOrder<TestEntity>> Orders => this.RegisteredOrders;
+
+        public TestEntitiesByNameSpecification()
+        {
+            this.OrderBy(entity => entity.Name);
+            this.ThenBy(entity => entity.Id);
+        }
+    }
+
+    private sealed class TestEntityNamesByNameSpecification
+        : Specification<TestEntity, TestEntityName>, IOrderedSpecification<TestEntity, TestEntityName>
+    {
+        public IReadOnlyList<SpecificationOrder<TestEntity>> Orders => this.RegisteredOrders;
+
+        public TestEntityNamesByNameSpecification()
+            : base(entity => new TestEntityName(entity.Id, entity.Name))
+        {
+            this.OrderBy(entity => entity.Name);
+        }
+    }
+
+    private sealed class TestEntitiesByCreatedAtSpecification : Specification<TestEntity>, IOrderedSpecification<TestEntity>
+    {
+        public IReadOnlyList<SpecificationOrder<TestEntity>> Orders => this.RegisteredOrders;
+
+        public TestEntitiesByCreatedAtSpecification()
+        {
+            this.OrderBy(entity => entity.CreatedAt);
+        }
+    }
+
+    private sealed class ShapeAndPredicateSpecification : Specification<TestEntity>, IPredicateSpecification<TestEntity>
+    {
+        public Expression<Func<TestEntity, bool>> ToExpression() => entity => entity.Name == "Excluded";
+    }
+
+    private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options)
+    {
+        public DbSet<TestEntity> Entities => Set<TestEntity>();
+        public DbSet<TestEntityDetail> Details => Set<TestEntityDetail>();
+        public DbSet<TestEntityOwner> Owners => Set<TestEntityOwner>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<TestEntity>()
+                .HasOne(entity => entity.Detail)
+                .WithOne(detail => detail.Entity)
+                .HasForeignKey<TestEntityDetail>(detail => detail.EntityId);
+            modelBuilder.Entity<TestEntityDetail>()
+                .HasOne(detail => detail.Owner)
+                .WithOne(owner => owner.Detail)
+                .HasForeignKey<TestEntityOwner>(owner => owner.DetailId);
+        }
+    }
+
+    private sealed class TestEntity : IIdEntity
+    {
+        public int Id { get; private set; }
+        public string Name { get; set; } = null!;
+        public DateTime CreatedAt { get; set; }
+        public TestEntityDetail? Detail { get; set; }
+    }
+
+    private sealed class TestEntityDetail
+    {
+        public int Id { get; private set; }
+        public int EntityId { get; set; }
+        public TestEntity Entity { get; set; } = null!;
+        public string Value { get; set; } = null!;
+        public TestEntityOwner? Owner { get; set; }
+    }
+
+    private sealed class TestEntityOwner
+    {
+        public int Id { get; private set; }
+        public int DetailId { get; set; }
+        public TestEntityDetail Detail { get; set; } = null!;
+        public string Name { get; set; } = null!;
+    }
+
+    private sealed record TestEntityName(int Id, string Name);
+}

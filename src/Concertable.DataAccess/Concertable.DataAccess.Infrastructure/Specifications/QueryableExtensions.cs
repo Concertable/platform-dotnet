@@ -80,6 +80,9 @@ public static class QueryableExtensions
                 ?? throw new ArgumentException("An include path must be an instance member expression.", nameof(expression));
         }
 
+        if (body is not ParameterExpression || members.Count == 0)
+            throw new ArgumentException("An include path must be a member-access chain rooted at the entity.", nameof(expression));
+
         return string.Join('.', members);
     }
 }
