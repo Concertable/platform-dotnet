@@ -6,7 +6,7 @@ using Concertable.Kernel.ValueObjects;
 namespace Concertable.DataAccess.Infrastructure.Specifications;
 
 internal sealed class DateRangeSpecification<TEntity>
-    : NavigablePredicateSpecification<TEntity, DateRange>, IDateRangeSpecification<TEntity>
+    : PredicateSpecification<TEntity, DateRange>, IDateRangeSpecification<TEntity>
     where TEntity : class, IHasDateRange
 {
     protected override Expression<Func<TEntity, bool>> BuildPredicate(DateRange range)

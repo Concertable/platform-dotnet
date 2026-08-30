@@ -3,6 +3,6 @@ using Concertable.Kernel.ValueObjects;
 
 namespace Concertable.DataAccess.Application.Specifications;
 
-public interface IDateRangeSpecification<TEntity> : INavigableSpecification<TEntity, DateRange>
+public interface IDateRangeSpecification<TEntity> : IPredicateSpecification<TEntity, DateRange>
     where TEntity : class, IHasDateRange
 { }

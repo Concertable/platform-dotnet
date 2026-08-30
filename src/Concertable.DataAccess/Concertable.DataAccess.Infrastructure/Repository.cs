@@ -1,5 +1,7 @@
 using Concertable.DataAccess.Application;
+using Concertable.DataAccess.Infrastructure.Specifications;
 using Concertable.Kernel;
+using Concertable.Kernel.Specifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.DataAccess.Infrastructure;
@@ -59,6 +61,24 @@ public abstract class Repository<TEntity, TKey> : IRepository<TEntity, TKey>
     public Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default) =>
         Context.Query<TEntity>().FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
 
+    public Task<TEntity?> GetByIdAsync(TKey id, ISpecification<TEntity> spec, CancellationToken ct = default) =>
+        Context.Query<TEntity>().Apply(spec).FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
+
+    public Task<TResult?> GetByIdAsync<TResult>(TKey id, ISpecification<TEntity, TResult> spec, CancellationToken ct = default) =>
+        Context.Query<TEntity>().Apply(spec).Where(e => e.Id!.Equals(id)).Select(spec.Selector).FirstOrDefaultAsync(ct);
+
+    public async Task<IEnumerable<TEntity>> GetAllAsync(ISpecification<TEntity> spec, CancellationToken ct = default) =>
+        await Context.Query<TEntity>().Apply(spec).ToListAsync(ct);
+
+    public async Task<IEnumerable<TEntity>> GetAllAsync(IOrderedSpecification<TEntity> spec, CancellationToken ct = default) =>
+        await Context.Query<TEntity>().Apply(spec).ToListAsync(ct);
+
+    public async Task<IEnumerable<TResult>> GetAllAsync<TResult>(ISpecification<TEntity, TResult> spec, CancellationToken ct = default) =>
+        await Context.Query<TEntity>().Apply(spec).Select(spec.Selector).ToListAsync(ct);
+
+    public async Task<IEnumerable<TResult>> GetAllAsync<TResult>(IOrderedSpecification<TEntity, TResult> spec, CancellationToken ct = default) =>
+        await Context.Query<TEntity>().Apply(spec).Select(spec.Selector).ToListAsync(ct);
+
     public bool Exists(TKey id) => Context.Query<TEntity>().Any(e => e.Id!.Equals(id));
 
     public async Task<TEntity> AddAsync(TEntity entity, CancellationToken ct = default)
@@ -105,6 +125,24 @@ public abstract class ReadRepository<TEntity, TKey> : IReadRepository<TEntity, T
 
     public Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default) =>
         Context.Query<TEntity>().FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
+
+    public Task<TEntity?> GetByIdAsync(TKey id, ISpecification<TEntity> spec, CancellationToken ct = default) =>
+        Context.Query<TEntity>().Apply(spec).FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
+
+    public Task<TResult?> GetByIdAsync<TResult>(TKey id, ISpecification<TEntity, TResult> spec, CancellationToken ct = default) =>
+        Context.Query<TEntity>().Apply(spec).Where(e => e.Id!.Equals(id)).Select(spec.Selector).FirstOrDefaultAsync(ct);
+
+    public async Task<IEnumerable<TEntity>> GetAllAsync(ISpecification<TEntity> spec, CancellationToken ct = default) =>
+        await Context.Query<TEntity>().Apply(spec).ToListAsync(ct);
+
+    public async Task<IEnumerable<TEntity>> GetAllAsync(IOrderedSpecification<TEntity> spec, CancellationToken ct = default) =>
+        await Context.Query<TEntity>().Apply(spec).ToListAsync(ct);
+
+    public async Task<IEnumerable<TResult>> GetAllAsync<TResult>(ISpecification<TEntity, TResult> spec, CancellationToken ct = default) =>
+        await Context.Query<TEntity>().Apply(spec).Select(spec.Selector).ToListAsync(ct);
+
+    public async Task<IEnumerable<TResult>> GetAllAsync<TResult>(IOrderedSpecification<TEntity, TResult> spec, CancellationToken ct = default) =>
+        await Context.Query<TEntity>().Apply(spec).Select(spec.Selector).ToListAsync(ct);
 
     public bool Exists(TKey id) =>
         Context.Query<TEntity>().Any(e => e.Id!.Equals(id));

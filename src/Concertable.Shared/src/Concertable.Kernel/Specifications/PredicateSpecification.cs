@@ -8,16 +8,12 @@ public abstract class PredicateSpecification<TEntity> : IPredicateSpecification<
     protected abstract Expression<Func<TEntity, bool>> Predicate { get; }
 
     public Expression<Func<TEntity, bool>> ToExpression() => Predicate;
-
-    public IQueryable<TEntity> Apply(IQueryable<TEntity> query)
-        => query.Where(Predicate);
 }
 
-public abstract class PredicateSpecification<TEntity, TParams> : ISpecification<TEntity, TParams>
+public abstract class PredicateSpecification<TEntity, TParams> : IPredicateSpecification<TEntity, TParams>
     where TEntity : class
 {
     protected abstract Expression<Func<TEntity, bool>> BuildPredicate(TParams @params);
 
-    public IQueryable<TEntity> Apply(IQueryable<TEntity> query, TParams @params)
-        => query.Where(BuildPredicate(@params));
+    public Expression<Func<TEntity, bool>> ToExpression(TParams @params) => this.BuildPredicate(@params);
 }
