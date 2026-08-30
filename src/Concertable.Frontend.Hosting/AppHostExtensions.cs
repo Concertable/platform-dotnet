@@ -10,41 +10,41 @@ public static class AppHostExtensions
 {
     public static IResourceBuilder<NodeAppResource> AddCustomerSpa(
         this IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> backend,
-        IResourceBuilder<ProjectResource> customerWeb,
-        IResourceBuilder<ProjectResource> auth) =>
+        IResourceBuilder<IResourceWithServiceDiscovery> backend,
+        IResourceBuilder<IResourceWithServiceDiscovery> customerWeb,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth) =>
         AddSpaSurface(builder, backend, auth, LocalSpaSurfaces.Customer)
             .WithReference(customerWeb)
             .WaitFor(customerWeb);
 
     public static IResourceBuilder<NodeAppResource> AddVenueSpa(
         this IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> backend,
-        IResourceBuilder<ProjectResource> auth) =>
+        IResourceBuilder<IResourceWithServiceDiscovery> backend,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth) =>
         AddSpaSurface(builder, backend, auth, LocalSpaSurfaces.Venue, "b2b");
 
     public static IResourceBuilder<NodeAppResource> AddArtistSpa(
         this IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> backend,
-        IResourceBuilder<ProjectResource> auth) =>
+        IResourceBuilder<IResourceWithServiceDiscovery> backend,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth) =>
         AddSpaSurface(builder, backend, auth, LocalSpaSurfaces.Artist, "b2b");
 
     public static IResourceBuilder<NodeAppResource> AddBusinessSpa(
         this IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> backend,
-        IResourceBuilder<ProjectResource> auth) =>
+        IResourceBuilder<IResourceWithServiceDiscovery> backend,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth) =>
         AddSpaSurface(builder, backend, auth, LocalSpaSurfaces.Business, "b2b");
 
     public static IResourceBuilder<NodeAppResource> AddAdminSpa(
         this IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> backend,
-        IResourceBuilder<ProjectResource> auth) =>
+        IResourceBuilder<IResourceWithServiceDiscovery> backend,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth) =>
         AddSpaSurface(builder, backend, auth, LocalSpaSurfaces.Admin);
 
     private static IResourceBuilder<NodeAppResource> AddSpaSurface(
         IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> backend,
-        IResourceBuilder<ProjectResource> auth,
+        IResourceBuilder<IResourceWithServiceDiscovery> backend,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth,
         LocalSpaSurface surface,
         params string[] tierSegments) =>
         builder.AddNpmApp(surface.ResourceName, RepoPath(builder, ["app", "web", .. tierSegments, surface.ResourceName]), "dev")
@@ -69,13 +69,14 @@ public static class AppHostExtensions
             yield return dir.FullName;
     }
 
-    public static void AddMobile(
+    public static void AddMobile<TAuth>(
         this IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> api,
-        IResourceBuilder<ProjectResource> auth,
-        IResourceBuilder<ProjectResource> searchWeb,
-        IResourceBuilder<ProjectResource> customerWeb,
-        IResourceBuilder<ProjectResource> paymentWeb)
+        IResourceBuilder<IResourceWithServiceDiscovery> api,
+        IResourceBuilder<TAuth> auth,
+        IResourceBuilder<IResourceWithServiceDiscovery> searchWeb,
+        IResourceBuilder<IResourceWithServiceDiscovery> customerWeb,
+        IResourceBuilder<IResourceWithServiceDiscovery> paymentWeb)
+        where TAuth : class, IResourceWithServiceDiscovery, IResourceWithEnvironment
     {
         if (!builder.Configuration.GetValue<bool>("RunMobile"))
             return;
@@ -98,11 +99,12 @@ public static class AppHostExtensions
         AddMobileSurface(builder, api, auth, tunnel, lanIp, "b2b", searchWeb, customerWeb, paymentWeb);
     }
 
-    public static void AddMobileB2B(
+    public static void AddMobileB2B<TAuth>(
         this IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> api,
-        IResourceBuilder<ProjectResource> auth,
-        IResourceBuilder<ProjectResource> paymentWeb)
+        IResourceBuilder<IResourceWithServiceDiscovery> api,
+        IResourceBuilder<TAuth> auth,
+        IResourceBuilder<IResourceWithServiceDiscovery> paymentWeb)
+        where TAuth : class, IResourceWithServiceDiscovery, IResourceWithEnvironment
     {
         if (!builder.Configuration.GetValue<bool>("RunMobile"))
             return;
@@ -122,11 +124,12 @@ public static class AppHostExtensions
         AddMobileSurface(builder, api, auth, tunnel, lanIp, "b2b", paymentWeb: paymentWeb);
     }
 
-    public static void AddMobileCustomer(
+    public static void AddMobileCustomer<TAuth>(
         this IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> customerWeb,
-        IResourceBuilder<ProjectResource> auth,
-        IResourceBuilder<ProjectResource> paymentWeb)
+        IResourceBuilder<IResourceWithServiceDiscovery> customerWeb,
+        IResourceBuilder<TAuth> auth,
+        IResourceBuilder<IResourceWithServiceDiscovery> paymentWeb)
+        where TAuth : class, IResourceWithServiceDiscovery, IResourceWithEnvironment
     {
         if (!builder.Configuration.GetValue<bool>("RunMobile"))
             return;
@@ -148,14 +151,14 @@ public static class AppHostExtensions
 
     private static IResourceBuilder<NodeAppResource> AddMobileSurface(
         IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> api,
-        IResourceBuilder<ProjectResource> auth,
+        IResourceBuilder<IResourceWithServiceDiscovery> api,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth,
         IResourceBuilder<DevTunnelResource> tunnel,
         string lanIp,
         string surface,
-        IResourceBuilder<ProjectResource>? searchWeb = null,
-        IResourceBuilder<ProjectResource>? customerWeb = null,
-        IResourceBuilder<ProjectResource>? paymentWeb = null)
+        IResourceBuilder<IResourceWithServiceDiscovery>? searchWeb = null,
+        IResourceBuilder<IResourceWithServiceDiscovery>? customerWeb = null,
+        IResourceBuilder<IResourceWithServiceDiscovery>? paymentWeb = null)
     {
         var mobile = builder.AddNpmApp($"mobile-{surface}", RepoPath(builder, "app", "mobile", surface), "start:ci")
                .WithEnvironment("REACT_NATIVE_PACKAGER_HOSTNAME", lanIp)
@@ -182,7 +185,7 @@ public static class AppHostExtensions
     private static void WithServiceUrl(
         IResourceBuilder<NodeAppResource> mobile,
         IResourceBuilder<DevTunnelResource> tunnel,
-        IResourceBuilder<ProjectResource>? service,
+        IResourceBuilder<IResourceWithServiceDiscovery>? service,
         string envName)
     {
         if (service is null)
