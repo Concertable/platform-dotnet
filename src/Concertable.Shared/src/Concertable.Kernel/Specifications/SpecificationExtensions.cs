@@ -46,22 +46,4 @@ public static class SpecificationExtensions
             specification.ToExpression(@params).Compile()(entity);
     }
 
-    extension<TNavigation>(IPredicateSpecification<TNavigation> specification)
-        where TNavigation : class
-    {
-        public Expression<Func<TSource, bool>> Via<TSource>(
-            Expression<Func<TSource, TNavigation>> navigation)
-            where TSource : class =>
-            navigation.Substitute(specification.ToExpression());
-    }
-
-    extension<TNavigation, TParams>(IPredicateSpecification<TNavigation, TParams> specification)
-        where TNavigation : class
-    {
-        public Expression<Func<TSource, bool>> Via<TSource>(
-            Expression<Func<TSource, TNavigation>> navigation,
-            TParams @params)
-            where TSource : class =>
-            navigation.Substitute(specification.ToExpression(@params));
-    }
 }
