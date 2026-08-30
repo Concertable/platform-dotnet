@@ -14,7 +14,7 @@ public interface IUnitOfWork<TContext>
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Saves pending changes. Returns <see langword="false"/> after a concurrency conflict and clears the
+    /// Saves pending changes. Returns <see langword="false"/> after an EF update failure and clears the
     /// complete tracked unit of work; every other failure propagates.
     /// </summary>
     Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default);
