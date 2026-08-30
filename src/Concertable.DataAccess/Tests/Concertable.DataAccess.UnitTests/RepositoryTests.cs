@@ -246,6 +246,19 @@ public sealed class RepositoryTests
     }
 
     [Fact]
+    public async Task Repository_GetAllAsync_WithDateOrderSpecification_AppliesDateOrder()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestCapabilityRepository(context);
+        await repository.InsertAsync(new TestEntity { Name = "Later", CreatedAt = new DateTime(2026, 9, 2) });
+        await repository.InsertAsync(new TestEntity { Name = "Earlier", CreatedAt = new DateTime(2026, 9, 1) });
+
+        var result = await repository.GetAllAsync(new TestEntitiesByCreatedAtSpecification());
+
+        Assert.Equal(["Earlier", "Later"], result.Select(entity => entity.Name));
+    }
+
+    [Fact]
     public async Task Repository_GetAllAsync_WithCancelledToken_CancelsTheDatabaseOperation()
     {
         await using var context = this.CreateContext();
@@ -400,6 +413,16 @@ public sealed class RepositoryTests
         }
     }
 
+    private sealed class TestEntitiesByCreatedAtSpecification : Specification<TestEntity>, IOrderedSpecification<TestEntity>
+    {
+        public IReadOnlyList<SpecificationOrder<TestEntity>> Orders => this.RegisteredOrders;
+
+        public TestEntitiesByCreatedAtSpecification()
+        {
+            this.OrderBy(entity => entity.CreatedAt);
+        }
+    }
+
     private sealed class ShapeAndPredicateSpecification : Specification<TestEntity>, IPredicateSpecification<TestEntity>
     {
         public Expression<Func<TestEntity, bool>> ToExpression() => entity => entity.Name == "Excluded";
@@ -451,6 +474,7 @@ public sealed class RepositoryTests
     {
         public int Id { get; private set; }
         public string Name { get; set; } = null!;
+        public DateTime CreatedAt { get; set; }
         public TestEntityDetail? Detail { get; set; }
     }
 

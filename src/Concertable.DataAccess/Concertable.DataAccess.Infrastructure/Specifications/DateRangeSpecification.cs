@@ -9,6 +9,6 @@ internal sealed class DateRangeSpecification<TEntity>
     : PredicateSpecification<TEntity, DateRange>, IDateRangeSpecification<TEntity>
     where TEntity : class, IHasDateRange
 {
-    protected override Expression<Func<TEntity, bool>> BuildPredicate(DateRange range)
+    protected override Expression<Func<TEntity, bool>> Predicate(DateRange range)
         => e => e.Period.Start < range.End && e.Period.End > range.Start;
 }
