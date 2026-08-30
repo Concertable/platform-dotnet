@@ -26,7 +26,7 @@ public abstract class Specification<TEntity> : ISpecification<TEntity> where TEn
 
     private void AddOrder<TProperty>(Expression<Func<TEntity, TProperty>> keySelector, SpecificationOrderDirection direction)
     {
-        this.orders.Add(new SpecificationOrder<TEntity>(keySelector, direction));
+        this.orders.Add(SpecificationOrder<TEntity>.Create(keySelector, direction));
     }
 }
 

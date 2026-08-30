@@ -1,30 +1,67 @@
+using System.Linq.Expressions;
 using Concertable.Kernel.Expressions;
 
 namespace Concertable.Kernel.Specifications;
 
 public static class SpecificationExtensions
 {
-    public static IPredicateSpecification<T> And<T>(this IPredicateSpecification<T> left, IPredicateSpecification<T> right) where T : class
-        => new AndSpecification<T>(left, right);
+    extension<TEntity>(IPredicateSpecification<TEntity> specification)
+        where TEntity : class
+    {
+        public IPredicateSpecification<TEntity> And(IPredicateSpecification<TEntity> right) =>
+            new AndSpecification<TEntity>(specification, right);
 
-    public static IPredicateSpecification<T> Or<T>(this IPredicateSpecification<T> left, IPredicateSpecification<T> right) where T : class
-        => new OrSpecification<T>(left, right);
+        public IPredicateSpecification<TEntity> And(Expression<Func<TEntity, bool>> right) =>
+            new AndSpecification<TEntity>(specification, right);
 
-    public static IPredicateSpecification<T> Not<T>(this IPredicateSpecification<T> specification) where T : class
-        => new NotSpecification<T>(specification);
+        public IPredicateSpecification<TEntity> Or(IPredicateSpecification<TEntity> right) =>
+            new OrSpecification<TEntity>(specification, right);
 
-    public static bool IsSatisfiedBy<T>(this IPredicateSpecification<T> specification, T entity) where T : class
-        => specification.ToExpression().Compile()(entity);
+        public IPredicateSpecification<TEntity> Not() =>
+            new NotSpecification<TEntity>(specification);
 
-    public static IPredicateSpecification<T, TParams> And<T, TParams>(this IPredicateSpecification<T, TParams> left, IPredicateSpecification<T, TParams> right) where T : class
-        => new AndSpecification<T, TParams>(left, right);
+        public bool IsSatisfiedBy(TEntity entity) =>
+            specification.ToExpression().Compile()(entity);
+    }
 
-    public static IPredicateSpecification<T, TParams> Or<T, TParams>(this IPredicateSpecification<T, TParams> left, IPredicateSpecification<T, TParams> right) where T : class
-        => new OrSpecification<T, TParams>(left, right);
+    extension<TEntity, TParams>(IPredicateSpecification<TEntity, TParams> specification)
+        where TEntity : class
+    {
+        public IPredicateSpecification<TEntity, TParams> And(
+            IPredicateSpecification<TEntity, TParams> right) =>
+            new AndSpecification<TEntity, TParams>(specification, right);
 
-    public static IPredicateSpecification<T, TParams> Not<T, TParams>(this IPredicateSpecification<T, TParams> specification) where T : class
-        => new NotSpecification<T, TParams>(specification);
+        public IPredicateSpecification<TEntity, TParams> And(
+            Expression<Func<TEntity, bool>> right) =>
+            new AndSpecification<TEntity, TParams>(specification, right);
 
-    public static bool IsSatisfiedBy<T, TParams>(this IPredicateSpecification<T, TParams> specification, T entity, TParams @params) where T : class
-        => specification.ToExpression(@params).Compile()(entity);
+        public IPredicateSpecification<TEntity, TParams> Or(
+            IPredicateSpecification<TEntity, TParams> right) =>
+            new OrSpecification<TEntity, TParams>(specification, right);
+
+        public IPredicateSpecification<TEntity, TParams> Not() =>
+            new NotSpecification<TEntity, TParams>(specification);
+
+        public bool IsSatisfiedBy(TEntity entity, TParams @params) =>
+            specification.ToExpression(@params).Compile()(entity);
+    }
+
+    extension<TNavigation>(IPredicateSpecification<TNavigation> specification)
+        where TNavigation : class
+    {
+        public Expression<Func<TSource, bool>> Via<TSource>(
+            Expression<Func<TSource, TNavigation>> navigation)
+            where TSource : class =>
+            navigation.Substitute(specification.ToExpression());
+    }
+
+    extension<TNavigation, TParams>(IPredicateSpecification<TNavigation, TParams> specification)
+        where TNavigation : class
+    {
+        public Expression<Func<TSource, bool>> Via<TSource>(
+            Expression<Func<TSource, TNavigation>> navigation,
+            TParams @params)
+            where TSource : class =>
+            navigation.Substitute(specification.ToExpression(@params));
+    }
 }

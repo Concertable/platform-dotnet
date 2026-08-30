@@ -86,6 +86,17 @@ public sealed class SpecificationTests
     }
 
     [Fact]
+    public void And_SpecificationAndExpression_ComposesThePredicate()
+    {
+        var sut = new AgeAtLeastSpec().And(person => person.Age <= 25);
+        var query = new[] { new Person(10), new Person(20), new Person(30) }.AsQueryable();
+
+        var result = query.Where(sut.ToExpression(18)).ToArray();
+
+        Assert.Equal([20], result.Select(person => person.Age));
+    }
+
+    [Fact]
     public void IsSatisfiedBy_EvaluatesTheSpecificationForOneEntity()
     {
         var sut = new MinAgeSpec(18);
@@ -121,12 +132,12 @@ public sealed class SpecificationTests
 
     private sealed class AgeAtLeastSpec : PredicateSpecification<Person, int>
     {
-        protected override Expression<Func<Person, bool>> BuildPredicate(int min) => p => p.Age >= min;
+        protected override Expression<Func<Person, bool>> Predicate(int min) => p => p.Age >= min;
     }
 
     private sealed class AgeAtMostSpec : PredicateSpecification<Person, int>
     {
-        protected override Expression<Func<Person, bool>> BuildPredicate(int @params) => p => p.Age <= @params;
+        protected override Expression<Func<Person, bool>> Predicate(int @params) => p => p.Age <= @params;
     }
 
 }
