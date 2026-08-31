@@ -9,14 +9,17 @@ public static class QueryableExtensions
     extension<TEntity>(IQueryable<TEntity> query)
         where TEntity : class
     {
-        public IQueryable<TEntity> Apply(ISpecification<TEntity> specification) =>
-            ApplyIncludes(query, specification);
+        public IQueryable<TEntity> Apply(ISpecification<TEntity> specification)
+        {
+            var result = query;
 
-        public IQueryable<TEntity> Apply(IOrderedSpecification<TEntity> specification) =>
-            ApplyIncludes(query, specification).ApplyOrders(specification.Orders);
+            foreach (var path in specification.Includes.Select(ToPath).Distinct())
+                result = result.Include(path);
 
-        public IQueryable<TEntity> ApplyOrders(
-            IReadOnlyList<SpecificationOrder<TEntity>> orders)
+            return result;
+        }
+
+        public IQueryable<TEntity> ApplyOrders(IReadOnlyList<SpecificationOrder<TEntity>> orders)
         {
             var result = query;
             IOrderedQueryable<TEntity>? ordered = null;
@@ -31,17 +34,6 @@ public static class QueryableExtensions
 
             return result;
         }
-    }
-
-    private static IQueryable<TEntity> ApplyIncludes<TEntity>(
-        IQueryable<TEntity> query,
-        ISpecification<TEntity> specification)
-        where TEntity : class
-    {
-        foreach (var include in specification.Includes)
-            query = query.Include(ToPath(include));
-
-        return query;
     }
 
     private static IOrderedQueryable<TEntity> ApplyOrder<TEntity>(
@@ -68,20 +60,24 @@ public static class QueryableExtensions
         };
     }
 
-    private static string ToPath(LambdaExpression expression)
+    private static string ToPath<TEntity>(IncludePath<TEntity> include)
+        where TEntity : class =>
+        string.Join('.', include.Steps.Select(ToSegment));
+
+    private static string ToSegment(LambdaExpression step)
     {
         var members = new Stack<string>();
-        Expression body = expression.Body;
+        Expression body = step.Body;
 
         while (body is MemberExpression member)
         {
             members.Push(member.Member.Name);
             body = member.Expression
-                ?? throw new ArgumentException("An include path must be an instance member expression.", nameof(expression));
+                ?? throw new ArgumentException("An include path must be an instance member expression.", nameof(step));
         }
 
         if (body is not ParameterExpression || members.Count == 0)
-            throw new ArgumentException("An include path must be a member-access chain rooted at the entity.", nameof(expression));
+            throw new ArgumentException("An include path must be a member-access chain rooted at the entity.", nameof(step));
 
         return string.Join('.', members);
     }

@@ -54,6 +54,90 @@ public sealed class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetByIdAsync_ThenIncludeThroughCollection_LoadsTheNestedGraph()
+    {
+        int id;
+        await using (var seed = this.CreateContext())
+        {
+            var entity = new TestEntity
+            {
+                Name = "Owner",
+                Items =
+                [
+                    new TestEntityItem { Label = "First", Tag = new TestEntityTag { Name = "Tagged" } }
+                ]
+            };
+            await seed.AddAsync(entity);
+            await seed.SaveChangesAsync();
+            id = entity.Id;
+        }
+
+        await using var context = this.CreateContext(QueryTrackingBehavior.NoTracking);
+        var repository = new TestRepository(context);
+
+        var result = await repository.GetByIdAsync(id, new TestEntityWithItemTagsSpecification());
+
+        Assert.NotNull(result);
+        var item = Assert.Single(result.Items);
+        Assert.Equal("First", item.Label);
+        Assert.NotNull(item.Tag);
+        Assert.Equal("Tagged", item.Tag.Name);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_UnrequestedNavigation_RemainsUnloaded()
+    {
+        int id;
+        await using (var seed = this.CreateContext())
+        {
+            var entity = new TestEntity
+            {
+                Name = "Owner",
+                Detail = new TestEntityDetail { Value = "Loaded" },
+                Items = [new TestEntityItem { Label = "First" }]
+            };
+            await seed.AddAsync(entity);
+            await seed.SaveChangesAsync();
+            id = entity.Id;
+        }
+
+        await using var context = this.CreateContext(QueryTrackingBehavior.NoTracking);
+        var repository = new TestRepository(context);
+
+        var result = await repository.GetByIdAsync(id, new TestEntityWithDetailSpecification());
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Detail);
+        Assert.Empty(result.Items);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_RepeatedFluentIncludes_AreIdempotent()
+    {
+        int id;
+        await using (var seed = this.CreateContext())
+        {
+            var entity = new TestEntity
+            {
+                Name = "Owner",
+                Detail = new TestEntityDetail { Value = "Loaded" }
+            };
+            await seed.AddAsync(entity);
+            await seed.SaveChangesAsync();
+            id = entity.Id;
+        }
+
+        await using var context = this.CreateContext(QueryTrackingBehavior.NoTracking);
+        var repository = new TestRepository(context);
+
+        var specification = new TestEntityFluentSpecification().WithDetail().WithDetail();
+        var result = await repository.GetByIdAsync(id, specification);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Detail);
+    }
+
+    [Fact]
     public async Task GetByIdAsync_ProjectionSpecification_ProjectsMatchingEntity()
     {
         await using var context = this.CreateContext();
@@ -185,6 +269,23 @@ public sealed class RepositoryTests : IDisposable
         }
     }
 
+    private sealed class TestEntityWithItemTagsSpecification : Specification<TestEntity>
+    {
+        public TestEntityWithItemTagsSpecification()
+        {
+            this.Include(entity => entity.Items).ThenInclude(item => item.Tag);
+        }
+    }
+
+    private sealed class TestEntityFluentSpecification : Specification<TestEntity>
+    {
+        public TestEntityFluentSpecification WithDetail()
+        {
+            this.Include(entity => entity.Detail);
+            return this;
+        }
+    }
+
     private sealed class TestEntityWithInvalidIncludeSpecification : Specification<TestEntity>
     {
         public TestEntityWithInvalidIncludeSpecification()
@@ -242,6 +343,8 @@ public sealed class RepositoryTests : IDisposable
         public DbSet<TestEntity> Entities => Set<TestEntity>();
         public DbSet<TestEntityDetail> Details => Set<TestEntityDetail>();
         public DbSet<TestEntityOwner> Owners => Set<TestEntityOwner>();
+        public DbSet<TestEntityItem> Items => Set<TestEntityItem>();
+        public DbSet<TestEntityTag> Tags => Set<TestEntityTag>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -254,6 +357,14 @@ public sealed class RepositoryTests : IDisposable
                 .HasOne(detail => detail.Owner)
                 .WithOne(owner => owner.Detail)
                 .HasForeignKey<TestEntityOwner>(owner => owner.DetailId);
+            modelBuilder.Entity<TestEntity>()
+                .HasMany(entity => entity.Items)
+                .WithOne(item => item.Entity)
+                .HasForeignKey(item => item.EntityId);
+            modelBuilder.Entity<TestEntityItem>()
+                .HasOne(item => item.Tag)
+                .WithMany()
+                .HasForeignKey(item => item.TagId);
         }
     }
 
@@ -263,6 +374,23 @@ public sealed class RepositoryTests : IDisposable
         public string Name { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
         public TestEntityDetail? Detail { get; set; }
+        public ICollection<TestEntityItem> Items { get; set; } = [];
+    }
+
+    private sealed class TestEntityItem
+    {
+        public int Id { get; private set; }
+        public int EntityId { get; set; }
+        public TestEntity Entity { get; set; } = null!;
+        public string Label { get; set; } = null!;
+        public int? TagId { get; set; }
+        public TestEntityTag? Tag { get; set; }
+    }
+
+    private sealed class TestEntityTag
+    {
+        public int Id { get; private set; }
+        public string Name { get; set; } = null!;
     }
 
     private sealed class TestEntityDetail

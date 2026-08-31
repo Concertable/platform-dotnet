@@ -2,11 +2,9 @@ using System.Linq.Expressions;
 
 namespace Concertable.Kernel.Specifications;
 
-public interface ISpecification;
-
-public interface ISpecification<TEntity> : ISpecification where TEntity : class
+public interface ISpecification<TEntity> where TEntity : class
 {
-    IReadOnlyList<LambdaExpression> Includes { get; }
+    IReadOnlyList<IncludePath<TEntity>> Includes { get; }
 }
 
 public interface ISpecification<TEntity, TResult> : ISpecification<TEntity> where TEntity : class

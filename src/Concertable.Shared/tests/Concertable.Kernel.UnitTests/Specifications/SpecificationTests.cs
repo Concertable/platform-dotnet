@@ -114,7 +114,131 @@ public sealed class SpecificationTests
         Assert.False(sut.IsSatisfiedBy(new Person(17), 18));
     }
 
-    private sealed record Person(int Age);
+    [Fact]
+    public void Or_SpecificationAndExpression_ComposesThePredicate()
+    {
+        var sut = new MaxAgeSpec(15).Or(person => person.Age >= 25);
+        var query = new[] { new Person(10), new Person(20), new Person(30) }.AsQueryable();
+
+        var result = query.Where(sut.ToExpression()).ToArray();
+
+        Assert.Equal([10, 30], result.Select(person => person.Age));
+    }
+
+    [Fact]
+    public void ParameterizedOr_SpecificationAndExpression_ComposesThePredicate()
+    {
+        var sut = new AgeAtLeastSpec().Or(person => person.Age == 10);
+        var query = new[] { new Person(10), new Person(20), new Person(30) }.AsQueryable();
+
+        var result = query.Where(sut.ToExpression(25)).ToArray();
+
+        Assert.Equal([10, 30], result.Select(person => person.Age));
+    }
+
+    [Fact]
+    public void Via_AdaptsThePredicateThroughTheNavigation()
+    {
+        var sut = new MinAgeSpec(18).Via((Household household) => household.Head);
+        var query = new[]
+        {
+            new Household(new Person(10)),
+            new Household(new Person(20))
+        }.AsQueryable();
+
+        var result = query.Where(sut.ToExpression()).ToArray();
+
+        Assert.Equal([20], result.Select(household => household.Head.Age));
+    }
+
+    [Fact]
+    public void Via_RemainsComposableBeforeMaterialization()
+    {
+        var sut = new MinAgeSpec(30)
+            .Via((Household household) => household.Head)
+            .Or(new MaxAgeSpec(12).Via((Household household) => household.Head))
+            .And(household => household.Head.Age != 12);
+        var query = new[]
+        {
+            new Household(new Person(10)),
+            new Household(new Person(12)),
+            new Household(new Person(20)),
+            new Household(new Person(40))
+        }.AsQueryable();
+
+        var result = query.Where(sut.ToExpression()).ToArray();
+
+        Assert.Equal([10, 40], result.Select(household => household.Head.Age));
+    }
+
+    [Fact]
+    public void ParameterizedVia_AdaptsTheBuiltPredicateThroughTheNavigation()
+    {
+        var sut = new AgeAtLeastSpec().Via((Household household) => household.Head);
+        var query = new[]
+        {
+            new Household(new Person(10)),
+            new Household(new Person(30))
+        }.AsQueryable();
+
+        var result = query.Where(sut.ToExpression(25)).ToArray();
+
+        Assert.Equal([30], result.Select(household => household.Head.Age));
+    }
+
+    [Fact]
+    public void Via_MaterializesOneParameterWithoutInvocation()
+    {
+        var sut = new MinAgeSpec(18)
+            .Via((Household household) => household.Head)
+            .Or(new MaxAgeSpec(5).Via((Household household) => household.Head));
+
+        var expression = sut.ToExpression();
+
+        Assert.Single(expression.Parameters);
+        Assert.False(new InvocationDetector().Detects(expression));
+    }
+
+    [Fact]
+    public void Include_ChainsThenIncludeThroughAReferenceNavigation()
+    {
+        var sut = new HouseholdWithHeadCitySpec();
+
+        var steps = Assert.Single(sut.Includes).Steps;
+
+        Assert.Equal(2, steps.Count);
+    }
+
+    [Fact]
+    public void Include_ChainsThenIncludeThroughACollectionNavigation()
+    {
+        var sut = new HouseholdWithMemberCitySpec();
+
+        var steps = Assert.Single(sut.Includes).Steps;
+
+        Assert.Equal(2, steps.Count);
+    }
+
+    [Fact]
+    public void Include_IsAdditiveAcrossFluentCalls()
+    {
+        var sut = new HouseholdSpec().WithHead().WithMembers();
+
+        Assert.Equal(2, sut.Includes.Count);
+    }
+
+    [Fact]
+    public void ProjectedSpecification_Include_IsRejected()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() => new ProjectedHouseholdSpec());
+
+        Assert.Contains("projected specification", exception.Message);
+    }
+
+    private sealed record Person(int Age)
+    {
+        public City? City { get; init; }
+    }
 
     private sealed class MaxAgeSpec : PredicateSpecification<Person>
     {
@@ -140,4 +264,75 @@ public sealed class SpecificationTests
         protected override Expression<Func<Person, bool>> Predicate(int @params) => p => p.Age <= @params;
     }
 
+    private sealed class Household
+    {
+        public Household(Person head)
+        {
+            this.Head = head;
+            this.Members = [head];
+        }
+
+        public Person Head { get; }
+        public ICollection<Person> Members { get; }
+    }
+
+    private sealed record City(string Name);
+
+    private sealed class HouseholdSpec : Specification<Household>
+    {
+        public HouseholdSpec WithHead()
+        {
+            this.Include(household => household.Head);
+            return this;
+        }
+
+        public HouseholdSpec WithMembers()
+        {
+            this.Include(household => household.Members);
+            return this;
+        }
+    }
+
+    private sealed class HouseholdWithHeadCitySpec : Specification<Household>
+    {
+        public HouseholdWithHeadCitySpec()
+        {
+            this.Include(household => household.Head).ThenInclude(person => person.City);
+        }
+    }
+
+    private sealed class HouseholdWithMemberCitySpec : Specification<Household>
+    {
+        public HouseholdWithMemberCitySpec()
+        {
+            this.Include(household => household.Members).ThenInclude(person => person.City);
+        }
+    }
+
+    private sealed class ProjectedHouseholdSpec : Specification<Household, int>
+    {
+        public ProjectedHouseholdSpec()
+            : base(household => household.Head.Age)
+        {
+            this.Include(household => household.Head);
+        }
+    }
+
+    private sealed class InvocationDetector : ExpressionVisitor
+    {
+        private bool found;
+
+        public bool Detects(Expression expression)
+        {
+            this.found = false;
+            this.Visit(expression);
+            return this.found;
+        }
+
+        protected override Expression VisitInvocation(InvocationExpression node)
+        {
+            this.found = true;
+            return base.VisitInvocation(node);
+        }
+    }
 }
