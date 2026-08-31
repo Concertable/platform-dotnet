@@ -11,10 +11,8 @@ public class UnitOfWork<TContext>(TContext context) : IUnitOfWork<TContext>
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);
 
-    public Task<bool> TrySaveChangesAsync(
-        Func<DbUpdateException, bool> isExpected,
-        CancellationToken cancellationToken = default) =>
-        context.TrySaveChangesAsync(isExpected, cancellationToken);
+    public Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default) =>
+        context.TrySaveChangesAsync(cancellationToken);
 
     public Task<bool> TrySaveChangesAsync(
         Func<DbUpdateException, bool> isExpected,
