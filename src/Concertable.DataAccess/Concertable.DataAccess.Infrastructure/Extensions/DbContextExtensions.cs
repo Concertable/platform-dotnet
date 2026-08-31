@@ -6,6 +6,9 @@ public static class DbContextExtensions
 {
     extension(DbContext context)
     {
+        public Task<bool> TrySaveChangesAsync(CancellationToken ct = default) =>
+            context.TrySaveChangesAsync(static _ => true, ct);
+
         public async Task<bool> TrySaveChangesAsync(
             Func<DbUpdateException, bool> isExpected,
             CancellationToken ct = default)
