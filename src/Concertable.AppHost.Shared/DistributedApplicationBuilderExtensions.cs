@@ -13,9 +13,16 @@ public static class DistributedApplicationBuilderExtensions
         public IResourceBuilder<ServiceContainerResource> AddContainerImage(
             string name,
             string image,
-            string digest) =>
-            builder.AddResource(new ServiceContainerResource(name))
-                   .WithImage(image, digest);
+            string digest)
+        {
+            var sha256 = digest.StartsWith("sha256:", StringComparison.Ordinal)
+                ? digest["sha256:".Length..]
+                : digest;
+
+            return builder.AddResource(new ServiceContainerResource(name))
+                          .WithImage(image)
+                          .WithImageSHA256(sha256);
+        }
     }
 
     /// <summary>Suffixes <paramref name="dataVolumeName"/> with a short hash of the AppHost assembly's own
