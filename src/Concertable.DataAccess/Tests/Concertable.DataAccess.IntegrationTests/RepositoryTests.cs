@@ -166,6 +166,21 @@ public sealed class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetByIdAsync_NullableValueProjection_ProjectsTheColumn()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        var entity = new TestEntity { Name = "Dated", CancelledAt = new DateTime(2026, 9, 3) };
+        await repository.InsertAsync(entity);
+
+        var result = await repository.GetByIdAsync(
+            entity.Id,
+            new TestEntitySpecification().Select(candidate => candidate.CancelledAt));
+
+        Assert.Equal(new DateTime(2026, 9, 3), result);
+    }
+
+    [Fact]
     public async Task GetByIdAsync_ValueProjection_MissingRow_ReturnsNullRatherThanDefault()
     {
         await using var context = this.CreateContext();
@@ -323,6 +338,7 @@ public sealed class RepositoryTests : IDisposable
         public int Id { get; private set; }
         public string Name { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
+        public DateTime? CancelledAt { get; set; }
         public TestEntityDetail? Detail { get; set; }
         public ICollection<TestEntityItem> Items { get; set; } = [];
     }
