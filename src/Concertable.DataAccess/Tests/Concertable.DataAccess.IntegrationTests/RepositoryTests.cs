@@ -150,6 +150,34 @@ public sealed class RepositoryTests : IDisposable
         Assert.Equal(new TestEntityName(entity.Id, "Projected"), result);
     }
 
+    [Fact]
+    public async Task GetByIdAsync_ValueProjection_ProjectsMatchingEntity()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        var entity = new TestEntity { Name = "Projected" };
+        await repository.InsertAsync(entity);
+
+        var result = await repository.GetByIdAsync(
+            entity.Id,
+            new TestEntitySpecification().Select(candidate => (int?)candidate.Id));
+
+        Assert.Equal(entity.Id, result);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ValueProjection_MissingRow_ReturnsNullRatherThanDefault()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+
+        var result = await repository.GetByIdAsync(
+            404,
+            new TestEntitySpecification().Select(candidate => (int?)candidate.Id));
+
+        Assert.Null(result);
+    }
+
     #endregion
 
     #region GetAllAsync
