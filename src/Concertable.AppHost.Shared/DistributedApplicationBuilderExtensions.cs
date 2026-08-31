@@ -10,11 +10,12 @@ public static class DistributedApplicationBuilderExtensions
 {
     extension(IDistributedApplicationBuilder builder)
     {
-        public IResourceBuilder<ContainerResource> AddContainerImage(
+        public IResourceBuilder<ServiceContainerResource> AddContainerImage(
             string name,
             string image,
             string digest) =>
-            builder.AddContainer(name, image, digest);
+            builder.AddResource(new ServiceContainerResource(name))
+                   .WithImage(image, digest);
     }
 
     /// <summary>Suffixes <paramref name="dataVolumeName"/> with a short hash of the AppHost assembly's own
