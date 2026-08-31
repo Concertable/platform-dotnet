@@ -88,7 +88,7 @@ public sealed class RepositoryTests
         await context.AddAsync(new TestEntity { Name = "Persisted" });
         IUnitOfWork<TestDbContext> unitOfWork = new UnitOfWork<TestDbContext>(context);
 
-        var saved = await unitOfWork.TrySaveChangesAsync();
+        var saved = await unitOfWork.TrySaveChangesAsync(static _ => false);
 
         Assert.True(saved);
         Assert.Equal("Persisted", (await context.Entities.SingleAsync()).Name);
@@ -114,7 +114,8 @@ public sealed class RepositoryTests
         await winnerContext.SaveChangesAsync();
         IUnitOfWork<TestDbContext> unitOfWork = new UnitOfWork<TestDbContext>(loserContext);
 
-        var saved = await unitOfWork.TrySaveChangesAsync();
+        var saved = await unitOfWork.TrySaveChangesAsync(
+            static exception => exception is DbUpdateConcurrencyException);
 
         Assert.False(saved);
         Assert.Empty(loserContext.ChangeTracker.Entries());
@@ -130,10 +131,41 @@ public sealed class RepositoryTests
         await context.AddAsync(new TestEntity { Name = "Failed" });
         IUnitOfWork<FailingDbContext> unitOfWork = new UnitOfWork<FailingDbContext>(context);
 
-        var saved = await unitOfWork.TrySaveChangesAsync();
+        var saved = await unitOfWork.TrySaveChangesAsync(static _ => true);
 
         Assert.False(saved);
         Assert.Empty(context.ChangeTracker.Entries());
+    }
+
+    [Fact]
+    public async Task UnitOfWork_TrySaveChangesAsync_UnexpectedUpdateFailure_PropagatesAndPreservesChangeTracker()
+    {
+        var options = new DbContextOptionsBuilder<FailingDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var context = new FailingDbContext(options);
+        await context.AddAsync(new TestEntity { Name = "Failed" });
+        IUnitOfWork<FailingDbContext> unitOfWork = new UnitOfWork<FailingDbContext>(context);
+
+        await Assert.ThrowsAsync<DbUpdateException>(
+            () => unitOfWork.TrySaveChangesAsync(static _ => false));
+
+        Assert.NotEmpty(context.ChangeTracker.Entries());
+    }
+
+    [Fact]
+    public async Task UnitOfWork_SaveChangesAsync_UpdateFailure_PreservesChangeTracker()
+    {
+        var options = new DbContextOptionsBuilder<FailingDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var context = new FailingDbContext(options);
+        await context.AddAsync(new TestEntity { Name = "Failed" });
+        IUnitOfWork<FailingDbContext> unitOfWork = new UnitOfWork<FailingDbContext>(context);
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => unitOfWork.SaveChangesAsync());
+
+        Assert.NotEmpty(context.ChangeTracker.Entries());
     }
 
     [Fact]
