@@ -7,7 +7,7 @@ public abstract class PredicateSpecification<TEntity> : IPredicateSpecification<
 {
     protected abstract Expression<Func<TEntity, bool>> Predicate { get; }
 
-    public Expression<Func<TEntity, bool>> ToExpression() => Predicate;
+    public Expression<Func<TEntity, bool>> ToExpression() => this.Predicate;
 }
 
 public abstract class PredicateSpecification<TEntity, TParams> : IPredicateSpecification<TEntity, TParams>
