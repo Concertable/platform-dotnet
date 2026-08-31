@@ -11,6 +11,11 @@ public static class ValueSpecificationExtensions
             Expression<Func<TEntity, TResult>> selector)
             where TResult : struct =>
             new ProjectedSpecification<TEntity, TResult?>(specification, ToNullable(selector));
+
+        public IOrderedSpecification<TEntity, TResult?> Select<TResult>(
+            Expression<Func<TEntity, TResult?>> selector)
+            where TResult : struct =>
+            new ProjectedSpecification<TEntity, TResult?>(specification, selector);
     }
 
     private static Expression<Func<TEntity, TResult?>> ToNullable<TEntity, TResult>(
