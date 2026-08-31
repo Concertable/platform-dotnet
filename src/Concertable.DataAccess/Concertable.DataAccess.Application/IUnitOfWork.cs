@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Concertable.DataAccess.Application;
@@ -12,12 +13,9 @@ namespace Concertable.DataAccess.Application;
 public interface IUnitOfWork<TContext>
 {
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Saves pending changes. Returns <see langword="false"/> after an EF update failure and clears the
-    /// complete tracked unit of work; every other failure propagates.
-    /// </summary>
-    Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<bool> TrySaveChangesAsync(
+        Func<DbUpdateException, bool> isExpected,
+        CancellationToken cancellationToken = default);
     Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
