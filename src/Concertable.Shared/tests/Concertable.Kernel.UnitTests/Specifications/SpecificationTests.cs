@@ -202,7 +202,7 @@ public sealed class SpecificationTests
     [Fact]
     public void Include_ChainsThenIncludeThroughAReferenceNavigation()
     {
-        var sut = new HouseholdWithHeadCitySpec();
+        var sut = new HouseholdSpec().Include(household => household.Head).ThenInclude(person => person.City);
 
         var steps = Assert.Single(sut.Includes).Steps;
 
@@ -212,7 +212,7 @@ public sealed class SpecificationTests
     [Fact]
     public void Include_ChainsThenIncludeThroughACollectionNavigation()
     {
-        var sut = new HouseholdWithMemberCitySpec();
+        var sut = new HouseholdSpec().Include(household => household.Members).ThenInclude(person => person.City);
 
         var steps = Assert.Single(sut.Includes).Steps;
 
@@ -222,17 +222,35 @@ public sealed class SpecificationTests
     [Fact]
     public void Include_IsAdditiveAcrossFluentCalls()
     {
-        var sut = new HouseholdSpec().WithHead().WithMembers();
+        var sut = new HouseholdSpec()
+            .Include(household => household.Head)
+            .Include(household => household.Members);
 
         Assert.Equal(2, sut.Includes.Count);
     }
 
     [Fact]
-    public void ProjectedSpecification_Include_IsRejected()
+    public void Select_CarriesOrdersAndDropsIncludes()
     {
-        var exception = Assert.Throws<InvalidOperationException>(() => new ProjectedHouseholdSpec());
+        var sut = new HouseholdSpec()
+            .Include(household => household.Head)
+            .OrderBy(household => household.Head.Age)
+            .Select(household => household.Head.Age);
 
-        Assert.Contains("projected specification", exception.Message);
+        Assert.Single(sut.Orders);
+        Assert.Empty(sut.Includes);
+    }
+
+    [Fact]
+    public void OrderBy_ThenBy_PreservesSequence()
+    {
+        var sut = new HouseholdSpec()
+            .OrderByDescending(household => household.Head.Age)
+            .ThenBy(household => household.Members.Count);
+
+        Assert.Equal(
+            [SpecificationOrderDirection.Descending, SpecificationOrderDirection.Ascending],
+            sut.Orders.Select(order => order.Direction));
     }
 
     private sealed record Person(int Age)
@@ -278,45 +296,7 @@ public sealed class SpecificationTests
 
     private sealed record City(string Name);
 
-    private sealed class HouseholdSpec : Specification<Household>
-    {
-        public HouseholdSpec WithHead()
-        {
-            this.Include(household => household.Head);
-            return this;
-        }
-
-        public HouseholdSpec WithMembers()
-        {
-            this.Include(household => household.Members);
-            return this;
-        }
-    }
-
-    private sealed class HouseholdWithHeadCitySpec : Specification<Household>
-    {
-        public HouseholdWithHeadCitySpec()
-        {
-            this.Include(household => household.Head).ThenInclude(person => person.City);
-        }
-    }
-
-    private sealed class HouseholdWithMemberCitySpec : Specification<Household>
-    {
-        public HouseholdWithMemberCitySpec()
-        {
-            this.Include(household => household.Members).ThenInclude(person => person.City);
-        }
-    }
-
-    private sealed class ProjectedHouseholdSpec : Specification<Household, int>
-    {
-        public ProjectedHouseholdSpec()
-            : base(household => household.Head.Age)
-        {
-            this.Include(household => household.Head);
-        }
-    }
+    private sealed class HouseholdSpec : SpecificationBuilder<Household>;
 
     private sealed class InvocationDetector : ExpressionVisitor
     {
