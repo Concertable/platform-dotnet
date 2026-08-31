@@ -52,7 +52,8 @@ public static class SpecificationBuilderExtensions
         where TEntity : class
     {
         public IOrderedSpecification<TEntity, TResult> Select<TResult>(
-            Expression<Func<TEntity, TResult>> selector) =>
+            Expression<Func<TEntity, TResult>> selector)
+            where TResult : class =>
             new ProjectedSpecification<TEntity, TResult>(specification, selector);
     }
 

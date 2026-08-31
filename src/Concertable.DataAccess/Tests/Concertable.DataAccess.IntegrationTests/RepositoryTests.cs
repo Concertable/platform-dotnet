@@ -160,7 +160,7 @@ public sealed class RepositoryTests : IDisposable
 
         var result = await repository.GetByIdAsync(
             entity.Id,
-            new TestEntitySpecification().Select(candidate => (int?)candidate.Id));
+            new TestEntitySpecification().Select(candidate => candidate.Id));
 
         Assert.Equal(entity.Id, result);
     }
@@ -173,7 +173,7 @@ public sealed class RepositoryTests : IDisposable
 
         var result = await repository.GetByIdAsync(
             404,
-            new TestEntitySpecification().Select(candidate => (int?)candidate.Id));
+            new TestEntitySpecification().Select(candidate => candidate.Id));
 
         Assert.Null(result);
     }
