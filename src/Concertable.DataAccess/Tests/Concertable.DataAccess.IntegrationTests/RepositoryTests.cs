@@ -44,7 +44,7 @@ public sealed class RepositoryTests : IDisposable
         await using var context = this.CreateContext(QueryTrackingBehavior.NoTracking);
         var repository = new TestRepository(context);
 
-        var result = await repository.GetByIdAsync(id, new TestEntityWithDetailOwnerSpecification());
+        var result = await repository.GetByIdAsync(id, new TestEntitySpecification().Include(entity => entity.Detail!.Owner));
 
         Assert.NotNull(result);
         Assert.NotNull(result.Detail);
@@ -75,7 +75,7 @@ public sealed class RepositoryTests : IDisposable
         await using var context = this.CreateContext(QueryTrackingBehavior.NoTracking);
         var repository = new TestRepository(context);
 
-        var result = await repository.GetByIdAsync(id, new TestEntityWithItemTagsSpecification());
+        var result = await repository.GetByIdAsync(id, new TestEntitySpecification().Include(entity => entity.Items).ThenInclude(item => item.Tag));
 
         Assert.NotNull(result);
         var item = Assert.Single(result.Items);
@@ -104,7 +104,7 @@ public sealed class RepositoryTests : IDisposable
         await using var context = this.CreateContext(QueryTrackingBehavior.NoTracking);
         var repository = new TestRepository(context);
 
-        var result = await repository.GetByIdAsync(id, new TestEntityWithDetailSpecification());
+        var result = await repository.GetByIdAsync(id, new TestEntitySpecification().Include(entity => entity.Detail));
 
         Assert.NotNull(result);
         Assert.NotNull(result.Detail);
@@ -130,7 +130,7 @@ public sealed class RepositoryTests : IDisposable
         await using var context = this.CreateContext(QueryTrackingBehavior.NoTracking);
         var repository = new TestRepository(context);
 
-        var specification = new TestEntityFluentSpecification().WithDetail().WithDetail();
+        var specification = new TestEntitySpecification().Include(entity => entity.Detail).Include(entity => entity.Detail);
         var result = await repository.GetByIdAsync(id, specification);
 
         Assert.NotNull(result);
@@ -145,7 +145,7 @@ public sealed class RepositoryTests : IDisposable
         var entity = new TestEntity { Name = "Projected" };
         await repository.InsertAsync(entity);
 
-        var result = await repository.GetByIdAsync(entity.Id, new TestEntityNameSpecification());
+        var result = await repository.GetByIdAsync(entity.Id, new TestEntitySpecification().Select(entity => new TestEntityName(entity.Id, entity.Name)));
 
         Assert.Equal(new TestEntityName(entity.Id, "Projected"), result);
     }
@@ -163,7 +163,7 @@ public sealed class RepositoryTests : IDisposable
         await repository.InsertAsync(new TestEntity { Name = "A" });
         await repository.InsertAsync(new TestEntity { Name = "C" });
 
-        var result = await repository.GetAllAsync(new TestEntitiesByNameSpecification());
+        var result = await repository.GetAllAsync(new TestEntitySpecification().OrderBy(entity => entity.Name).ThenBy(entity => entity.Id));
 
         Assert.Equal(["A", "B", "C"], result.Select(entity => entity.Name));
     }
@@ -176,7 +176,7 @@ public sealed class RepositoryTests : IDisposable
         await repository.InsertAsync(new TestEntity { Name = "B" });
         await repository.InsertAsync(new TestEntity { Name = "A" });
 
-        var result = await repository.GetAllAsync(new TestEntityNamesByNameSpecification());
+        var result = await repository.GetAllAsync(new TestEntitySpecification().OrderBy(entity => entity.Name).Select(entity => new TestEntityName(entity.Id, entity.Name)));
 
         Assert.Equal(["A", "B"], result.Select(entity => entity.Name));
     }
@@ -189,7 +189,7 @@ public sealed class RepositoryTests : IDisposable
         await repository.InsertAsync(new TestEntity { Name = "Later", CreatedAt = new DateTime(2026, 9, 2) });
         await repository.InsertAsync(new TestEntity { Name = "Earlier", CreatedAt = new DateTime(2026, 9, 1) });
 
-        var result = await repository.GetAllAsync(new TestEntitiesByCreatedAtSpecification());
+        var result = await repository.GetAllAsync(new TestEntitySpecification().OrderBy(entity => entity.CreatedAt));
 
         Assert.Equal(["Earlier", "Later"], result.Select(entity => entity.Name));
     }
@@ -203,7 +203,7 @@ public sealed class RepositoryTests : IDisposable
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => repository.GetAllAsync(new TestEntityWithDetailSpecification(), cancellation.Token));
+            () => repository.GetAllAsync(new TestEntitySpecification().Include(entity => entity.Detail), cancellation.Token));
     }
 
     [Fact]
@@ -226,7 +226,7 @@ public sealed class RepositoryTests : IDisposable
         var repository = new TestRepository(context);
 
         await Assert.ThrowsAsync<ArgumentException>(
-            () => repository.GetAllAsync(new TestEntityWithInvalidIncludeSpecification()));
+            () => repository.GetAllAsync(new TestEntitySpecification().Include(entity => entity.Name.ToUpper())));
     }
 
     #endregion
@@ -253,85 +253,7 @@ public sealed class RepositoryTests : IDisposable
             : base(context) { }
     }
 
-    private sealed class TestEntityWithDetailSpecification : Specification<TestEntity>
-    {
-        public TestEntityWithDetailSpecification()
-        {
-            this.Include(entity => entity.Detail);
-        }
-    }
-
-    private sealed class TestEntityWithDetailOwnerSpecification : Specification<TestEntity>
-    {
-        public TestEntityWithDetailOwnerSpecification()
-        {
-            this.Include(entity => entity.Detail!.Owner);
-        }
-    }
-
-    private sealed class TestEntityWithItemTagsSpecification : Specification<TestEntity>
-    {
-        public TestEntityWithItemTagsSpecification()
-        {
-            this.Include(entity => entity.Items).ThenInclude(item => item.Tag);
-        }
-    }
-
-    private sealed class TestEntityFluentSpecification : Specification<TestEntity>
-    {
-        public TestEntityFluentSpecification WithDetail()
-        {
-            this.Include(entity => entity.Detail);
-            return this;
-        }
-    }
-
-    private sealed class TestEntityWithInvalidIncludeSpecification : Specification<TestEntity>
-    {
-        public TestEntityWithInvalidIncludeSpecification()
-        {
-            this.Include(entity => entity.Name.ToUpper());
-        }
-    }
-
-    private sealed class TestEntityNameSpecification : Specification<TestEntity, TestEntityName>
-    {
-        public TestEntityNameSpecification()
-            : base(entity => new TestEntityName(entity.Id, entity.Name)) { }
-    }
-
-    private sealed class TestEntitiesByNameSpecification : Specification<TestEntity>, IOrderedSpecification<TestEntity>
-    {
-        public IReadOnlyList<SpecificationOrder<TestEntity>> Orders => this.RegisteredOrders;
-
-        public TestEntitiesByNameSpecification()
-        {
-            this.OrderBy(entity => entity.Name);
-            this.ThenBy(entity => entity.Id);
-        }
-    }
-
-    private sealed class TestEntityNamesByNameSpecification
-        : Specification<TestEntity, TestEntityName>, IOrderedSpecification<TestEntity, TestEntityName>
-    {
-        public IReadOnlyList<SpecificationOrder<TestEntity>> Orders => this.RegisteredOrders;
-
-        public TestEntityNamesByNameSpecification()
-            : base(entity => new TestEntityName(entity.Id, entity.Name))
-        {
-            this.OrderBy(entity => entity.Name);
-        }
-    }
-
-    private sealed class TestEntitiesByCreatedAtSpecification : Specification<TestEntity>, IOrderedSpecification<TestEntity>
-    {
-        public IReadOnlyList<SpecificationOrder<TestEntity>> Orders => this.RegisteredOrders;
-
-        public TestEntitiesByCreatedAtSpecification()
-        {
-            this.OrderBy(entity => entity.CreatedAt);
-        }
-    }
+    private sealed class TestEntitySpecification : SpecificationBuilder<TestEntity>;
 
     private sealed class ShapeAndPredicateSpecification : Specification<TestEntity>, IPredicateSpecification<TestEntity>
     {

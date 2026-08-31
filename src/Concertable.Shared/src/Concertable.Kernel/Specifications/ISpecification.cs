@@ -19,3 +19,10 @@ public interface IOrderedSpecification<TEntity> : ISpecification<TEntity> where 
 
 public interface IOrderedSpecification<TEntity, TResult> : ISpecification<TEntity, TResult>, IOrderedSpecification<TEntity>
     where TEntity : class;
+
+public interface ISpecificationBuilder<TEntity> : IOrderedSpecification<TEntity> where TEntity : class
+{
+    IncludePath<TEntity> StartInclude(LambdaExpression navigation);
+
+    void AddOrder<TProperty>(Expression<Func<TEntity, TProperty>> keySelector, SpecificationOrderDirection direction);
+}
