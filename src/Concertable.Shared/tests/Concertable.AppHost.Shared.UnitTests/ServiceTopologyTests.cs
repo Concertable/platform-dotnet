@@ -31,8 +31,7 @@ public sealed class ServiceTopologyTests
         builder.AddAzureServiceBus("messaging")
             .Topology()
             .Publish<ConcertPostedEvent>()
-            .WithService("consumer")
-            .Subscribe<ConcertPostedEvent>()
+            .ForService("consumer", service => service.Subscribe<ConcertPostedEvent>())
             .RunAsEmulator();
 
         var topicName = new AzureServiceBusOptions().TopicNameFor(typeof(ConcertPostedEvent));
@@ -62,17 +61,15 @@ public sealed class ServiceTopologyTests
     }
 
     [Fact]
-    public void WithService_CalledAgainMidChain_ScopesEachSubscriptionToItsOwnServiceName()
+    public void ForService_PerBlock_ScopesEachSubscriptionToItsOwnServiceName()
     {
         var builder = DistributedApplication.CreateBuilder();
         builder.AddAzureServiceBus("messaging")
             .Topology()
             .Publish<ConcertPostedEvent>()
             .Publish<ConcertChangedEvent>()
-            .WithService("service-a")
-            .Subscribe<ConcertPostedEvent>()
-            .WithService("service-b")
-            .Subscribe<ConcertChangedEvent>()
+            .ForService("service-a", service => service.Subscribe<ConcertPostedEvent>())
+            .ForService("service-b", service => service.Subscribe<ConcertChangedEvent>())
             .RunAsEmulator();
 
         var subscriptionNames = builder.Resources
@@ -81,6 +78,21 @@ public sealed class ServiceTopologyTests
             .ToHashSet();
 
         Assert.Equal(["service-a", "service-b"], subscriptionNames.Order());
+    }
+
+    /// <summary>
+    /// Every service composes onto one builder, so a name outliving its block would provision the next
+    /// topology's subscriptions under the previous service, silently and correctly-looking.
+    /// </summary>
+    [Fact]
+    public void ForService_DoesNotLeakItsServiceNameToLaterSubscriptions()
+    {
+        var topology = DistributedApplication.CreateBuilder()
+            .AddAzureServiceBus("messaging")
+            .Topology()
+            .ForService("service-a", service => service.Subscribe<ConcertPostedEvent>());
+
+        Assert.Throws<InvalidOperationException>(() => topology.Subscribe<ConcertChangedEvent>());
     }
 
     [Fact]
