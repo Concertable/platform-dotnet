@@ -80,10 +80,10 @@ public abstract class Repository<TEntity, TKey> : IRepository<TEntity, TKey>
         await Context.Query<TEntity>().ApplyOrders(spec).Select(spec.Selector).ToListAsync(ct);
 
     public Task<IPagination<TEntity>> GetPageAsync(ISpecification<TEntity> spec, IPageParams pageParams, CancellationToken ct = default) =>
-        Context.Query<TEntity>().Apply(spec).ApplyOrders(spec).ToPaginationAsync(pageParams, ct);
+        Context.Query<TEntity>().Apply(spec).ApplyPagedOrders(spec).ToPaginationAsync(pageParams, ct);
 
     public Task<IPagination<TResult>> GetPageAsync<TResult>(ISpecification<TEntity, TResult> spec, IPageParams pageParams, CancellationToken ct = default) =>
-        Context.Query<TEntity>().ApplyOrders(spec).Select(spec.Selector).ToPaginationAsync(pageParams, ct);
+        Context.Query<TEntity>().ApplyPagedOrders(spec).Select(spec.Selector).ToPaginationAsync(pageParams, ct);
 
     public bool Exists(TKey id) => Context.Query<TEntity>().Any(e => e.Id!.Equals(id));
 
@@ -150,10 +150,10 @@ public abstract class ReadRepository<TEntity, TKey> : IReadRepository<TEntity, T
         await Context.Query<TEntity>().ApplyOrders(spec).Select(spec.Selector).ToListAsync(ct);
 
     public Task<IPagination<TEntity>> GetPageAsync(ISpecification<TEntity> spec, IPageParams pageParams, CancellationToken ct = default) =>
-        Context.Query<TEntity>().Apply(spec).ApplyOrders(spec).ToPaginationAsync(pageParams, ct);
+        Context.Query<TEntity>().Apply(spec).ApplyPagedOrders(spec).ToPaginationAsync(pageParams, ct);
 
     public Task<IPagination<TResult>> GetPageAsync<TResult>(ISpecification<TEntity, TResult> spec, IPageParams pageParams, CancellationToken ct = default) =>
-        Context.Query<TEntity>().ApplyOrders(spec).Select(spec.Selector).ToPaginationAsync(pageParams, ct);
+        Context.Query<TEntity>().ApplyPagedOrders(spec).Select(spec.Selector).ToPaginationAsync(pageParams, ct);
 
     public bool Exists(TKey id) =>
         Context.Query<TEntity>().Any(e => e.Id!.Equals(id));
