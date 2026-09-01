@@ -60,6 +60,75 @@ public sealed class FactoryUnitOfWorkTests : IDisposable
         Assert.Equal(2, await verificationContext.Entities.CountAsync());
     }
 
+    [Fact]
+    public async Task TryExecuteAsync_ExpectedFailure_DisposesTheContextBeforeClassifying()
+    {
+        bool? disposedWhenClassified = null;
+
+        var outcome = await this.unitOfWork.TryExecuteAsync<string>(
+            _ => throw new DbUpdateException(),
+            static _ => true,
+            _ =>
+            {
+                disposedWhenClassified = this.dbContextFactory.Contexts[0].IsDisposed;
+                return Task.FromResult("classified");
+            });
+
+        Assert.Equal("classified", outcome);
+        Assert.True(disposedWhenClassified);
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_ExpectedFailure_RollsBackTheOperationsWrites()
+    {
+        await this.unitOfWork.TryExecuteAsync<string>(
+            context =>
+            {
+                context.Entities.Add(new TestEntity { Name = "Rolled back" });
+                throw new DbUpdateException();
+            },
+            static _ => true,
+            _ => Task.FromResult("classified"));
+
+        await using var verificationContext = this.CreateVerificationContext();
+        Assert.Empty(await verificationContext.Entities.ToListAsync());
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_RejectedFailure_Propagates()
+    {
+        await Assert.ThrowsAsync<DbUpdateException>(
+            () => this.unitOfWork.TryExecuteAsync<string>(
+                _ => throw new DbUpdateException(),
+                static _ => false,
+                _ => Task.FromResult("classified")));
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_Success_PersistsAndNeverClassifies()
+    {
+        var classified = false;
+
+        var outcome = await this.unitOfWork.TryExecuteAsync(
+            context =>
+            {
+                context.Entities.Add(new TestEntity { Name = "Persisted" });
+                return Task.FromResult("committed");
+            },
+            static _ => true,
+            _ =>
+            {
+                classified = true;
+                return Task.FromResult("classified");
+            });
+
+        Assert.Equal("committed", outcome);
+        Assert.False(classified);
+
+        await using var verificationContext = this.CreateVerificationContext();
+        Assert.Equal("Persisted", (await verificationContext.Entities.SingleAsync()).Name);
+    }
+
     public void Dispose() => this.connection.Dispose();
 
     private TestDbContext CreateVerificationContext() => this.CreateContext();
