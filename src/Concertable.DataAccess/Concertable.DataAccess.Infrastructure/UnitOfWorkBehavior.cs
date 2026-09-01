@@ -30,6 +30,12 @@ public class UnitOfWorkBehavior<TContext>(IUnitOfWork<TContext> unitOfWork) : IU
         Func<DbUpdateException, Task<T>> onExpectedFailure,
         CancellationToken cancellationToken = default)
     {
+        // Recovery belongs to whoever owns the transaction. Rolling a nested scope back dooms the caller's
+        // transaction too, leaving onExpectedFailure nothing it can read or commit, so a nested failure
+        // propagates to the root scope that can actually roll back and rerun.
+        if (Transaction.Current is not null)
+            return await ExecuteAsync(action, cancellationToken);
+
         DbUpdateException expected;
 
         // The scope must be disposed — rolling the transaction back — before onExpectedFailure runs,

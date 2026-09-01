@@ -1,4 +1,4 @@
-using System.Transactions;
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
@@ -6,16 +6,16 @@ namespace Concertable.Testing.Integration;
 
 /// <summary>
 /// Turns a race into a deterministic one. Armed with a competing change and the entity type whose update
-/// should lose, it commits that competing change — on its own connection, outside the operation's ambient
-/// transaction — in the window between the operation reading the row and its UPDATE reaching the server.
-/// The operation's rowversion predicate then matches nothing, so the store raises the concurrency
-/// exception a real interleaving would have produced, at a point the test chose rather than one the
-/// scheduler chose.
+/// should lose, it commits that competing change in the window between the operation reading that entity's
+/// row and the operation's own UPDATE reaching the server. The operation's rowversion predicate then matches
+/// nothing, so the store raises the concurrency exception a real interleaving would have produced, at a point
+/// the test chose rather than one the scheduler chose.
 /// </summary>
-public sealed class ConcurrencyConflictInterceptor : SaveChangesInterceptor, IResettable
+public sealed class ConcurrencyConflictInterceptor : IDbCommandInterceptor, ISaveChangesInterceptor, IResettable
 {
     private Func<Task>? competingChange;
     private Type? losingEntityType;
+    private bool committed;
 
     /// <summary>How many times a conflict was actually forced — assert on this so a test cannot pass by
     /// silently never reaching the retry it claims to cover.</summary>
@@ -32,28 +32,79 @@ public sealed class ConcurrencyConflictInterceptor : SaveChangesInterceptor, IRe
     {
         this.competingChange = null;
         this.losingEntityType = null;
+        this.committed = false;
         this.ForcedConflicts = 0;
     }
 
-    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
-        DbContextEventData eventData,
-        InterceptionResult<int> result,
+    // The read, not the save, is the safe window: by its own SavingChanges the operation has already run its
+    // pre-commit handlers, whose cross-module writes hold row locks the competing change would wait on until
+    // the command timeout — a deadlock no scheduler could produce, because the operation is itself blocked on
+    // the competing change.
+    public async ValueTask<DbDataReader> ReaderExecutedAsync(
+        DbCommand command,
+        CommandExecutedEventData eventData,
+        DbDataReader result,
         CancellationToken cancellationToken = default)
     {
         if (this.competingChange is { } pending &&
             this.losingEntityType is { } entityType &&
-            HasPendingUpdate(eventData.Context!, entityType))
+            eventData.Context is { } context &&
+            Reads(command, context, entityType))
         {
             this.competingChange = null;
-            this.ForcedConflicts++;
-            using var suppressed = new TransactionScope(
-                TransactionScopeOption.Suppress,
-                TransactionScopeAsyncFlowOption.Enabled);
-            await pending();
-            suppressed.Complete();
+            await RunDetachedAsync(pending);
+            this.committed = true;
         }
 
-        return await base.SavingChangesAsync(eventData, result, cancellationToken);
+        return result;
+    }
+
+    public ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
+        CancellationToken cancellationToken = default)
+    {
+        if (this.committed && HasPendingUpdate(eventData.Context!, this.losingEntityType!))
+        {
+            this.committed = false;
+            this.ForcedConflicts++;
+        }
+
+        return ValueTask.FromResult(result);
+    }
+
+    /// <summary>
+    /// The competing change stands for an independent caller, so it must not inherit the operation's ambient
+    /// state. Suppressing execution-context flow detaches both the operation's transaction — whose locks it
+    /// would otherwise wait on — and its <c>HttpContext</c>, which would leave the change's own scope neither
+    /// host nor tenant-resolved and so make every tenant-filtered read return nothing.
+    /// </summary>
+    private static Task RunDetachedAsync(Func<Task> competingChange)
+    {
+        using (ExecutionContext.SuppressFlow())
+            return Task.Run(competingChange);
+    }
+
+    /// <summary>
+    /// The read an update can be built from is the one that fetches the row's concurrency tokens, so a
+    /// projection of a key or a single column -- which the same flow may issue first to resolve the row --
+    /// does not open the window.
+    /// </summary>
+    private static bool Reads(DbCommand command, DbContext context, Type entityType)
+    {
+        if (context.Model.FindEntityType(entityType) is not { } type ||
+            type.GetTableName() is not { } table ||
+            !command.CommandText.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase) ||
+            !command.CommandText.Contains($"[{table}]", StringComparison.Ordinal))
+            return false;
+
+        var tokens = type.GetProperties()
+            .Where(property => property.IsConcurrencyToken)
+            .Select(property => property.GetColumnName())
+            .ToArray();
+
+        return tokens.Length > 0 &&
+            tokens.All(column => command.CommandText.Contains($"[{column}]", StringComparison.Ordinal));
     }
 
     private static bool HasPendingUpdate(DbContext context, Type entityType) =>
