@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using Concertable.Contracts;
 using Concertable.DataAccess.Application;
 using Concertable.DataAccess.Infrastructure;
 using Concertable.DataAccess.Infrastructure.Data;
@@ -225,6 +226,36 @@ public sealed class RepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAllAsync_OrderedSpecificationHeldAsShapeSpecification_StillAppliesOrders()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        await repository.InsertAsync(new TestEntity { Name = "B" });
+        await repository.InsertAsync(new TestEntity { Name = "A" });
+        ISpecification<TestEntity> specification = new TestEntitySpecification().OrderBy(entity => entity.Name);
+
+        var result = await repository.GetAllAsync(specification);
+
+        Assert.Equal(["A", "B"], result.Select(entity => entity.Name));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_OrderedProjectionHeldAsShapeSpecification_StillAppliesOrders()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        await repository.InsertAsync(new TestEntity { Name = "B" });
+        await repository.InsertAsync(new TestEntity { Name = "A" });
+        ISpecification<TestEntity, TestEntityName> specification = new TestEntitySpecification()
+            .OrderBy(entity => entity.Name)
+            .Select(entity => new TestEntityName(entity.Id, entity.Name));
+
+        var result = await repository.GetAllAsync(specification);
+
+        Assert.Equal(["A", "B"], result.Select(entity => entity.Name));
+    }
+
+    [Fact]
     public async Task GetAllAsync_DateOrderSpecification_AppliesDateOrder()
     {
         await using var context = this.CreateContext();
@@ -273,6 +304,48 @@ public sealed class RepositoryTests : IDisposable
     }
 
     #endregion
+
+    #region GetPageAsync
+
+    [Fact]
+    public async Task GetPageAsync_OrderedSpecification_ReturnsRequestedPageWithTotals()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        foreach (var name in new[] { "C", "A", "D", "B" })
+            await repository.InsertAsync(new TestEntity { Name = name });
+
+        var result = await repository.GetPageAsync(
+            new TestEntitySpecification().OrderBy(entity => entity.Name),
+            new PageParams { PageNumber = 2, PageSize = 2 });
+
+        Assert.Equal(["C", "D"], result.Data.Select(entity => entity.Name));
+        Assert.Equal(4, result.TotalCount);
+        Assert.Equal(2, result.TotalPages);
+        Assert.Equal(2, result.PageNumber);
+    }
+
+    [Fact]
+    public async Task GetPageAsync_ProjectionSpecification_ProjectsThePage()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        await repository.InsertAsync(new TestEntity { Name = "B" });
+        await repository.InsertAsync(new TestEntity { Name = "A" });
+
+        var result = await repository.GetPageAsync(
+            new TestEntitySpecification()
+                .OrderBy(entity => entity.Name)
+                .Select(entity => new TestEntityName(entity.Id, entity.Name)),
+            new PageParams { PageNumber = 1, PageSize = 1 });
+
+        Assert.Equal("A", Assert.Single(result.Data).Name);
+        Assert.Equal(2, result.TotalCount);
+    }
+
+    #endregion
+
+
 
     public void Dispose()
     {
