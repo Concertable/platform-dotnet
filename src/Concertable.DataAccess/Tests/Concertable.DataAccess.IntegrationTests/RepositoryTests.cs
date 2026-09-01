@@ -343,6 +343,19 @@ public sealed class RepositoryTests : IDisposable
         Assert.Equal(2, result.TotalCount);
     }
 
+    [Fact]
+    public async Task GetPageAsync_UnorderedSpecification_Throws()
+    {
+        await using var context = this.CreateContext();
+        var repository = new TestRepository(context);
+        await repository.InsertAsync(new TestEntity { Name = "A" });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => repository.GetPageAsync(
+                new TestEntitySpecification(),
+                new PageParams { PageNumber = 1, PageSize = 1 }));
+    }
+
     #endregion
 
 

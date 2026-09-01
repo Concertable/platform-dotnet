@@ -24,6 +24,12 @@ public static class QueryableExtensions
                 ? query.ApplyOrders(ordered.Orders)
                 : query;
 
+        public IQueryable<TEntity> ApplyPagedOrders(ISpecification<TEntity> specification) =>
+            specification is IOrderedSpecification<TEntity> { Orders.Count: > 0 } ordered
+                ? query.ApplyOrders(ordered.Orders)
+                : throw new InvalidOperationException(
+                    "A paged query needs a deterministic order. Add OrderBy to the specification before paging it.");
+
         public IQueryable<TEntity> ApplyOrders(IReadOnlyList<SpecificationOrder<TEntity>> orders)
         {
             var result = query;
