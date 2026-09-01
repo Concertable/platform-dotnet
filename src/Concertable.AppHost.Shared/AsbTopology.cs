@@ -22,9 +22,25 @@ public sealed class AsbTopology
         return this;
     }
 
-    public AsbTopology WithService(string serviceName)
+    /// <summary>
+    /// Scopes the subscriptions and queues <paramref name="configure"/> declares to
+    /// <paramref name="serviceName"/>. Every service composes onto one builder, so the name is restored
+    /// afterwards rather than left set: a name that outlived its block would let the next topology's
+    /// <see cref="Subscribe{TEvent}"/> silently provision under the previous service.
+    /// </summary>
+    public AsbTopology ForService(string serviceName, Action<AsbTopology> configure)
     {
+        var enclosing = this.serviceName;
         this.serviceName = serviceName;
+        try
+        {
+            configure(this);
+        }
+        finally
+        {
+            this.serviceName = enclosing;
+        }
+
         return this;
     }
 
@@ -40,6 +56,8 @@ public sealed class AsbTopology
         return this;
     }
 
+    // The per-call service name every topology still passes. Superseded by ForService and removed once the
+    // published package carrying it reaches them.
     public AsbTopology Subscribe<TEvent>(string serviceName)
     {
         SubscribeCore<TEvent>(serviceName);
@@ -68,7 +86,8 @@ public sealed class AsbTopology
     }
 
     private string RequireServiceName() =>
-        serviceName ?? throw new InvalidOperationException($"Call {nameof(WithService)} before Subscribe or Queue.");
+        serviceName ?? throw new InvalidOperationException(
+            $"Declare subscriptions and queues inside {nameof(ForService)}.");
 
     private void SubscribeCore<TEvent>(string forServiceName)
     {
