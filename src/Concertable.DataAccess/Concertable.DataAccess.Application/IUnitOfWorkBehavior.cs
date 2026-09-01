@@ -21,6 +21,11 @@ public interface IUnitOfWorkBehavior<TContext>
     /// <paramref name="onExpectedFailure"/> then produces the outcome, after the scope has been
     /// disposed. Every other failure, and cancellation, propagates.
     /// <para>
+    /// Recovery belongs to whoever owns the transaction: called inside another scope this classifies
+    /// nothing and behaves as <see cref="ExecuteAsync{T}"/>, so the failure reaches the root scope that
+    /// can actually roll back and rerun.
+    /// </para>
+    /// <para>
     /// Use this, never a <c>TrySaveChangesAsync</c> inside
     /// <see cref="ExecuteAsync{T}"/>: a block that returns normally commits the ambient transaction, so a
     /// failure classified inside it still commits whatever that save's pre-commit handlers wrote to other
