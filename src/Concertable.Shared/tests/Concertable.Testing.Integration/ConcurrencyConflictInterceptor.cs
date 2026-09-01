@@ -24,16 +24,16 @@ public sealed class ConcurrencyConflictInterceptor : IDbCommandInterceptor, ISav
     public void ArmOnce<TEntity>(Func<Task> competingChange)
         where TEntity : class
     {
-        this.losingEntityType = typeof(TEntity);
+        losingEntityType = typeof(TEntity);
         this.competingChange = competingChange;
     }
 
     public void Reset()
     {
-        this.competingChange = null;
-        this.losingEntityType = null;
-        this.committed = false;
-        this.ForcedConflicts = 0;
+        competingChange = null;
+        losingEntityType = null;
+        committed = false;
+        ForcedConflicts = 0;
     }
 
     // The read, not the save, is the safe window: by its own SavingChanges the operation has already run its
@@ -46,14 +46,14 @@ public sealed class ConcurrencyConflictInterceptor : IDbCommandInterceptor, ISav
         DbDataReader result,
         CancellationToken cancellationToken = default)
     {
-        if (this.competingChange is { } pending &&
-            this.losingEntityType is { } entityType &&
+        if (competingChange is { } pending &&
+            losingEntityType is { } entityType &&
             eventData.Context is { } context &&
             Reads(command, context, entityType))
         {
-            this.competingChange = null;
+            competingChange = null;
             await RunDetachedAsync(pending);
-            this.committed = true;
+            committed = true;
         }
 
         return result;
@@ -64,10 +64,10 @@ public sealed class ConcurrencyConflictInterceptor : IDbCommandInterceptor, ISav
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        if (this.committed && HasPendingUpdate(eventData.Context!, this.losingEntityType!))
+        if (committed && HasPendingUpdate(eventData.Context!, losingEntityType!))
         {
-            this.committed = false;
-            this.ForcedConflicts++;
+            committed = false;
+            ForcedConflicts++;
         }
 
         return ValueTask.FromResult(result);
