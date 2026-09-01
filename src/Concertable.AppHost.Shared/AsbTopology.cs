@@ -38,7 +38,7 @@ public sealed class AsbTopology
         }
         finally
         {
-            this.serviceName = enclosing;
+            serviceName = enclosing;
         }
 
         return this;

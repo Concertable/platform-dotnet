@@ -8,13 +8,13 @@ namespace Concertable.DataAccess.UnitTests;
 
 public sealed class UnitOfWorkBehaviorTests
 {
-    private readonly ThrowingUnitOfWork unitOfWork;
+    private readonly ThrowingUnitOfWork throwingUnitOfWork;
     private readonly UnitOfWorkBehavior<TestDbContext> behavior;
 
     public UnitOfWorkBehaviorTests()
     {
-        this.unitOfWork = new ThrowingUnitOfWork();
-        this.behavior = new UnitOfWorkBehavior<TestDbContext>(this.unitOfWork);
+        throwingUnitOfWork = new ThrowingUnitOfWork();
+        behavior = new UnitOfWorkBehavior<TestDbContext>(throwingUnitOfWork);
     }
 
     [Fact]
@@ -23,7 +23,7 @@ public sealed class UnitOfWorkBehaviorTests
         Transaction? duringAction = null;
         Transaction? duringClassification = null;
 
-        var outcome = await this.behavior.TryExecuteAsync(
+        var outcome = await behavior.TryExecuteAsync(
             () =>
             {
                 duringAction = Transaction.Current;
@@ -46,7 +46,7 @@ public sealed class UnitOfWorkBehaviorTests
     {
         var completed = true;
 
-        await this.behavior.TryExecuteAsync(
+        await behavior.TryExecuteAsync(
             () => Task.FromResult("committed"),
             static _ => true,
             _ =>
@@ -62,7 +62,7 @@ public sealed class UnitOfWorkBehaviorTests
     public async Task TryExecuteAsync_RejectedFailure_Propagates()
     {
         await Assert.ThrowsAsync<DbUpdateException>(
-            () => this.behavior.TryExecuteAsync(
+            () => behavior.TryExecuteAsync(
                 () => Task.FromResult("committed"),
                 static _ => false,
                 _ => Task.FromResult("classified")));
@@ -71,10 +71,10 @@ public sealed class UnitOfWorkBehaviorTests
     [Fact]
     public async Task TryExecuteAsync_Success_ReturnsTheValueAndNeverClassifies()
     {
-        this.unitOfWork.Throw = false;
+        throwingUnitOfWork.Throw = false;
         var classified = false;
 
-        var outcome = await this.behavior.TryExecuteAsync(
+        var outcome = await behavior.TryExecuteAsync(
             () => Task.FromResult("committed"),
             static _ => true,
             _ =>
@@ -95,7 +95,7 @@ public sealed class UnitOfWorkBehaviorTests
         var classified = false;
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => this.behavior.TryExecuteAsync(
+            () => behavior.TryExecuteAsync(
                 () => Task.FromCanceled<string>(cancellation.Token),
                 static _ => true,
                 _ =>
@@ -113,7 +113,7 @@ public sealed class UnitOfWorkBehaviorTests
         public bool Throw { get; set; } = true;
 
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
-            this.Throw ? throw new DbUpdateException() : Task.CompletedTask;
+            Throw ? throw new DbUpdateException() : Task.CompletedTask;
 
         public Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
