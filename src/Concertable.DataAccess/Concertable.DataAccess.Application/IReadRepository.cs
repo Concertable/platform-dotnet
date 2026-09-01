@@ -11,11 +11,11 @@ public interface IReadRepository<TEntity, TKey> where TEntity : class, IEntity<T
         where TResult : class;
     Task<TResult?> GetByIdAsync<TResult>(TKey id, ISpecification<TEntity, TResult?> spec, CancellationToken ct = default)
         where TResult : struct;
-    Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken ct = default);
-    Task<IEnumerable<TEntity>> GetAllAsync(ISpecification<TEntity> spec, CancellationToken ct = default);
-    Task<IEnumerable<TEntity>> GetAllAsync(IOrderedSpecification<TEntity> spec, CancellationToken ct = default);
-    Task<IEnumerable<TResult>> GetAllAsync<TResult>(ISpecification<TEntity, TResult> spec, CancellationToken ct = default);
-    Task<IEnumerable<TResult>> GetAllAsync<TResult>(IOrderedSpecification<TEntity, TResult> spec, CancellationToken ct = default);
+    Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<TEntity>> GetAllAsync(ISpecification<TEntity> spec, CancellationToken ct = default);
+    Task<IReadOnlyList<TResult>> GetAllAsync<TResult>(ISpecification<TEntity, TResult> spec, CancellationToken ct = default);
+    Task<IPagination<TEntity>> GetPageAsync(ISpecification<TEntity> spec, IPageParams pageParams, CancellationToken ct = default);
+    Task<IPagination<TResult>> GetPageAsync<TResult>(ISpecification<TEntity, TResult> spec, IPageParams pageParams, CancellationToken ct = default);
     bool Exists(TKey id);
 }
 

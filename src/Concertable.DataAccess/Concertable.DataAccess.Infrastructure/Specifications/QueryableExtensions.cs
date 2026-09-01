@@ -19,6 +19,11 @@ public static class QueryableExtensions
             return result;
         }
 
+        public IQueryable<TEntity> ApplyOrders(ISpecification<TEntity> specification) =>
+            specification is IOrderedSpecification<TEntity> ordered
+                ? query.ApplyOrders(ordered.Orders)
+                : query;
+
         public IQueryable<TEntity> ApplyOrders(IReadOnlyList<SpecificationOrder<TEntity>> orders)
         {
             var result = query;
