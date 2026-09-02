@@ -12,7 +12,6 @@ public sealed class AsbTopology
     private readonly AzureServiceBusOptions options = new();
     private readonly Dictionary<string, IResourceBuilder<AzureServiceBusTopicResource>> topics = new();
     private readonly HashSet<string> subscribedTopics = [];
-    private string? serviceName;
 
     public AsbTopology(IResourceBuilder<AzureServiceBusResource> asb) => this.asb = asb;
 
@@ -22,42 +21,10 @@ public sealed class AsbTopology
         return this;
     }
 
-    /// <summary>
-    /// Scopes the subscriptions and queues <paramref name="configure"/> declares to
-    /// <paramref name="serviceName"/>. Every service composes onto one builder, so the name is restored
-    /// afterwards rather than left set: a name that outlived its block would let the next topology's
-    /// <see cref="Subscribe{TEvent}"/> silently provision under the previous service.
-    /// </summary>
-    public AsbTopology ForService(string serviceName, Action<AsbTopology> configure)
-    {
-        var enclosing = this.serviceName;
-        this.serviceName = serviceName;
-        try
-        {
-            configure(this);
-        }
-        finally
-        {
-            this.serviceName = enclosing;
-        }
+    public AsbServiceTopology WithService(string serviceName) => new(this, serviceName);
 
-        return this;
-    }
-
-    public AsbTopology Subscribe<TEvent>()
-    {
-        SubscribeCore<TEvent>(RequireServiceName());
-        return this;
-    }
-
-    public AsbTopology Queue<TCommand>()
-    {
-        QueueCore<TCommand>(RequireServiceName());
-        return this;
-    }
-
-    // The per-call service name every topology still passes. Superseded by ForService and removed once the
-    // published package carrying it reaches them.
+    // The published topologies still name the service per call; they move onto WithService once the
+    // package carrying it reaches them, and these two go with the last caller.
     public AsbTopology Subscribe<TEvent>(string serviceName)
     {
         SubscribeCore<TEvent>(serviceName);
@@ -84,10 +51,6 @@ public sealed class AsbTopology
 
         return asb.RunAsEmulator();
     }
-
-    private string RequireServiceName() =>
-        serviceName ?? throw new InvalidOperationException(
-            $"Declare subscriptions and queues inside {nameof(ForService)}.");
 
     private void SubscribeCore<TEvent>(string forServiceName)
     {
