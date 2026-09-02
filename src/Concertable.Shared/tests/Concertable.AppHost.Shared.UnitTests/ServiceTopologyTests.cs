@@ -89,6 +89,21 @@ public sealed class ServiceTopologyTests
     }
 
     [Fact]
+    public void WithService_Queue_NamesTheQueueForThatService()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        builder.AddAzureServiceBus("messaging")
+            .Topology()
+            .WithService("service-a")
+            .Queue<SendEmailCommand>();
+
+        var expected = new AzureServiceBusOptions().QueueNameFor("service-a", typeof(SendEmailCommand));
+        var queues = builder.Resources.OfType<AzureServiceBusQueueResource>().Select(queue => queue.QueueName);
+
+        Assert.Contains(expected, queues);
+    }
+
+    [Fact]
     public void PublishWithoutSubscriber_ProvisionsExpiringEmulatorSink()
     {
         var builder = DistributedApplication.CreateBuilder();
