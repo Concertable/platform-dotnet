@@ -17,7 +17,9 @@ public sealed class HrefTests
     [Theory]
     [InlineData("/api/files?path=/a/../b")]
     [InlineData("/api/concert/7#notes/..")]
-    public void From_ParentSegmentOutsideThePath_IsAccepted(string input)
+    [InlineData("/api/report?filename=C:\u005Ctemp\u005Cout.csv")]
+    [InlineData("/api/search?q=a b")]
+    public void From_QueryOrFragmentContent_IsNotJudgedAsAPath(string input)
     {
         Assert.Equal(input, Href.From(input).Value);
     }
@@ -25,6 +27,12 @@ public sealed class HrefTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
+    public void From_MissingValue_ThrowsDomainException(string input)
+    {
+        Assert.Throws<DomainException>(() => Href.From(input));
+    }
+
+    [Theory]
     [InlineData("api/application/42/accept")]
     [InlineData("https://example.com/api/application/42/accept")]
     public void From_NotRootRelative_ThrowsDomainException(string input)
@@ -34,19 +42,32 @@ public sealed class HrefTests
 
     [Theory]
     [InlineData("//example.com/api/application/42/accept")]
-    [InlineData("/\\example.com/api/application")]
-    [InlineData("/\t/example.com")]
-    [InlineData("/\r/example.com")]
-    [InlineData("/\n/example.com")]
-    public void From_ValueThatResolvesCrossOrigin_ThrowsDomainException(string input)
+    [InlineData("/api//example.com/x")]
+    [InlineData("/api///example.com/x")]
+    [InlineData("/%2Fexample.com/x")]
+    [InlineData("/%2fexample.com/x")]
+    public void From_EmptyPathSegment_ThrowsDomainException(string input)
     {
         Assert.Throws<DomainException>(() => Href.From(input));
     }
 
     [Theory]
+    [InlineData("/\u005Cexample.com/api/application")]
+    [InlineData("/%5Cexample.com/x")]
+    public void From_Backslash_ThrowsDomainException(string input)
+    {
+        Assert.Throws<DomainException>(() => Href.From(input));
+    }
+
+    [Theory]
+    [InlineData("/\u0009/example.com")]
+    [InlineData("/\u000D/example.com")]
+    [InlineData("/\u000A/example.com")]
     [InlineData("/api/x\u0001y")]
-    [InlineData("/api/x y")]
-    public void From_ControlCharacterOrSpace_ThrowsDomainException(string input)
+    [InlineData("/%09/example.com")]
+    [InlineData("/%0D/example.com")]
+    [InlineData("/%0A/example.com")]
+    public void From_ControlCharacter_ThrowsDomainException(string input)
     {
         Assert.Throws<DomainException>(() => Href.From(input));
     }
@@ -69,7 +90,9 @@ public sealed class HrefTests
 
     [Theory]
     [InlineData("https://example.com/api/venue/3")]
-    [InlineData("/\\example.com")]
+    [InlineData("/api//example.com/x")]
+    [InlineData("/%2Fexample.com/x")]
+    [InlineData("/%5Cexample.com/x")]
     [InlineData("/api/%2e%2e/admin")]
     public void TryFrom_InvalidHref_ReturnsFalse(string input)
     {

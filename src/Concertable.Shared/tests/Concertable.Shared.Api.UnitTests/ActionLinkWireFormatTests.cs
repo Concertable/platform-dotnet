@@ -74,6 +74,23 @@ public sealed class ActionLinkWireFormatTests
         Assert.Throws<DomainException>(() => ActionLink.Get("https://example.com/api/concert/7"));
     }
 
+    [Theory]
+    [InlineData("""{"method":"POST"}""")]
+    [InlineData("""{"href":"/api/application/42/accept"}""")]
+    [InlineData("""{}""")]
+    public void Deserialize_MemberMissing_Throws(string json)
+    {
+        Assert.ThrowsAny<Exception>(() => JsonSerializer.Deserialize<ActionLink>(json, this.options));
+    }
+
+    [Theory]
+    [InlineData("""{"href":"https://example.com/x","method":"POST"}""")]
+    [InlineData("""{"href":"/api//example.com/x","method":"POST"}""")]
+    public void Deserialize_HrefThatWouldLeaveTheOrigin_Throws(string json)
+    {
+        Assert.ThrowsAny<Exception>(() => JsonSerializer.Deserialize<ActionLink>(json, this.options));
+    }
+
     [Fact]
     public void Equality_IsByHrefAndMethod()
     {

@@ -13,19 +13,26 @@ public sealed partial record Href
         if (string.IsNullOrWhiteSpace(value))
             return Validation.Invalid("Href is required.");
 
-        if (value.Any(character => char.IsControl(character) || character is '\\' or ' '))
-            return Validation.Invalid(
-                $"'{value}' must not contain a backslash, a space or a control character.");
-
-        // Don't narrow this to StartsWith("//"): a browser reads '\' as '/' and strips tab/CR/LF
-        // before parsing, so "/\host" and "/<tab>/host" both resolve cross-origin.
-        if (value[0] != '/' || (value.Length > 1 && value[1] == '/'))
-            return Validation.Invalid($"'{value}' must be root-relative.");
+        if (value.Any(char.IsControl))
+            return Validation.Invalid($"'{value}' must not contain a control character.");
 
         var path = value.Split('?', '#')[0];
-        if (Uri.UnescapeDataString(path).Split('/').Contains(".."))
-            return Validation.Invalid($"'{value}' must not traverse its parent.");
 
-        return Validation.Ok;
+        // Check the once-decoded path as well. A rule that only sees raw bytes accepts "/%2Fhost",
+        // which is "//host" after the single decode a server performs.
+        var fault = PathFault(path) ?? PathFault(Uri.UnescapeDataString(path));
+
+        return fault is null ? Validation.Ok : Validation.Invalid($"'{value}' {fault}.");
     }
+
+    // An empty interior segment is rejected outright, not just at index 1: the SPA strips the "/api"
+    // prefix before re-issuing, so "/api//host" becomes "//host", which every HTTP client treats as
+    // protocol-relative and sends off-origin with the caller's bearer token attached.
+    private static string? PathFault(string path) =>
+        path.Length == 0 || path[0] != '/' ? "must be root-relative"
+            : path.Contains("//", StringComparison.Ordinal) ? "must not contain an empty path segment"
+            : path.Contains('\\') ? "must not contain a backslash"
+            : path.Any(char.IsControl) ? "must not contain a control character"
+            : path.Split('/').Contains("..") ? "must not traverse its parent"
+            : null;
 }
