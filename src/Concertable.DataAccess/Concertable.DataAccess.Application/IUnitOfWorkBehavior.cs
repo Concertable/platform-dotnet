@@ -15,22 +15,11 @@ public interface IUnitOfWorkBehavior<TContext>
     Task ExecuteAsync(Func<Task> action, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Runs <paramref name="action"/> in the ambient transaction. When the write fails with a
-    /// <see cref="DbUpdateException"/> that <paramref name="isExpected"/> accepts, the transaction is
-    /// rolled back — including every other context enlisted in it — and
-    /// <paramref name="onExpectedFailure"/> then produces the outcome, after the scope has been
-    /// disposed. Every other failure, and cancellation, propagates.
-    /// <para>
-    /// Recovery belongs to whoever owns the transaction: called inside another scope this classifies
-    /// nothing and behaves as <see cref="ExecuteAsync{T}"/>, so the failure reaches the root scope that
-    /// can actually roll back and rerun.
-    /// </para>
-    /// <para>
-    /// Use this, never a <c>TrySaveChangesAsync</c> inside
-    /// <see cref="ExecuteAsync{T}"/>: a block that returns normally commits the ambient transaction, so a
-    /// failure classified inside it still commits whatever that save's pre-commit handlers wrote to other
-    /// contexts.
-    /// </para>
+    /// Runs <paramref name="action"/> in the ambient transaction. A <see cref="DbUpdateException"/> that
+    /// <paramref name="isExpected"/> accepts rolls the scope back — every enlisted context with it — and
+    /// <paramref name="onExpectedFailure"/> then produces the outcome, after the scope has been disposed.
+    /// Every other failure, and cancellation, propagates. Nested inside another scope this classifies
+    /// nothing, so the failure reaches the root scope that can roll back.
     /// </summary>
     Task<T> TryExecuteAsync<T>(
         Func<Task<T>> action,
