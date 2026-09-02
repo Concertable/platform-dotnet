@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Concertable.Kernel.ValueObjects;
 using Microsoft.AspNetCore.Http;
 
@@ -5,6 +6,7 @@ namespace Concertable.Shared.Api.Http;
 
 public sealed record ActionLink
 {
+    [JsonConstructor]
     private ActionLink(Href href, string method)
     {
         this.Href = href;
@@ -18,8 +20,4 @@ public sealed record ActionLink
     public static ActionLink Get(string href) => new(Href.From(href), HttpMethods.Get);
 
     public static ActionLink Post(string href) => new(Href.From(href), HttpMethods.Post);
-
-    public static ActionLink Put(string href) => new(Href.From(href), HttpMethods.Put);
-
-    public static ActionLink Delete(string href) => new(Href.From(href), HttpMethods.Delete);
 }
