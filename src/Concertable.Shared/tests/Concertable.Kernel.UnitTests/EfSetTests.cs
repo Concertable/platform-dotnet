@@ -44,6 +44,26 @@ public sealed class EfSetTests
     }
 
     [Fact]
+    public void Remove_PresentValue_RemovesItAndReportsTrue_AbsentValueReportsFalse()
+    {
+        var set = new EfSet<Colour>([Colour.Red, Colour.Blue]);
+
+        Assert.True(set.Remove(Colour.Red));
+        Assert.False(set.Remove(Colour.Green));
+        Assert.Equal([Colour.Blue], set);
+    }
+
+    [Fact]
+    public void Clear_EmptiesTheSet()
+    {
+        var set = new EfSet<Colour>([Colour.Red, Colour.Blue]);
+
+        set.Clear();
+
+        Assert.Empty(set);
+    }
+
+    [Fact]
     public void ToEfSet_DedupesAndPreservesOrder()
     {
         IReadOnlyCollection<Colour> source = [Colour.Amber, Colour.Red, Colour.Amber];
