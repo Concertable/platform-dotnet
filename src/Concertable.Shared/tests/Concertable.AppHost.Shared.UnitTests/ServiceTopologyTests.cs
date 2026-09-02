@@ -31,7 +31,8 @@ public sealed class ServiceTopologyTests
         builder.AddAzureServiceBus("messaging")
             .Topology()
             .Publish<ConcertPostedEvent>()
-            .ForService("consumer", service => service.Subscribe<ConcertPostedEvent>())
+            .WithService("consumer")
+            .Subscribe<ConcertPostedEvent>()
             .RunAsEmulator();
 
         var topicName = new AzureServiceBusOptions().TopicNameFor(typeof(ConcertPostedEvent));
@@ -45,31 +46,17 @@ public sealed class ServiceTopologyTests
     }
 
     [Fact]
-    public void Subscribe_WithoutServiceScope_Throws()
-    {
-        var topology = DistributedApplication.CreateBuilder().AddAzureServiceBus("messaging").Topology();
-
-        Assert.Throws<InvalidOperationException>(() => topology.Subscribe<ConcertPostedEvent>());
-    }
-
-    [Fact]
-    public void Queue_WithoutServiceScope_Throws()
-    {
-        var topology = DistributedApplication.CreateBuilder().AddAzureServiceBus("messaging").Topology();
-
-        Assert.Throws<InvalidOperationException>(() => topology.Queue<SendEmailCommand>());
-    }
-
-    [Fact]
-    public void ForService_PerBlock_ScopesEachSubscriptionToItsOwnServiceName()
+    public void WithService_PerService_ScopesEachSubscriptionToItsOwnServiceName()
     {
         var builder = DistributedApplication.CreateBuilder();
         builder.AddAzureServiceBus("messaging")
             .Topology()
             .Publish<ConcertPostedEvent>()
             .Publish<ConcertChangedEvent>()
-            .ForService("service-a", service => service.Subscribe<ConcertPostedEvent>())
-            .ForService("service-b", service => service.Subscribe<ConcertChangedEvent>())
+            .WithService("service-a")
+            .Subscribe<ConcertPostedEvent>()
+            .WithService("service-b")
+            .Subscribe<ConcertChangedEvent>()
             .RunAsEmulator();
 
         var subscriptionNames = builder.Resources
@@ -80,19 +67,25 @@ public sealed class ServiceTopologyTests
         Assert.Equal(["service-a", "service-b"], subscriptionNames.Order());
     }
 
-    /// <summary>
-    /// Every service composes onto one builder, so a name outliving its block would provision the next
-    /// topology's subscriptions under the previous service, silently and correctly-looking.
-    /// </summary>
     [Fact]
-    public void ForService_DoesNotLeakItsServiceNameToLaterSubscriptions()
+    public void WithService_ScopedBuildersStayIndependentWhenInterleaved()
     {
-        var topology = DistributedApplication.CreateBuilder()
-            .AddAzureServiceBus("messaging")
-            .Topology()
-            .ForService("service-a", service => service.Subscribe<ConcertPostedEvent>());
+        var builder = DistributedApplication.CreateBuilder();
+        var topology = builder.AddAzureServiceBus("messaging").Topology();
+        var serviceA = topology.WithService("service-a");
+        var serviceB = topology.WithService("service-b");
 
-        Assert.Throws<InvalidOperationException>(() => topology.Subscribe<ConcertChangedEvent>());
+        serviceA.Subscribe<ConcertPostedEvent>();
+        serviceB.Subscribe<ConcertChangedEvent>();
+        serviceA.Subscribe<ArtistChangedEvent>();
+
+        var perService = builder.Resources
+            .OfType<AzureServiceBusSubscriptionResource>()
+            .GroupBy(subscription => subscription.SubscriptionName)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        Assert.Equal(2, perService["service-a"]);
+        Assert.Equal(1, perService["service-b"]);
     }
 
     [Fact]
