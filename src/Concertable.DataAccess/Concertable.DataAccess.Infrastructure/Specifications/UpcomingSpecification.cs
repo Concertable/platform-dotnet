@@ -6,7 +6,7 @@ using Concertable.Kernel.ValueObjects;
 namespace Concertable.DataAccess.Infrastructure.Specifications;
 
 internal sealed class UpcomingSpecification<TEntity>
-    : NavigablePredicateSpecification<TEntity>, IUpcomingSpecification<TEntity>
+    : PredicateSpecification<TEntity>, IUpcomingSpecification<TEntity>
     where TEntity : class, IHasDateRange
 {
     private readonly TimeProvider timeProvider;
