@@ -89,6 +89,26 @@ public sealed class ServiceTopologyTests
     }
 
     [Fact]
+    public void WithService_Publish_ProvisionsTheTopicWithoutScopingIt()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        builder.AddAzureServiceBus("messaging")
+            .Topology()
+            .WithService("service-a")
+            .Publish<ConcertPostedEvent>()
+            .Subscribe<ConcertChangedEvent>();
+
+        var topicName = new AzureServiceBusOptions().TopicNameFor(typeof(ConcertPostedEvent));
+        var topics = builder.Resources.OfType<AzureServiceBusTopicResource>().Select(topic => topic.Name);
+        var subscriptions = builder.Resources
+            .OfType<AzureServiceBusSubscriptionResource>()
+            .Select(subscription => subscription.SubscriptionName);
+
+        Assert.Contains(topicName, topics);
+        Assert.Equal(["service-a"], subscriptions);
+    }
+
+    [Fact]
     public void WithService_Queue_NamesTheQueueForThatService()
     {
         var builder = DistributedApplication.CreateBuilder();

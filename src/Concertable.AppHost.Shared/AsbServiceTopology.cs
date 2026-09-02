@@ -12,6 +12,12 @@ public sealed class AsbServiceTopology
         this.serviceName = serviceName;
     }
 
+    public AsbServiceTopology Publish<TEvent>()
+    {
+        this.topology.Publish<TEvent>();
+        return this;
+    }
+
     public AsbServiceTopology Subscribe<TEvent>()
     {
         this.topology.Subscribe<TEvent>(this.serviceName);
