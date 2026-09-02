@@ -1,5 +1,8 @@
+using Concertable.Contracts;
 using Concertable.DataAccess.Application;
+using Concertable.DataAccess.Infrastructure.Specifications;
 using Concertable.Kernel;
+using Concertable.Kernel.Specifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.DataAccess.Infrastructure;
@@ -53,11 +56,34 @@ public abstract class Repository<TEntity, TKey> : IRepository<TEntity, TKey>
         this.Context = context;
     }
 
-    public virtual async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken ct = default) =>
+    public virtual async Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken ct = default) =>
         await Context.Query<TEntity>().ToListAsync(ct);
 
     public Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default) =>
         Context.Query<TEntity>().FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
+
+    public Task<TEntity?> GetByIdAsync(TKey id, ISpecification<TEntity> spec, CancellationToken ct = default) =>
+        Context.Query<TEntity>().Apply(spec).FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
+
+    public Task<TResult?> GetByIdAsync<TResult>(TKey id, ISpecification<TEntity, TResult> spec, CancellationToken ct = default)
+        where TResult : class =>
+        Context.Query<TEntity>().Where(e => e.Id!.Equals(id)).Select(spec.Selector).FirstOrDefaultAsync(ct);
+
+    public Task<TResult?> GetByIdAsync<TResult>(TKey id, ISpecification<TEntity, TResult?> spec, CancellationToken ct = default)
+        where TResult : struct =>
+        Context.Query<TEntity>().Where(e => e.Id!.Equals(id)).Select(spec.Selector).FirstOrDefaultAsync(ct);
+
+    public async Task<IReadOnlyList<TEntity>> GetAllAsync(ISpecification<TEntity> spec, CancellationToken ct = default) =>
+        await Context.Query<TEntity>().Apply(spec).ApplyOrders(spec).ToListAsync(ct);
+
+    public async Task<IReadOnlyList<TResult>> GetAllAsync<TResult>(ISpecification<TEntity, TResult> spec, CancellationToken ct = default) =>
+        await Context.Query<TEntity>().ApplyOrders(spec).Select(spec.Selector).ToListAsync(ct);
+
+    public Task<IPagination<TEntity>> GetPageAsync(ISpecification<TEntity> spec, IPageParams pageParams, CancellationToken ct = default) =>
+        Context.Query<TEntity>().Apply(spec).ApplyPagedOrders(spec).ToPaginationAsync(pageParams, ct);
+
+    public Task<IPagination<TResult>> GetPageAsync<TResult>(ISpecification<TEntity, TResult> spec, IPageParams pageParams, CancellationToken ct = default) =>
+        Context.Query<TEntity>().ApplyPagedOrders(spec).Select(spec.Selector).ToPaginationAsync(pageParams, ct);
 
     public bool Exists(TKey id) => Context.Query<TEntity>().Any(e => e.Id!.Equals(id));
 
@@ -100,11 +126,34 @@ public abstract class ReadRepository<TEntity, TKey> : IReadRepository<TEntity, T
         this.Context = context;
     }
 
-    public virtual async Task<IEnumerable<TEntity>> GetAllAsync(CancellationToken ct = default) =>
+    public virtual async Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken ct = default) =>
         await Context.Query<TEntity>().ToListAsync(ct);
 
     public Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default) =>
         Context.Query<TEntity>().FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
+
+    public Task<TEntity?> GetByIdAsync(TKey id, ISpecification<TEntity> spec, CancellationToken ct = default) =>
+        Context.Query<TEntity>().Apply(spec).FirstOrDefaultAsync(e => e.Id!.Equals(id), ct);
+
+    public Task<TResult?> GetByIdAsync<TResult>(TKey id, ISpecification<TEntity, TResult> spec, CancellationToken ct = default)
+        where TResult : class =>
+        Context.Query<TEntity>().Where(e => e.Id!.Equals(id)).Select(spec.Selector).FirstOrDefaultAsync(ct);
+
+    public Task<TResult?> GetByIdAsync<TResult>(TKey id, ISpecification<TEntity, TResult?> spec, CancellationToken ct = default)
+        where TResult : struct =>
+        Context.Query<TEntity>().Where(e => e.Id!.Equals(id)).Select(spec.Selector).FirstOrDefaultAsync(ct);
+
+    public async Task<IReadOnlyList<TEntity>> GetAllAsync(ISpecification<TEntity> spec, CancellationToken ct = default) =>
+        await Context.Query<TEntity>().Apply(spec).ApplyOrders(spec).ToListAsync(ct);
+
+    public async Task<IReadOnlyList<TResult>> GetAllAsync<TResult>(ISpecification<TEntity, TResult> spec, CancellationToken ct = default) =>
+        await Context.Query<TEntity>().ApplyOrders(spec).Select(spec.Selector).ToListAsync(ct);
+
+    public Task<IPagination<TEntity>> GetPageAsync(ISpecification<TEntity> spec, IPageParams pageParams, CancellationToken ct = default) =>
+        Context.Query<TEntity>().Apply(spec).ApplyPagedOrders(spec).ToPaginationAsync(pageParams, ct);
+
+    public Task<IPagination<TResult>> GetPageAsync<TResult>(ISpecification<TEntity, TResult> spec, IPageParams pageParams, CancellationToken ct = default) =>
+        Context.Query<TEntity>().ApplyPagedOrders(spec).Select(spec.Selector).ToPaginationAsync(pageParams, ct);
 
     public bool Exists(TKey id) =>
         Context.Query<TEntity>().Any(e => e.Id!.Equals(id));
