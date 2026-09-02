@@ -23,20 +23,6 @@ public sealed class AsbTopology
 
     public AsbServiceTopology WithService(string serviceName) => new(this, serviceName);
 
-    // The published topologies still name the service per call; they move onto WithService once the
-    // package carrying it reaches them, and these two go with the last caller.
-    public AsbTopology Subscribe<TEvent>(string serviceName)
-    {
-        SubscribeCore<TEvent>(serviceName);
-        return this;
-    }
-
-    public AsbTopology Queue<TCommand>(string serviceName)
-    {
-        QueueCore<TCommand>(serviceName);
-        return this;
-    }
-
     public IResourceBuilder<AzureServiceBusResource> RunAsEmulator()
     {
         foreach (var (topic, topicBuilder) in topics)
@@ -52,14 +38,14 @@ public sealed class AsbTopology
         return asb.RunAsEmulator();
     }
 
-    private void SubscribeCore<TEvent>(string forServiceName)
+    internal void Subscribe<TEvent>(string forServiceName)
     {
         var topicBuilder = GetOrAddTopic<TEvent>();
         topicBuilder.AddServiceBusSubscription($"{forServiceName}-{KebabCase(typeof(TEvent))}", forServiceName);
         subscribedTopics.Add(topicBuilder.Resource.TopicName);
     }
 
-    private void QueueCore<TCommand>(string forServiceName) =>
+    internal void Queue<TCommand>(string forServiceName) =>
         asb.AddServiceBusQueue(options.QueueNameFor(forServiceName, typeof(TCommand)));
 
     private IResourceBuilder<AzureServiceBusTopicResource> GetOrAddTopic<TEvent>()
