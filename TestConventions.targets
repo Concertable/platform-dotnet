@@ -5,13 +5,14 @@
        before the csproj body, where $(IsTestProject) is not yet set.
 
        The project NAME is the single declaration of tier, so no separate property can disagree with it.
-       EndsWith is tested before Contains, or Concertable.Payment.E2ETests.Helpers.UnitTests - a unit-test
-       project for an E2E helper library - would resolve as E2E. -->
+       Every EndsWith is tested before the single Contains, or Concertable.Payment.E2ETests.Helpers.UnitTests -
+       a unit-test project for an E2E helper library - would resolve as E2E. -->
   <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
     <ConcertableTestTier Condition="$(MSBuildProjectName.EndsWith('.UnitTests'))">Unit</ConcertableTestTier>
     <ConcertableTestTier Condition="'$(ConcertableTestTier)' == '' And $(MSBuildProjectName.EndsWith('.IntegrationTests'))">Integration</ConcertableTestTier>
-    <ConcertableTestTier Condition="'$(ConcertableTestTier)' == '' And $(MSBuildProjectName.Contains('.E2ETests'))">E2E</ConcertableTestTier>
     <ConcertableTestTier Condition="'$(ConcertableTestTier)' == '' And $(MSBuildProjectName.EndsWith('.ArchitectureTests'))">Architecture</ConcertableTestTier>
+    <ConcertableTestTier Condition="'$(ConcertableTestTier)' == '' And $(MSBuildProjectName.EndsWith('.StartupTests'))">Startup</ConcertableTestTier>
+    <ConcertableTestTier Condition="'$(ConcertableTestTier)' == '' And $(MSBuildProjectName.Contains('.E2ETests'))">E2E</ConcertableTestTier>
   </PropertyGroup>
 
   <!-- Source-level fingerprints a PackageReference check cannot see, because the symbol can arrive
@@ -26,7 +27,7 @@
   <Target Name="ValidateTestConventions" BeforeTargets="BeforeBuild" Condition="'$(IsTestProject)' == 'true'">
 
     <Error Condition="'$(ConcertableTestTier)' == ''"
-           Text="Test-tier violation: '$(MSBuildProjectName)' declares &lt;IsTestProject&gt;true&lt;/IsTestProject&gt; but its name states no tier. Rename it to end in .UnitTests, .IntegrationTests, or .ArchitectureTests, or to contain .E2ETests. Answer the question the name is asking: a test needing a host, HTTP or a database is an integration test, not a unit test. A support library that is not itself a test suite sets &lt;IsTestProject&gt;false&lt;/IsTestProject&gt; (see the *.Fixtures and *.Helpers projects). Skills: dotnet-standards:unit-testing, dotnet:unit-testing, dotnet-standards:integration-testing." />
+           Text="Test-tier violation: '$(MSBuildProjectName)' declares &lt;IsTestProject&gt;true&lt;/IsTestProject&gt; but its name states no tier. Rename it to end in .UnitTests, .IntegrationTests, .ArchitectureTests or .StartupTests, or to contain .E2ETests. Answer the question the name is asking: a test needing a host, HTTP or a database is an integration test, not a unit test; a test asking whether a host would refuse to boot on the configuration its app model supplies is a startup test; a test asserting code structure is an architecture test. A support library that is not itself a test suite sets &lt;IsTestProject&gt;false&lt;/IsTestProject&gt; (see the *.Fixtures and *.Helpers projects). Skills: dotnet-standards:unit-testing, dotnet:unit-testing, dotnet-standards:integration-testing." />
 
     <ItemGroup>
       <_ConcertableHostPackage Include="@(PackageReference)"
