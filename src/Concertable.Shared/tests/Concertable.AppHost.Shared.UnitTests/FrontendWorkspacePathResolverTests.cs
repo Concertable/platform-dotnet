@@ -58,7 +58,7 @@ public sealed class FrontendWorkspacePathResolverTests
                 this.workspacePathCandidates,
                 _ => false));
 
-        Assert.Contains("app\\web\\b2b\\venue", exception.Message);
-        Assert.Contains("app\\web\\venue", exception.Message);
+        Assert.Contains(Path.Combine("app", "web", "b2b", "venue"), exception.Message);
+        Assert.Contains(Path.Combine("app", "web", "venue"), exception.Message);
     }
 }
