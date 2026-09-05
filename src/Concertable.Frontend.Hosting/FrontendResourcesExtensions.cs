@@ -12,10 +12,13 @@ public static class FrontendResourcesExtensions
     {
         public IResourceBuilder<NodeAppResource> AddSpaSurface(
             SpaSurface surface,
-            string[] pathSegments,
+            IReadOnlyList<string[]> workspacePathCandidates,
             IResourceBuilder<IResourceWithServiceDiscovery> backend,
             IResourceBuilder<IResourceWithServiceDiscovery> auth) =>
-            builder.AddNpmApp(surface.ResourceName, RepoPath(builder, pathSegments), "dev")
+            builder.AddNpmApp(
+                       surface.ResourceName,
+                       FrontendWorkspacePathResolver.Resolve(builder.AppHostDirectory, workspacePathCandidates),
+                       "dev")
                    .WithHttpsEndpoint(port: surface.HttpsPort, isProxied: false)
                    .WithReference(backend)
                    .WithReference(auth)
@@ -33,12 +36,14 @@ public static class FrontendResourcesExtensions
 
         public IResourceBuilder<NodeAppResource> AddMobileSurface(
             string resourceName,
-            string[] pathSegments,
+            IReadOnlyList<string[]> workspacePathCandidates,
             IResourceBuilder<IResourceWithServiceDiscovery> backend,
             IResourceBuilder<DevTunnelResource> tunnel,
             params MobileServiceEndpoint[] endpoints)
         {
-            var directory = RepoPath(builder, pathSegments);
+            var directory = FrontendWorkspacePathResolver.Resolve(
+                builder.AppHostDirectory,
+                workspacePathCandidates);
             var mobile = builder.AddNpmApp(resourceName, directory, "start:ci")
                 .WithEnvironment("REACT_NATIVE_PACKAGER_HOSTNAME", builder.Configuration["MobileLanIp"] ?? "localhost")
                 .WaitFor(backend)
@@ -69,15 +74,6 @@ public static class FrontendResourcesExtensions
             MobileServiceEndpoint endpoint) =>
             mobile.WithReference(endpoint.Service, tunnel)
                   .WithEnvironment(context => SetServiceUrl(context, endpoint.Service.Resource.Name, endpoint.EnvironmentVariable));
-    }
-
-    private static string RepoPath(IDistributedApplicationBuilder builder, string[] segments)
-    {
-        for (var directory = new DirectoryInfo(builder.AppHostDirectory); directory is not null; directory = directory.Parent)
-            if (Directory.Exists(Path.Combine(directory.FullName, "app")))
-                return Path.Combine([directory.FullName, .. segments]);
-
-        throw new InvalidOperationException($"Could not locate repo root (no 'app' directory found walking up from '{builder.AppHostDirectory}').");
     }
 
     private static void SetServiceUrl(EnvironmentCallbackContext context, string resourceName, string environmentVariable)

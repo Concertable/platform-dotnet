@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Concertable.AppHost.Shared\Concertable.AppHost.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Concertable.Frontend.Hosting\Concertable.Frontend.Hosting.csproj" />
     <PackageReference Include="Concertable.Auth.Hosting" />
     <PackageReference Include="Concertable.B2B.Hosting" />
     <PackageReference Include="Concertable.Customer.Hosting" />
