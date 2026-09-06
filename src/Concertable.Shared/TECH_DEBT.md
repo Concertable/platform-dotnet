@@ -35,6 +35,30 @@ and the misleading `IsPackable=true` is dropped. Decision + execution steps:
 consistency with the Shared-repo model — the cost is that every shared-test-helper edit then takes the
 publish-first cycle.
 
+### Outbox quiescence across an integration reset lives in B2B's fixture, not the shared library
+
+`ApiFixture.ResetAsync` Respawns the database between tests while `OutboxDispatcher`, a `BackgroundService`
+polling every second, may already hold a claimed batch it has not yet delivered — so the previous test's
+messages land in the next test, after its mocks were cleared. B2B fixed this by stopping every live host's
+background services before Respawn and starting them again after seeding, and by tracking the extra hosts
+`CreateClient(user, configure)` builds so their dispatchers stop too.
+
+That fix sits in `api/Concertable.B2B/tests/Concertable.B2B.IntegrationTests.Fixtures/ApiFixture.cs`. Customer,
+Payment and Auth each register the same dispatcher behind their own `ApiFixture` and have the same hole open;
+they are green today only because their suites generate less cross-reset outbox traffic.
+
+It could not be lifted into `Concertable.Testing.Integration` in the same stroke: B2B consumes that library
+as a pinned package and publishing runs only on `main`, so the shared change and its consumer cannot land
+together. The same publish-first constraint blocks the tidier fix of having `OutboxDispatcher` and
+`QueueHostedService` swallow cancellation in `ExecuteAsync` — both let it escape, which is why the B2B test
+host has to set `BackgroundServiceExceptionBehavior.Ignore` to stop a cancelled loop tearing down the host.
+
+**Resolves when:** the stop-before-Respawn / start-after-seed step is a member of the shared integration
+testing library, B2B's fixture calls it instead of carrying its own copy, and the Customer, Payment and Auth
+fixtures call it too.
+
+---
+
 ---
 
 ## LOW
@@ -104,3 +128,21 @@ Verified, not assumed:
 retyped or removed with its callers, the three package references are dropped, and the arch guard is
 widened from `Functional/` to the whole Kernel so the carrier cannot come back. Publish-first: the
 overload removal is breaking, so it migrates through a platform sync.
+
+## `Concertable.Payment.Hosting` is pinned at the platform version, not the split Payment version
+
+`api/Concertable.Shared/Directory.Packages.props` pins `Concertable.Payment.Hosting` at
+`$(ConcertablePlatformVersion)`, while B2B and Customer pin every Payment package at the separate
+`$(ConcertablePaymentVersion)` (`0.1.0-alpha.0.1322`) because Payment's alpha heights are not monotonic with
+the platform's. Inert today: the only consumer is `Concertable.AppHost.Shared.UnitTests`, and
+`PlatformSourcePackages.targets` swaps every `tests/`-path and `*.AppHost` project's Payment/Hosting
+package reference to the in-repo project, so nothing here resolves Payment from the feed.
+
+Found by independent review during PR #633 (finding IR36).
+
+**Resolves when:** this file carries the same `ConcertablePaymentVersion` block as
+`api/Concertable.B2B/Directory.Packages.props` and the `Concertable.Payment.Hosting` entry points at it —
+after confirming against the feed which Payment versions are actually published, since the whole reason the
+split pin exists is that the platform height is not a valid Payment height.
+
+---
