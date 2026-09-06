@@ -35,6 +35,30 @@ and the misleading `IsPackable=true` is dropped. Decision + execution steps:
 consistency with the Shared-repo model — the cost is that every shared-test-helper edit then takes the
 publish-first cycle.
 
+### Outbox quiescence across an integration reset lives in B2B's fixture, not the shared library
+
+`ApiFixture.ResetAsync` Respawns the database between tests while `OutboxDispatcher`, a `BackgroundService`
+polling every second, may already hold a claimed batch it has not yet delivered — so the previous test's
+messages land in the next test, after its mocks were cleared. B2B fixed this by stopping every live host's
+background services before Respawn and starting them again after seeding, and by tracking the extra hosts
+`CreateClient(user, configure)` builds so their dispatchers stop too.
+
+That fix sits in `api/Concertable.B2B/tests/Concertable.B2B.IntegrationTests.Fixtures/ApiFixture.cs`. Customer,
+Payment and Auth each register the same dispatcher behind their own `ApiFixture` and have the same hole open;
+they are green today only because their suites generate less cross-reset outbox traffic.
+
+It could not be lifted into `Concertable.Testing.Integration` in the same stroke: B2B consumes that library
+as a pinned package and publishing runs only on `main`, so the shared change and its consumer cannot land
+together. The same publish-first constraint blocks the tidier fix of having `OutboxDispatcher` and
+`QueueHostedService` swallow cancellation in `ExecuteAsync` — both let it escape, which is why the B2B test
+host has to set `BackgroundServiceExceptionBehavior.Ignore` to stop a cancelled loop tearing down the host.
+
+**Resolves when:** the stop-before-Respawn / start-after-seed step is a member of the shared integration
+testing library, B2B's fixture calls it instead of carrying its own copy, and the Customer, Payment and Auth
+fixtures call it too.
+
+---
+
 ---
 
 ## LOW
