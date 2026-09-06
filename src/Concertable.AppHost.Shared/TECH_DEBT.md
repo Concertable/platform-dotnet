@@ -48,3 +48,23 @@ deleted in the same stroke.
 `AssertImageEndpoint`, `AssertContainerRuntimeArgs` and `AssertUsesDeveloperCertificate` are declared verbatim in the `ResourceGraphTests` of `Concertable.B2B.StartupTests`, `Concertable.Customer.StartupTests`, `Concertable.Payment.StartupTests` and `Concertable.Search.StartupTests` (about 45 lines each). Their natural home is `Concertable.Testing.Architecture`, which every one of those suites already references as a published package — so landing them is a publish-then-consume two-step. Moving them there means that package taking an `Aspire.Hosting` and `Concertable.AppHost.Shared` dependency — it currently has neither — so a shared-testing package would start carrying the AppHost graph vocabulary.
 
 **Resolves when:** the three helpers exist once in `Concertable.Testing.Architecture` (or a new AppHost-graph testing package), all four suites call them from there, and no service startup suite declares its own copy.
+
+---
+
+## LOW
+
+### `AppModelConfiguration` is triplicated byte-for-byte across three startup suites
+
+`Concertable.Auth.StartupTests`, `Concertable.Payment.StartupTests` and `Concertable.Search.StartupTests` each carry a 49-line `AppModelConfiguration.cs` differing only in its namespace declaration. It is the piece that makes the tier's central gate work — it resolves what an AppHost resource is actually handed — so three copies means three places for the `Secrets` allowlist to drift, and a topology key wrongly added to one copy blinds only that service while the other two still look correct. Same destination and the same publish-then-consume constraint as the entry above.
+
+**Resolves when:** `AppModelConfiguration` exists once in `Concertable.Testing.Architecture` (or the same new AppHost-graph testing package), every service startup suite resolves its app-model configuration through it, and no suite declares its own copy.
+
+---
+
+## LOW
+
+### The startup gate's `IStartupValidator` call is inert wherever `ValidateOnStart` has not landed
+
+`AppModelStartupContractTests` ends each case with `app.Services.GetService<IStartupValidator>()?.Validate()`. That service exists only once something has called `ValidateOnStart()`, and the only calls in `api/` are three in `Concertable.Payment.Infrastructure`. For Auth and Search the line therefore asserts nothing, and the gate's actual bite is the eager `?? throw` inside each host's `Configure` lambda firing during `builder.Build()`. The null-conditional keeps the tier forward-compatible as options validation lands, but it also means deleting a `ValidateOnStart()` weakens the gate without turning anything red.
+
+**Resolves when:** every executable host declares its required configuration through `IValidateOptions<T>` plus `ValidateOnStart()`, and `AppModelStartupContractTests` resolves `IStartupValidator` with `GetRequiredService` so a host that stops declaring its requirements fails the tier instead of silently skipping the check.
