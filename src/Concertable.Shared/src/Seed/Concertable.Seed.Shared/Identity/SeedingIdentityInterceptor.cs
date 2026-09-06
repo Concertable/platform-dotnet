@@ -10,8 +10,12 @@ namespace Concertable.Seed.Shared.Identity;
 public sealed class SeedingIdentityInterceptor : DbCommandInterceptor
 {
     private static readonly Regex insertRegex = new(
-        @"INSERT\s+INTO\s+(?<table>\[?[\w]+\]?(?:\.\[?[\w]+\]?)?)\s*\((?<cols>[^)]*)\)",
+        @"(?:INSERT\s+INTO|MERGE\s+(?:INTO\s+)?)\s*(?<table>\[?[\w]+\]?(?:\.\[?[\w]+\]?)?)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex columnListRegex = new(
+        @"\(([^()]*)\)",
+        RegexOptions.Compiled);
 
     private static readonly ConcurrentDictionary<Type, Dictionary<string, string>> tableCache = new();
 
@@ -36,13 +40,18 @@ public sealed class SeedingIdentityInterceptor : DbCommandInterceptor
     private void Rewrite(DbCommand command, CommandEventData e)
     {
         if (!scope.IsActive || e.Context is null) return;
-        if (!command.CommandText.Contains("INSERT INTO", StringComparison.OrdinalIgnoreCase)) return;
+        if (!command.CommandText.Contains("INSERT", StringComparison.OrdinalIgnoreCase)) return;
 
         var identityTables = tableCache.GetOrAdd(e.Context.GetType(), _ => BuildTableMap(e.Context.Model));
 
+        var columnLists = columnListRegex.Matches(command.CommandText)
+            .Select(m => m.Groups[1].Value)
+            .ToArray();
+
         var tables = insertRegex.Matches(command.CommandText)
             .Where(m => identityTables.TryGetValue(Normalize(m.Groups["table"].Value), out var col)
-                     && m.Groups["cols"].Value.Split(',').Any(c => c.Trim(' ', '[', ']').Equals(col, StringComparison.OrdinalIgnoreCase)))
+                     && columnLists.Any(list => list.Split(',')
+                         .Any(c => c.Trim(' ', '[', ']').Equals(col, StringComparison.OrdinalIgnoreCase))))
             .Select(m => Normalize(m.Groups["table"].Value))
             .ToHashSet();
 
