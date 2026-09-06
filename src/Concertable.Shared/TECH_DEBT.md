@@ -104,3 +104,21 @@ Verified, not assumed:
 retyped or removed with its callers, the three package references are dropped, and the arch guard is
 widened from `Functional/` to the whole Kernel so the carrier cannot come back. Publish-first: the
 overload removal is breaking, so it migrates through a platform sync.
+
+## `Concertable.Payment.Hosting` is pinned at the platform version, not the split Payment version
+
+`api/Concertable.Shared/Directory.Packages.props` pins `Concertable.Payment.Hosting` at
+`$(ConcertablePlatformVersion)`, while B2B and Customer pin every Payment package at the separate
+`$(ConcertablePaymentVersion)` (`0.1.0-alpha.0.1322`) because Payment's alpha heights are not monotonic with
+the platform's. Inert today: the only consumer is `Concertable.AppHost.Shared.UnitTests`, and
+`PlatformSourcePackages.targets` swaps every `tests/`-path and `*.AppHost` project's Payment/Hosting
+package reference to the in-repo project, so nothing here resolves Payment from the feed.
+
+Found by independent review during PR #633 (finding IR36).
+
+**Resolves when:** this file carries the same `ConcertablePaymentVersion` block as
+`api/Concertable.B2B/Directory.Packages.props` and the `Concertable.Payment.Hosting` entry points at it —
+after confirming against the feed which Payment versions are actually published, since the whole reason the
+split pin exists is that the platform height is not a valid Payment height.
+
+---
