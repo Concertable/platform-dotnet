@@ -3,6 +3,7 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Azure;
 using Concertable.Auth.Contracts.Events;
 using Concertable.Auth.Hosting;
+using Concertable.B2B.Application.Contracts.Events;
 using Concertable.B2B.Artist.Contracts.Events;
 using Concertable.B2B.Booking.Contracts.Events;
 using Concertable.B2B.Concert.Contracts.Commands;
@@ -159,7 +160,22 @@ public sealed class ServiceTopologyTests
             typeof(ConcertCancelledEvent),
             typeof(ConcertCreatedEvent),
             typeof(B2BPayoutOwnerRegisteredEvent),
-            typeof(TenantActivityRecordedEvent));
+            typeof(TenantActivityRecordedEvent),
+            typeof(ApplicationAcceptedEvent));
+
+    [Fact]
+    public void AddB2BTopology_ProvisionsApplicationAcceptedLoopbackSubscription()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        var topology = builder.AddAzureServiceBus("messaging").Topology();
+        topology.AddB2BTopology();
+
+        var subscription = Assert.Single(
+            builder.Resources.OfType<AzureServiceBusSubscriptionResource>(),
+            resource => resource.Name == $"{B2BConstants.ServiceName}-application-accepted");
+
+        Assert.Equal(B2BConstants.ServiceName, subscription.SubscriptionName);
+    }
 
     [Fact]
     public void AddB2BTopology_ProvisionsCommandQueues()
