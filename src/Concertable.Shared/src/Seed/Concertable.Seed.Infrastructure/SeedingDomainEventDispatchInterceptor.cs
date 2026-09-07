@@ -8,19 +8,19 @@ namespace Concertable.Seed.Infrastructure;
 
 public sealed class SeedingDomainEventDispatchInterceptor : SaveChangesInterceptor, IDomainEventDispatchInterceptor
 {
-    private readonly IDomainEventDispatcher dispatcher;
-    private readonly IDbContextAccessor contextAccessor;
+    private readonly IDomainEventDispatcher domainEventDispatcher;
+    private readonly IDbContextAccessor dbContextAccessor;
     private readonly SeedingScope seedingScope;
 
     private readonly Stack<List<IDomainEvent>> pendingEventsStack = new();
 
     public SeedingDomainEventDispatchInterceptor(
-        IDomainEventDispatcher dispatcher,
-        IDbContextAccessor contextAccessor,
+        IDomainEventDispatcher domainEventDispatcher,
+        IDbContextAccessor dbContextAccessor,
         SeedingScope seedingScope)
     {
-        this.dispatcher = dispatcher;
-        this.contextAccessor = contextAccessor;
+        this.domainEventDispatcher = domainEventDispatcher;
+        this.dbContextAccessor = dbContextAccessor;
         this.seedingScope = seedingScope;
     }
 
@@ -43,6 +43,14 @@ public sealed class SeedingDomainEventDispatchInterceptor : SaveChangesIntercept
         return await base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
+    public override Task SaveChangesFailedAsync(
+        DbContextErrorEventData eventData,
+        CancellationToken cancellationToken = default)
+    {
+        pendingEventsStack.TryPop(out _);
+        return base.SaveChangesFailedAsync(eventData, cancellationToken);
+    }
+
     public override async ValueTask<int> SavedChangesAsync(
         SaveChangesCompletedEventData eventData,
         int result,
@@ -53,7 +61,7 @@ public sealed class SeedingDomainEventDispatchInterceptor : SaveChangesIntercept
         if (seedingScope.IsActive)
             await DispatchPreCommitAsync(eventData.Context!, pendingEvents, cancellationToken);
 
-        await dispatcher.DispatchAsync(pendingEvents, cancellationToken);
+        await domainEventDispatcher.DispatchAsync(pendingEvents, cancellationToken);
 
         return await base.SavedChangesAsync(eventData, result, cancellationToken);
     }
@@ -63,15 +71,15 @@ public sealed class SeedingDomainEventDispatchInterceptor : SaveChangesIntercept
         List<IDomainEvent> pendingEvents,
         CancellationToken cancellationToken)
     {
-        var previous = contextAccessor.Context;
-        contextAccessor.Context = context;
+        var previous = dbContextAccessor.Context;
+        dbContextAccessor.Context = context;
         try
         {
-            await dispatcher.DispatchPreCommitAsync(pendingEvents, cancellationToken);
+            await domainEventDispatcher.DispatchPreCommitAsync(pendingEvents, cancellationToken);
         }
         finally
         {
-            contextAccessor.Context = previous;
+            dbContextAccessor.Context = previous;
         }
     }
 }

@@ -35,6 +35,73 @@ and the misleading `IsPackable=true` is dropped. Decision + execution steps:
 consistency with the Shared-repo model — the cost is that every shared-test-helper edit then takes the
 publish-first cycle.
 
+### Outbox quiescence across an integration reset lives in B2B's fixture, not the shared library
+
+`ApiFixture.ResetAsync` Respawns the database between tests while `OutboxDispatcher`, a `BackgroundService`
+polling every second, may already hold a claimed batch it has not yet delivered — so the previous test's
+messages land in the next test, after its mocks were cleared. B2B fixed this by stopping every live host's
+background services before Respawn and starting them again after seeding, and by tracking the extra hosts
+`CreateClient(user, configure)` builds so their dispatchers stop too.
+
+That fix sits in `api/Concertable.B2B/tests/Concertable.B2B.IntegrationTests.Fixtures/ApiFixture.cs`. Customer,
+Payment and Auth each register the same dispatcher behind their own `ApiFixture` and have the same hole open;
+they are green today only because their suites generate less cross-reset outbox traffic.
+
+It could not be lifted into `Concertable.Testing.Integration` in the same stroke: B2B consumes that library
+as a pinned package and publishing runs only on `main`, so the shared change and its consumer cannot land
+together. The same publish-first constraint blocks the tidier fix of having `OutboxDispatcher` and
+`QueueHostedService` swallow cancellation in `ExecuteAsync` — both let it escape, which is why the B2B test
+host has to set `BackgroundServiceExceptionBehavior.Ignore` to stop a cancelled loop tearing down the host.
+
+**Resolves when:** the stop-before-Respawn / start-after-seed step is a member of the shared integration
+testing library, B2B's fixture calls it instead of carrying its own copy, and the Customer, Payment and Auth
+fixtures call it too.
+
+---
+
+### Seeding defects can only surface in E2E, because nothing cheaper runs a dev seeder
+
+`IDevSeeder` runs in dev and E2E; `ITestSeeder` runs in integration. Two seeders write the same rows by
+different code paths, so a fix can land on one path and leave the other broken with every gate still green.
+That is not hypothetical — it is exactly what happened on
+`Refactor/launch_deal-lifecycle-modules-phase2`.
+
+`SeedingIdentityInterceptor` exists so no seeder hand-writes `SET IDENTITY_INSERT`. Its regex matched only
+literal `INSERT INTO <table> (cols)`, and EF emits a `MERGE` for batched inserts into a TPH table — so the
+interceptor silently did nothing for exactly the three modules with `HasDiscriminator` (Application, Booking,
+Concert) and worked everywhere else. Someone hit the resulting error and pasted `SET IDENTITY_INSERT ON/OFF`
+into `ApplicationTestSeeder`, `BookingTestSeeder` and `ConcertTestSeeder`. That fixed the integration tier and
+masked the interceptor bug, leaving the dev seeders broken. It surfaced when E2E first ran on the branch: all
+ten B2B API E2E tests failed on a health check, because `ApplicationDevSeeder` threw SQL 544 and `b2b-web`
+exited. Roughly three hours to find, for a defect a millisecond-scale unit test would have caught.
+
+The interceptor is fixed and the three workarounds are deleted. What follows is the tiering, cheapest first:
+
+1. **Unit-test `SeedingIdentityInterceptor`.** It is pure string manipulation over an EF model — no container,
+   no database — and has *zero* coverage today, which is the direct reason a regex that missed `MERGE`
+   survived. Cover both SQL shapes, a TPH model, and a non-identity table. Also pin the constraint currently
+   recorded only in a comment in `BookingFactory`: SQL Server permits `IDENTITY_INSERT` on one table at a
+   time, so a command touching two identity tables must not emit two `ON` statements.
+2. **A dev-seeder smoke test per service in the integration tier.** Every `ApiFixture` already has
+   containerized SQL and real migrations; it just runs `ITestSeeder`. One test that instead runs the
+   `IDevSeeder` chain to completion catches identity mismatches, seeder ordering and FK violations in ~2
+   minutes rather than ~30.
+3. **An architecture test for seeder parity.** Every `ITestSeeder` has an `IDevSeeder` twin for the same
+   module, and neither contains raw `IDENTITY_INSERT` SQL now the interceptor handles it. Unit-speed, and it
+   would have failed the day the workaround was written instead of letting it mask a live bug.
+4. **Collapse the dev/test seeder pair onto one implementation** differing only by interface, so a fix
+   physically cannot land on one path. This defect required the divergence to exist.
+
+E2E should be reserved for what genuinely needs real orchestration — cross-service wiring, Aspire, real HTTP.
+Seeding needs a database and migrations, and the integration tier already has both.
+
+**Resolves when:** items 1-3 are in place — `SeedingIdentityInterceptor` has unit coverage of both SQL shapes,
+each service's integration suite runs its `IDevSeeder` chain against a migrated database, and an architecture
+test asserts dev/test seeder parity with no hand-written `IDENTITY_INSERT` in either. Item 4 is the structural
+follow-up and may be tracked separately.
+
+---
+
 ---
 
 ## LOW
@@ -104,3 +171,21 @@ Verified, not assumed:
 retyped or removed with its callers, the three package references are dropped, and the arch guard is
 widened from `Functional/` to the whole Kernel so the carrier cannot come back. Publish-first: the
 overload removal is breaking, so it migrates through a platform sync.
+
+## `Concertable.Payment.Hosting` is pinned at the platform version, not the split Payment version
+
+`api/Concertable.Shared/Directory.Packages.props` pins `Concertable.Payment.Hosting` at
+`$(ConcertablePlatformVersion)`, while B2B and Customer pin every Payment package at the separate
+`$(ConcertablePaymentVersion)` (`0.1.0-alpha.0.1322`) because Payment's alpha heights are not monotonic with
+the platform's. Inert today: the only consumer is `Concertable.AppHost.Shared.UnitTests`, and
+`PlatformSourcePackages.targets` swaps every `tests/`-path and `*.AppHost` project's Payment/Hosting
+package reference to the in-repo project, so nothing here resolves Payment from the feed.
+
+Found by independent review during PR #633 (finding IR36).
+
+**Resolves when:** this file carries the same `ConcertablePaymentVersion` block as
+`api/Concertable.B2B/Directory.Packages.props` and the `Concertable.Payment.Hosting` entry points at it —
+after confirming against the feed which Payment versions are actually published, since the whole reason the
+split pin exists is that the platform height is not a valid Payment height.
+
+---

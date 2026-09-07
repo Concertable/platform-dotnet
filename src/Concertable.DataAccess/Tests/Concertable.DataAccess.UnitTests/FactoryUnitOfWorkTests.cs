@@ -12,62 +12,131 @@ public sealed class FactoryUnitOfWorkTests : IDisposable
 
     public FactoryUnitOfWorkTests()
     {
-        this.connection = new SqliteConnection("Data Source=:memory:");
-        this.connection.Open();
+        connection = new SqliteConnection("Data Source=:memory:");
+        connection.Open();
 
-        using var context = this.CreateContext();
+        using var context = CreateContext();
         context.Database.EnsureCreated();
 
-        this.dbContextFactory = new TestDbContextFactory(this.connection);
-        this.unitOfWork = new FactoryUnitOfWork<TestDbContext>(this.dbContextFactory);
+        dbContextFactory = new TestDbContextFactory(connection);
+        unitOfWork = new FactoryUnitOfWork<TestDbContext>(dbContextFactory);
     }
 
     [Fact]
     public async Task ExecuteAsync_WriteOperation_PersistsThroughFactoryCreatedContext()
     {
-        await this.unitOfWork.ExecuteAsync(context =>
+        await unitOfWork.ExecuteAsync(context =>
         {
             context.Entities.Add(new TestEntity { Name = "Persisted" });
             return Task.CompletedTask;
         });
 
-        Assert.Equal(1, this.dbContextFactory.AsyncCreateCount);
-        Assert.True(this.dbContextFactory.Contexts[0].IsDisposed);
+        Assert.Equal(1, dbContextFactory.AsyncCreateCount);
+        Assert.True(dbContextFactory.Contexts[0].IsDisposed);
 
-        await using var verificationContext = this.CreateVerificationContext();
+        await using var verificationContext = CreateVerificationContext();
         Assert.Equal("Persisted", (await verificationContext.Entities.SingleAsync()).Name);
     }
 
     [Fact]
     public async Task ExecuteAsync_ResultOperation_UsesFreshFactoryCreatedContext()
     {
-        var firstContextId = await this.unitOfWork.ExecuteAsync(context =>
+        var firstContextId = await unitOfWork.ExecuteAsync(context =>
         {
             context.Entities.Add(new TestEntity { Name = "First" });
             return Task.FromResult(context.ContextId.InstanceId);
         });
-        var secondContextId = await this.unitOfWork.ExecuteAsync(context =>
+        var secondContextId = await unitOfWork.ExecuteAsync(context =>
         {
             context.Entities.Add(new TestEntity { Name = "Second" });
             return Task.FromResult(context.ContextId.InstanceId);
         });
 
-        Assert.Equal(2, this.dbContextFactory.AsyncCreateCount);
+        Assert.Equal(2, dbContextFactory.AsyncCreateCount);
         Assert.NotEqual(firstContextId, secondContextId);
-        Assert.All(this.dbContextFactory.Contexts, context => Assert.True(context.IsDisposed));
+        Assert.All(dbContextFactory.Contexts, context => Assert.True(context.IsDisposed));
 
-        await using var verificationContext = this.CreateVerificationContext();
+        await using var verificationContext = CreateVerificationContext();
         Assert.Equal(2, await verificationContext.Entities.CountAsync());
     }
 
-    public void Dispose() => this.connection.Dispose();
+    [Fact]
+    public async Task TryExecuteAsync_ExpectedFailure_DisposesTheContextBeforeClassifying()
+    {
+        bool? disposedWhenClassified = null;
 
-    private TestDbContext CreateVerificationContext() => this.CreateContext();
+        var outcome = await unitOfWork.TryExecuteAsync<string>(
+            _ => throw new DbUpdateException(),
+            static _ => true,
+            _ =>
+            {
+                disposedWhenClassified = dbContextFactory.Contexts[0].IsDisposed;
+                return Task.FromResult("classified");
+            });
+
+        Assert.Equal("classified", outcome);
+        Assert.True(disposedWhenClassified);
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_ExpectedFailure_RollsBackTheOperationsWrites()
+    {
+        await unitOfWork.TryExecuteAsync<string>(
+            context =>
+            {
+                context.Entities.Add(new TestEntity { Name = "Rolled back" });
+                throw new DbUpdateException();
+            },
+            static _ => true,
+            _ => Task.FromResult("classified"));
+
+        await using var verificationContext = CreateVerificationContext();
+        Assert.Empty(await verificationContext.Entities.ToListAsync());
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_RejectedFailure_Propagates()
+    {
+        await Assert.ThrowsAsync<DbUpdateException>(
+            () => unitOfWork.TryExecuteAsync<string>(
+                _ => throw new DbUpdateException(),
+                static _ => false,
+                _ => Task.FromResult("classified")));
+    }
+
+    [Fact]
+    public async Task TryExecuteAsync_Success_PersistsAndNeverClassifies()
+    {
+        var classified = false;
+
+        var outcome = await unitOfWork.TryExecuteAsync(
+            context =>
+            {
+                context.Entities.Add(new TestEntity { Name = "Persisted" });
+                return Task.FromResult("committed");
+            },
+            static _ => true,
+            _ =>
+            {
+                classified = true;
+                return Task.FromResult("classified");
+            });
+
+        Assert.Equal("committed", outcome);
+        Assert.False(classified);
+
+        await using var verificationContext = CreateVerificationContext();
+        Assert.Equal("Persisted", (await verificationContext.Entities.SingleAsync()).Name);
+    }
+
+    public void Dispose() => connection.Dispose();
+
+    private TestDbContext CreateVerificationContext() => CreateContext();
 
     private TestDbContext CreateContext() =>
         new(
             new DbContextOptionsBuilder<TestDbContext>()
-                .UseSqlite(this.connection)
+                .UseSqlite(connection)
                 .Options);
 
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options)
@@ -78,7 +147,7 @@ public sealed class FactoryUnitOfWorkTests : IDisposable
 
         public override async ValueTask DisposeAsync()
         {
-            this.IsDisposed = true;
+            IsDisposed = true;
             await base.DisposeAsync();
         }
     }
@@ -95,20 +164,20 @@ public sealed class FactoryUnitOfWorkTests : IDisposable
         public int AsyncCreateCount { get; private set; }
         public List<TestDbContext> Contexts { get; } = [];
 
-        public TestDbContext CreateDbContext() => this.CreateContext();
+        public TestDbContext CreateDbContext() => CreateContext();
 
         public Task<TestDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
         {
-            this.AsyncCreateCount++;
-            var context = this.CreateContext();
-            this.Contexts.Add(context);
+            AsyncCreateCount++;
+            var context = CreateContext();
+            Contexts.Add(context);
             return Task.FromResult(context);
         }
 
         private TestDbContext CreateContext() =>
             new(
                 new DbContextOptionsBuilder<TestDbContext>()
-                    .UseSqlite(this.connection)
+                    .UseSqlite(connection)
                     .Options);
     }
 
