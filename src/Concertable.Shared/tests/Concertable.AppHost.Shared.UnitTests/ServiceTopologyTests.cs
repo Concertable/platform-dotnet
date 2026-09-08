@@ -161,7 +161,8 @@ public sealed class ServiceTopologyTests
             typeof(ConcertCreatedEvent),
             typeof(B2BPayoutOwnerRegisteredEvent),
             typeof(TenantActivityRecordedEvent),
-            typeof(ApplicationAcceptedEvent));
+            typeof(ApplicationAcceptedEvent),
+            typeof(BookingConfirmedEvent));
 
     [Fact]
     public void AddB2BTopology_ProvisionsApplicationAcceptedLoopbackSubscription()
@@ -173,6 +174,20 @@ public sealed class ServiceTopologyTests
         var subscription = Assert.Single(
             builder.Resources.OfType<AzureServiceBusSubscriptionResource>(),
             resource => resource.Name == $"{B2BConstants.ServiceName}-application-accepted");
+
+        Assert.Equal(B2BConstants.ServiceName, subscription.SubscriptionName);
+    }
+
+    [Fact]
+    public void AddB2BTopology_ProvisionsBookingConfirmedLoopbackSubscription()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        var topology = builder.AddAzureServiceBus("messaging").Topology();
+        topology.AddB2BTopology();
+
+        var subscription = Assert.Single(
+            builder.Resources.OfType<AzureServiceBusSubscriptionResource>(),
+            resource => resource.Name == $"{B2BConstants.ServiceName}-booking-confirmed");
 
         Assert.Equal(B2BConstants.ServiceName, subscription.SubscriptionName);
     }
