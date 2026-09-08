@@ -16,4 +16,8 @@
     <ProjectReference Include="..\Concertable.AppHost.Shared\Concertable.AppHost.Shared.csproj" IsAspireProjectResource="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Concertable.AppHost.Shared.UnitTests" />
+  </ItemGroup>
+
 </Project>
