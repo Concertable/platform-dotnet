@@ -53,8 +53,84 @@ public sealed class SeedingIdentityRewriterTests
 
         var rewritten = SeedingIdentityRewriter.Rewrite(sql, this.identityTables);
 
+        Assert.Equal(
+            "SET IDENTITY_INSERT [catalog].[Gadgets] ON;\n" + sql + "\nSET IDENTITY_INSERT [catalog].[Gadgets] OFF;\n",
+            rewritten);
+    }
+
+    [Fact]
+    public void Rewrite_SecondMappedTableLettingTheDatabaseGenerateItsIdentity_WrapsOnlyTheTableSupplyingOne()
+    {
+        const string sql = """
+            INSERT INTO [Widgets] ([Name])
+            VALUES (@p0);
+            INSERT INTO [Animals] ([Id], [Name], [Discriminator])
+            VALUES (@p1, @p2, @p3);
+            """;
+
+        var rewritten = SeedingIdentityRewriter.Rewrite(sql, this.identityTables);
+
         Assert.NotNull(rewritten);
-        Assert.StartsWith("SET IDENTITY_INSERT [catalog].[Gadgets] ON;\n", rewritten);
+        Assert.StartsWith("SET IDENTITY_INSERT [Animals] ON;\n", rewritten);
+        Assert.DoesNotContain("[Widgets] ON", rewritten);
+    }
+
+    [Fact]
+    public void Rewrite_TwoStatementsAgainstTheSameIdentityTable_WrapsItOnce()
+    {
+        const string sql = """
+            INSERT INTO [Animals] ([Id], [Name], [Discriminator])
+            VALUES (@p0, @p1, @p2);
+            INSERT INTO [Animals] ([Id], [Name], [Discriminator])
+            VALUES (@p3, @p4, @p5);
+            """;
+
+        var rewritten = SeedingIdentityRewriter.Rewrite(sql, this.identityTables);
+
+        Assert.NotNull(rewritten);
+        Assert.Equal(1, Occurrences(rewritten, "SET IDENTITY_INSERT [Animals] ON;"));
+        Assert.Equal(1, Occurrences(rewritten, "SET IDENTITY_INSERT [Animals] OFF;"));
+    }
+
+    [Fact]
+    public void Rewrite_MergeCarryingAnOutputClauseAndDeclaredTableVariable_WrapsTheTable()
+    {
+        const string sql = """
+            SET NOCOUNT ON;
+            DECLARE @inserted0 TABLE ([Id] int, [_Position] int);
+            MERGE [Animals] USING (
+            VALUES (@p0, @p1, @p2, 0)) AS i ([Id], [Name], [Discriminator], _Position) ON 1=0
+            WHEN NOT MATCHED THEN
+            INSERT ([Id], [Name], [Discriminator])
+            VALUES (i.[Id], i.[Name], i.[Discriminator])
+            OUTPUT INSERTED.[Id], i._Position INTO @inserted0;
+            SELECT [Id] FROM @inserted0 ORDER BY [_Position];
+            """;
+
+        var rewritten = SeedingIdentityRewriter.Rewrite(sql, this.identityTables);
+
+        Assert.NotNull(rewritten);
+        Assert.Equal(1, Occurrences(rewritten, "SET IDENTITY_INSERT [Animals] ON;"));
+        Assert.DoesNotContain("[]", rewritten);
+    }
+
+    [Fact]
+    public void Rewrite_AnInsertAndAMergeForDifferentIdentityTables_ThrowsNamingBothInOrder()
+    {
+        const string sql = """
+            INSERT INTO [Widgets] ([Id], [Name])
+            VALUES (@p0, @p1);
+            MERGE [Animals] USING (
+            VALUES (@p2, @p3, @p4, 0)) AS i ([Id], [Name], [Discriminator], _Position) ON 1=0
+            WHEN NOT MATCHED THEN
+            INSERT ([Id], [Name], [Discriminator])
+            VALUES (i.[Id], i.[Name], i.[Discriminator]);
+            """;
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => SeedingIdentityRewriter.Rewrite(sql, this.identityTables));
+
+        Assert.Contains("[Animals] and [Widgets]", exception.Message);
     }
 
     [Fact]
@@ -105,8 +181,11 @@ public sealed class SeedingIdentityRewriterTests
     [Fact]
     public void BuildTableMap_TphHierarchy_MapsTheRootTableOnce()
     {
+        Assert.Equal(
+            ["[Animals]", "[Widgets]", "[catalog].[Gadgets]"],
+            this.identityTables.Keys.OrderBy(key => key, StringComparer.Ordinal));
+
         Assert.Equal("Id", this.identityTables["[Animals]"]);
-        Assert.Single(this.identityTables.Keys, key => key == "[Animals]");
     }
 
     [Fact]
@@ -116,6 +195,18 @@ public sealed class SeedingIdentityRewriterTests
     }
 
     #endregion
+
+    private static int Occurrences(string haystack, string needle)
+    {
+        var count = 0;
+        for (var at = haystack.IndexOf(needle, StringComparison.Ordinal); at >= 0;
+             at = haystack.IndexOf(needle, at + needle.Length, StringComparison.Ordinal))
+        {
+            count++;
+        }
+
+        return count;
+    }
 
     private sealed class SeedModelContext : DbContext
     {
