@@ -28,7 +28,10 @@ public sealed class SeedingIdentityInterceptor : DbCommandInterceptor
 
     private void Rewrite(DbCommand command, CommandEventData e)
     {
-        if (!scope.IsActive || e.Context is null)
+        if (!this.scope.IsActive || e.Context is null)
+            return;
+
+        if (!command.CommandText.Contains("INSERT", StringComparison.OrdinalIgnoreCase))
             return;
 
         var identityTables = tableCache.GetOrAdd(

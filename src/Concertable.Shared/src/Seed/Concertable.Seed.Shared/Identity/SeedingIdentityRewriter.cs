@@ -31,10 +31,12 @@ internal static class SeedingIdentityRewriter
             return null;
 
         if (tables.Count > 1)
+        {
             throw new InvalidOperationException(
                 $"Seeding staged explicit identity values for {string.Join(" and ", tables.Order())} in a single command. "
                 + "SQL Server permits IDENTITY_INSERT on one table at a time, so these entities must be saved in "
                 + "separate windows and no navigation may drag one into the other's save.");
+        }
 
         return On(tables) + commandText + "\n" + Off(tables);
     }

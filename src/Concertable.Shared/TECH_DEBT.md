@@ -75,13 +75,12 @@ masked the interceptor bug, leaving the dev seeders broken. It surfaced when E2E
 ten B2B API E2E tests failed on a health check, because `ApplicationDevSeeder` threw SQL 544 and `b2b-web`
 exited. Roughly three hours to find, for a defect a millisecond-scale unit test would have caught.
 
-The interceptor is fixed and the three workarounds are deleted. What follows is the tiering, cheapest first:
+The interceptor is fixed, the three workarounds are deleted, and its string logic now carries unit coverage:
+`SeedingIdentityRewriter` holds the rewrite and the identity-table map, `Concertable.Seed.Shared.UnitTests`
+covers both SQL shapes, a TPH model, a schema-qualified table, a database-generated identity and a
+non-identity key, and the one-table-at-a-time constraint is enforced by a throw rather than recorded in a
+`BookingFactory` comment. What remains, cheapest first:
 
-1. **Unit-test `SeedingIdentityInterceptor`.** It is pure string manipulation over an EF model — no container,
-   no database — and has *zero* coverage today, which is the direct reason a regex that missed `MERGE`
-   survived. Cover both SQL shapes, a TPH model, and a non-identity table. Also pin the constraint currently
-   recorded only in a comment in `BookingFactory`: SQL Server permits `IDENTITY_INSERT` on one table at a
-   time, so a command touching two identity tables must not emit two `ON` statements.
 2. **A dev-seeder smoke test per service in the integration tier.** Every `ApiFixture` already has
    containerized SQL and real migrations; it just runs `ITestSeeder`. One test that instead runs the
    `IDevSeeder` chain to completion catches identity mismatches, seeder ordering and FK violations in ~2
@@ -95,10 +94,9 @@ The interceptor is fixed and the three workarounds are deleted. What follows is 
 E2E should be reserved for what genuinely needs real orchestration — cross-service wiring, Aspire, real HTTP.
 Seeding needs a database and migrations, and the integration tier already has both.
 
-**Resolves when:** items 1-3 are in place — `SeedingIdentityInterceptor` has unit coverage of both SQL shapes,
-each service's integration suite runs its `IDevSeeder` chain against a migrated database, and an architecture
-test asserts dev/test seeder parity with no hand-written `IDENTITY_INSERT` in either. Item 4 is the structural
-follow-up and may be tracked separately.
+**Resolves when:** items 2-3 are in place — each service's integration suite runs its `IDevSeeder` chain
+against a migrated database, and an architecture test asserts dev/test seeder parity with no hand-written
+`IDENTITY_INSERT` in either. Item 4 is the structural follow-up and may be tracked separately.
 
 ---
 
