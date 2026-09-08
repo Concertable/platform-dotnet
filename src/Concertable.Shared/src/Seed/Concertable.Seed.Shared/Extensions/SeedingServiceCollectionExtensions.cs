@@ -19,6 +19,20 @@ public static class SeedingServiceCollectionExtensions
             where TContext : DbContext
             where TSeeder : class, ISeeder
         {
+            if (typeof(IStandInSeeder).IsAssignableFrom(typeof(TSeeder)))
+                throw new InvalidOperationException(
+                    $"{typeof(TSeeder).Name} is an {nameof(IStandInSeeder)}, so it writes rows a producer " +
+                    $"owns and must never run in dev or E2E. Register it with AddStandInSeeder from the " +
+                    $"integration composition instead.");
+
+            services.AddKeyedScoped<ISeeder, TSeeder>(typeof(TContext));
+            return services;
+        }
+
+        public IServiceCollection AddStandInSeeder<TContext, TSeeder>()
+            where TContext : DbContext
+            where TSeeder : class, IStandInSeeder
+        {
             services.AddKeyedScoped<ISeeder, TSeeder>(typeof(TContext));
             return services;
         }
