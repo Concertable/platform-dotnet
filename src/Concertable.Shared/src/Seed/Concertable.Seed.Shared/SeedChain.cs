@@ -20,7 +20,7 @@ public static class SeedChain
         if (ordered.Count == 0)
             return;
 
-        logger.BeginDbInitialization(ordered.Count);
+        logger.BeginSeedChain(ordered.Count);
         var total = Stopwatch.StartNew();
 
         foreach (var seeder in ordered)
@@ -43,7 +43,7 @@ public static class SeedChain
         }
 
         total.Stop();
-        logger.DbInitializationComplete(total.ElapsedMilliseconds);
+        logger.SeedChainComplete(total.ElapsedMilliseconds);
     }
 
     private static List<ISeeder> Ordered(IEnumerable<ISeeder> seeders) =>
