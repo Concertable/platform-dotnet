@@ -21,4 +21,10 @@ internal static partial class Log
 
     [LoggerMessage(Level = LogLevel.Information, Message = "DB initialization complete in {ElapsedMs}ms")]
     internal static partial void DbInitializationComplete(this ILogger logger, long elapsedMs);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Beginning seed chain ({SeederCount} seeders)")]
+    internal static partial void BeginSeedChain(this ILogger logger, int seederCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Seed chain complete in {ElapsedMs}ms")]
+    internal static partial void SeedChainComplete(this ILogger logger, long elapsedMs);
 }

@@ -5,7 +5,7 @@ libs). Debt spanning multiple *services*, host `Program.cs` files, or repo-wide 
 [`api/TECH_DEBT.md`](../TECH_DEBT.md); service-specific debt belongs in that service's own `TECH_DEBT.md`.
 
 Everything here sits behind the published-package boundary: these libs are consumed cross-service by
-`PackageReference` pinned to `$(ConcertablePlatformVersion)`, so a breaking change can't land atomically —
+`PackageReference` pinned to `$(ConcertableDotNetPlatformVersion)`, so a breaking change can't land atomically —
 it needs a publish-first cut-over (see the `plans` skill, "Breaking published-contract changes"). That constraint is
 why several items below are deferred rather than simply fixed.
 
@@ -175,7 +175,7 @@ overload removal is breaking, so it migrates through a platform sync.
 ## `Concertable.Payment.Hosting` is pinned at the platform version, not the split Payment version
 
 `api/Concertable.Shared/Directory.Packages.props` pins `Concertable.Payment.Hosting` at
-`$(ConcertablePlatformVersion)`, while B2B and Customer pin every Payment package at the separate
+`$(ConcertableDotNetPlatformVersion)`, while B2B and Customer pin every Payment package at the separate
 `$(ConcertablePaymentVersion)` (`0.1.0-alpha.0.1322`) because Payment's alpha heights are not monotonic with
 the platform's. Inert today: the only consumer is `Concertable.AppHost.Shared.UnitTests`, and
 `PlatformSourcePackages.targets` swaps every `tests/`-path and `*.AppHost` project's Payment/Hosting
