@@ -23,7 +23,7 @@ public readonly record struct ModuleNamespace(string Module, ArchitectureLayer L
         if (lastDot < 0)
             return null;
 
-        return Enum.TryParse<ArchitectureLayer>(rest[(lastDot + 1)..], out var layer)
+        return Enum.TryParse<ArchitectureLayer>(rest[(lastDot + 1)..], out var layer) && Enum.IsDefined(layer)
             ? new ModuleNamespace(rest[..lastDot], layer)
             : null;
     }
