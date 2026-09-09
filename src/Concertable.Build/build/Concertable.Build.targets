@@ -1,0 +1,8 @@
+<Project>
+
+  <!-- TestConventions.targets reads $(IsTestProject), which the csproj body sets after props are
+       imported, so the gate can only live in targets. It resolves BannedSymbols.UnitTests.txt from
+       its own directory, which is this one. -->
+  <Import Project="$(MSBuildThisFileDirectory)TestConventions.targets" />
+
+</Project>

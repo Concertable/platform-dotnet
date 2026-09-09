@@ -1,0 +1,29 @@
+<Project>
+
+  <PropertyGroup>
+    <NuGetAudit>false</NuGetAudit>
+    <NoWarn>$(NoWarn);NU1510</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsPackable Condition="'$(IsPackable)' == ''">false</IsPackable>
+    <Authors>Concertable</Authors>
+    <Company>Concertable</Company>
+    <RepositoryUrl>https://github.com/Concertable/platform-dotnet</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Concertable/platform-dotnet</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <!-- Floor is 0.2 so a clone whose tags did not come with it cannot mint a 0.1.x that collides
+         with a version the monorepo already published to the same feed. -->
+    <MinVerMinimumMajorMinor>0.2</MinVerMinimumMajorMinor>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Unguarded by design. In the monorepo this reference is Exists()-guarded so a carve that
+         leaves the file behind degrades instead of failing; past the carve that same guard is what
+         silently disables the law, so here a missing file must break the build. -->
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
+  </ItemGroup>
+
+</Project>

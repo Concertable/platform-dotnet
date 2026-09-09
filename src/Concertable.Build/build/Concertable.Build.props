@@ -1,0 +1,14 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- A banned-symbol list that only warns is not a law. Carried here so one PackageReference is
+         enough; a consumer's own editorconfig can still suppress RS0030 where it must (generated
+         migrations), because a suppressed diagnostic is never raised to be promoted. -->
+    <WarningsAsErrors>$(WarningsAsErrors);RS0030</WarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
+  </ItemGroup>
+
+</Project>
