@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  merge_group:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  verify:
+    name: Build and test
+    uses: Concertable/.github/.github/workflows/dotnet-ci.yml@main
+    with:
+      solution: Concertable.Platform.slnx
+
+  build-law:
+    name: Build law reaches a consumer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Pack Concertable.Build
+        run: dotnet pack src/Concertable.Build/Concertable.Build.csproj --configuration Release --output artifacts/packages
+      - name: Prove the law arrives through the PackageReference
+        run: python eng/verify-build-law.py

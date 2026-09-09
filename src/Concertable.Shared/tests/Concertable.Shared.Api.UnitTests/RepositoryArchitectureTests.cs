@@ -34,9 +34,9 @@ public sealed partial class RepositoryArchitectureTests
 
     private static IEnumerable<string> EnumerateProductionSource()
     {
-        var apiRoot = FindApiRoot();
+        var sourceRoot = FindSourceRoot();
         return Directory
-            .EnumerateFiles(apiRoot, "*.cs", SearchOption.AllDirectories)
+            .EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
             .Where(path => !path.Contains(
                 $"{Path.DirectorySeparatorChar}Tests{Path.DirectorySeparatorChar}",
                 StringComparison.OrdinalIgnoreCase))
@@ -48,21 +48,19 @@ public sealed partial class RepositoryArchitectureTests
                 StringComparison.OrdinalIgnoreCase));
     }
 
-    private static string FindApiRoot()
+    private static string FindSourceRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
         while (directory is not null)
         {
-            var apiRoot = Path.Combine(directory.FullName, "api");
-
-            if (File.Exists(Path.Combine(apiRoot, "Concertable.slnx")))
-                return apiRoot;
+            if (File.Exists(Path.Combine(directory.FullName, "Concertable.Platform.slnx")))
+                return Path.Combine(directory.FullName, "src");
 
             directory = directory.Parent;
         }
 
-        throw new DirectoryNotFoundException("Could not locate api/Concertable.slnx.");
+        throw new DirectoryNotFoundException("Could not locate Concertable.Platform.slnx.");
     }
 
     [GeneratedRegex(@"\binterface\s+IReadDbContext\b")]

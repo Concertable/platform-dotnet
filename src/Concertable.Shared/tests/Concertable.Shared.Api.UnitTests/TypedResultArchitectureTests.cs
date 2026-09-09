@@ -12,7 +12,7 @@ public sealed partial class TypedResultArchitectureTests
     public void TypedResultSlices_DoNotUseHttpExceptions()
     {
         var violations = Directory
-            .EnumerateFiles(FindApiRoot(), "*.cs", SearchOption.AllDirectories)
+            .EnumerateFiles(FindSourceRoot(), "*.cs", SearchOption.AllDirectories)
             .Where(IsProductionSource)
             .Select(path => new { Path = path, Source = File.ReadAllText(path) })
             .Where(file => IsTypedResultHttpExceptionViolation(file.Source))
@@ -21,7 +21,8 @@ public sealed partial class TypedResultArchitectureTests
 
         Assert.Empty(violations);
     }
-
+
+
     [Theory]
     [InlineData("UnitResult<TestError>")]
     [InlineData("Result<TestValue, TestError>")]
@@ -63,7 +64,7 @@ public sealed partial class TypedResultArchitectureTests
     [Fact]
     public void SharedProduction_DoesNotDeclareBusinessUnions()
     {
-        var sharedSource = Path.Combine(FindApiRoot(), "Concertable.Shared", "src");
+        var sharedSource = Path.Combine(FindSourceRoot(), "Concertable.Shared", "src");
         var unions = Directory
             .EnumerateFiles(sharedSource, "*.cs", SearchOption.AllDirectories)
             .Where(path => !path.Contains(
@@ -78,7 +79,7 @@ public sealed partial class TypedResultArchitectureTests
     [Fact]
     public void SharedProduction_DoesNotReferenceDunet()
     {
-        var sharedSource = Path.Combine(FindApiRoot(), "Concertable.Shared", "src");
+        var sharedSource = Path.Combine(FindSourceRoot(), "Concertable.Shared", "src");
         var projects = Directory
             .EnumerateFiles(sharedSource, "*.csproj", SearchOption.AllDirectories)
             .Where(path => XDocument
@@ -96,7 +97,7 @@ public sealed partial class TypedResultArchitectureTests
     [Fact]
     public void SharedProduction_DoesNotReferenceCSharpFunctionalExtensions()
     {
-        var sharedSource = Path.Combine(FindApiRoot(), "Concertable.Shared", "src");
+        var sharedSource = Path.Combine(FindSourceRoot(), "Concertable.Shared", "src");
         var violations = Directory
             .EnumerateFiles(sharedSource, "*", SearchOption.AllDirectories)
             .Where(path => Path.GetExtension(path) is ".cs" or ".csproj")
@@ -113,7 +114,7 @@ public sealed partial class TypedResultArchitectureTests
     public void KernelFunctionalTypes_DoNotReferenceThirdPartyCarriers()
     {
         var functionalSource = Path.Combine(
-            FindApiRoot(),
+            FindSourceRoot(),
             "Concertable.Shared",
             "src",
             "Concertable.Kernel",
@@ -159,7 +160,7 @@ public sealed partial class TypedResultArchitectureTests
     public void ServiceHosts_RegisterProblemDetailsBeforeMvc()
     {
         var violations = Directory
-            .EnumerateFiles(FindApiRoot(), "Program.cs", SearchOption.AllDirectories)
+            .EnumerateFiles(FindSourceRoot(), "Program.cs", SearchOption.AllDirectories)
             .Where(IsProductionSource)
             .Where(path => Path.GetDirectoryName(path)?
                 .EndsWith(".Web", StringComparison.Ordinal) == true)
@@ -279,7 +280,7 @@ public sealed partial class TypedResultArchitectureTests
     public void DunetReferences_BelongToProjectsDeclaringUnions()
     {
         var violations = Directory
-            .EnumerateFiles(FindApiRoot(), "*.csproj", SearchOption.AllDirectories)
+            .EnumerateFiles(FindSourceRoot(), "*.csproj", SearchOption.AllDirectories)
             .Where(path => !IsGeneratedPath(path))
             .Where(path => XDocument
                 .Load(path)
@@ -317,7 +318,9 @@ public sealed partial class TypedResultArchitectureTests
                 .Select(File.ReadAllText)
         ];
     }
-
+
+
+
     private static bool IsTypedResultHttpExceptionViolation(string source) =>
         HttpExceptionPattern().IsMatch(source)
         && TypedErrorResultPattern().IsMatch(source);
@@ -330,7 +333,7 @@ public sealed partial class TypedResultArchitectureTests
 
     private static IEnumerable<string> EnumerateSourceFiles() =>
         Directory
-            .EnumerateFiles(FindApiRoot(), "*.cs", SearchOption.AllDirectories)
+            .EnumerateFiles(FindSourceRoot(), "*.cs", SearchOption.AllDirectories)
             .Where(path => !IsGeneratedPath(path));
 
     private static bool IsGeneratedPath(string path)
@@ -340,21 +343,19 @@ public sealed partial class TypedResultArchitectureTests
             || path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string FindApiRoot()
+    private static string FindSourceRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
         while (directory is not null)
         {
-            var apiRoot = Path.Combine(directory.FullName, "api");
-
-            if (File.Exists(Path.Combine(apiRoot, "Concertable.slnx")))
-                return apiRoot;
+            if (File.Exists(Path.Combine(directory.FullName, "Concertable.Platform.slnx")))
+                return Path.Combine(directory.FullName, "src");
 
             directory = directory.Parent;
         }
 
-        throw new DirectoryNotFoundException("Could not locate api/Concertable.slnx.");
+        throw new DirectoryNotFoundException("Could not locate Concertable.Platform.slnx.");
     }
 
     [GeneratedRegex(@"\b(?:UnitResult<[^>\r\n]+>|Result<[^,\r\n>]+,\s*[^>\r\n]+>)")]
