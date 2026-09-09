@@ -10,8 +10,10 @@
     <Description>Concertable .NET build law: the test-tier gate and both banned-symbol lists, delivered to a consuming repository as MSBuild props/targets.</Description>
   </PropertyGroup>
 
+  <!-- Analyzer assets are non-transitive by default, which would ship the rules files to a consumer
+       with nothing to run them. The whole point of this package is that one reference is enough. -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" />
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="none" IncludeAssets="all" />
   </ItemGroup>
 
   <!-- The law files live at the repository root, where this repository's own projects consume them
