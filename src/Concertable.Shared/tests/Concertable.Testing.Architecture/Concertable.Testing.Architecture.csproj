@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <IsTestProject>false</IsTestProject>
     <IsPackable>true</IsPackable>
-    <Description>Side-effect-free executable host composition validation.</Description>
+    <Description>Architecture-test support: module topology read from the assembly graph, and side-effect-free executable host composition validation.</Description>
   </PropertyGroup>
 
   <ItemGroup>
