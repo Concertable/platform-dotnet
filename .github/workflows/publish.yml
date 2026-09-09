@@ -1,0 +1,49 @@
+name: Publish packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Push the packed versions to the org feed
+        type: boolean
+        default: false
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  attestations: write
+
+jobs:
+  version-guard:
+    name: Refuse a colliding or non-advancing version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Pack
+        run: dotnet pack Concertable.Platform.slnx --configuration Release --output artifacts/packages
+      - name: Check every version against the recorded baseline and the live feed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python eng/check-version.py
+
+  publish:
+    name: Pack, verify and publish
+    needs: version-guard
+    uses: Concertable/.github/.github/workflows/nuget-publish.yml@main
+    with:
+      project: Concertable.Platform.slnx
+      publish: ${{ inputs.publish || github.event_name == 'release' }}
+    secrets: inherit
