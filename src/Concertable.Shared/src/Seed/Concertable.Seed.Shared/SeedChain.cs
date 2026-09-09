@@ -7,7 +7,7 @@ public static class SeedChain
 {
     public static async Task MigrateAsync(IEnumerable<ISeeder> seeders, ILogger logger, CancellationToken ct = default)
     {
-        foreach (var seeder in Ordered(seeders))
+        foreach (var seeder in OrderSeeders(seeders))
         {
             logger.MigratingSeeder(seeder.GetType().Name);
             await seeder.MigrateAsync(ct);
@@ -16,7 +16,7 @@ public static class SeedChain
 
     public static async Task SeedAsync(IEnumerable<ISeeder> seeders, ILogger logger, CancellationToken ct = default)
     {
-        var ordered = Ordered(seeders);
+        var ordered = OrderSeeders(seeders);
         if (ordered.Count == 0)
             return;
 
@@ -46,6 +46,6 @@ public static class SeedChain
         logger.SeedChainComplete(total.ElapsedMilliseconds);
     }
 
-    private static List<ISeeder> Ordered(IEnumerable<ISeeder> seeders) =>
+    private static List<ISeeder> OrderSeeders(IEnumerable<ISeeder> seeders) =>
         [.. seeders.OrderBy(seeder => seeder.Order)];
 }
