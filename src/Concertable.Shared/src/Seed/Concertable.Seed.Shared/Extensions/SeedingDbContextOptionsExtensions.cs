@@ -15,15 +15,18 @@ public static class SeedingDbContextOptionsExtensions
         public DbContextOptionsBuilder UseSeedChain(IServiceProvider provider)
             => builder
                 .UseSeeding((context, _) =>
-                    SeedChain.SeedAsync(ResolveSeeders(provider, context), CreateLogger(provider))
+                    SeedChain.SeedAsync(provider.GetSeeders(context), provider.CreateSeedChainLogger())
                         .GetAwaiter().GetResult())
                 .UseAsyncSeeding((context, _, ct) =>
-                    SeedChain.SeedAsync(ResolveSeeders(provider, context), CreateLogger(provider), ct));
+                    SeedChain.SeedAsync(provider.GetSeeders(context), provider.CreateSeedChainLogger(), ct));
     }
 
-    private static IEnumerable<ISeeder> ResolveSeeders(IServiceProvider provider, DbContext context)
-        => provider.GetKeyedServices<ISeeder>(context.GetType());
+    extension(IServiceProvider provider)
+    {
+        private IEnumerable<ISeeder> GetSeeders(DbContext context)
+            => provider.GetKeyedServices<ISeeder>(context.GetType());
 
-    private static ILogger CreateLogger(IServiceProvider provider)
-        => provider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(SeedChain));
+        private ILogger CreateSeedChainLogger()
+            => provider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(SeedChain));
+    }
 }
