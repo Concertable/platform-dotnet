@@ -33,7 +33,7 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - name: Pack
-        run: dotnet pack Concertable.Platform.slnx --configuration Release --output artifacts/packages
+        run: dotnet pack Concertable.Platform.Packages.slnx --configuration Release --output artifacts/packages
       - name: Check every version against the recorded baseline and the live feed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -44,6 +44,6 @@ jobs:
     needs: version-guard
     uses: Concertable/.github/.github/workflows/nuget-publish.yml@main
     with:
-      project: Concertable.Platform.slnx
+      project: Concertable.Platform.Packages.slnx
       publish: ${{ inputs.publish || github.event_name == 'release' }}
     secrets: inherit
