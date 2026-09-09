@@ -33,10 +33,7 @@ public sealed class ServiceArchitecture
     /// <summary>The service segment — <c>B2B</c>.</summary>
     public string Service { get; }
 
-    /// <summary>
-    /// Every non-test <c>{Company}.{Service}.*</c> assembly in the test output, plus the kernel — the graph
-    /// ArchUnitNET loads.
-    /// </summary>
+    /// <summary>Every non-test <c>{Company}.{Service}.*</c> assembly in the test output — the graph ArchUnitNET loads.</summary>
     public IReadOnlyList<Assembly> Assemblies { get; }
 
     /// <summary>Every module-owned namespace, audience-facing modules only — the parsed source <see cref="Modules"/> is a view of.</summary>
@@ -51,17 +48,15 @@ public sealed class ServiceArchitecture
         var parts = testAssembly.GetName().Name!.Split('.');
         var company = parts[0];
         var service = parts[1];
-        var prefix = $"{company}.{service}.";
 
         var directory = Path.GetDirectoryName(testAssembly.Location)!;
-        var assemblies = Directory.GetFiles(directory, $"{prefix}*.dll")
+        var assemblies = Directory.GetFiles(directory, $"{company}.{service}.*.dll")
             .Where(path => !Path.GetFileNameWithoutExtension(path).Contains("Test", StringComparison.Ordinal))
             .Select(Assembly.LoadFrom)
-            .Append(Assembly.LoadFrom(Path.Combine(directory, $"{company}.Kernel.dll")))
             .ToArray();
 
         var parsed = assemblies
-            .Select(assembly => Parse(assembly.GetName().Name!, prefix))
+            .Select(assembly => ModuleNamespace.Parse(assembly.GetName().Name!, company, service))
             .OfType<ModuleNamespace>()
             .ToArray();
 
@@ -82,6 +77,13 @@ public sealed class ServiceArchitecture
                 .ToArray());
     }
 
+    /// <summary>
+    /// This service's <see cref="ModuleNamespace.Parse(string, string, string)"/> — parses
+    /// <c>Concertable.B2B.Concert.Domain</c> into its module namespace, or <c>null</c> when it is not one of
+    /// this service's.
+    /// </summary>
+    public ModuleNamespace? Parse(string qualifiedName) => ModuleNamespace.Parse(qualifiedName, this.Company, this.Service);
+
     /// <summary>A namespace regex matching types in the given layers of any module — its whole subtree when no layer is named.</summary>
     public string NamespacePattern(params ArchitectureLayer[] layers) =>
         Pattern($"({string.Join("|", this.Modules.Select(Regex.Escape))})", layers);
@@ -96,22 +98,5 @@ public sealed class ServiceArchitecture
         return layers.Length == 0
             ? $@"{head}($|\.)"
             : $@"{head}\.({string.Join("|", layers)})($|\.)";
-    }
-
-    // "Concertable.B2B.Dashboard.Artist.Api" with prefix "Concertable.B2B." -> ("Dashboard.Artist", Api); null
-    // for anything not shaped like a module namespace (the kernel, a single-segment shared library).
-    private static ModuleNamespace? Parse(string assemblyName, string prefix)
-    {
-        if (!assemblyName.StartsWith(prefix, StringComparison.Ordinal))
-            return null;
-
-        var rest = assemblyName[prefix.Length..];
-        var lastDot = rest.LastIndexOf('.');
-        if (lastDot < 0)
-            return null;
-
-        return Enum.TryParse<ArchitectureLayer>(rest[(lastDot + 1)..], out var layer)
-            ? new ModuleNamespace(rest[..lastDot], layer)
-            : null;
     }
 }
