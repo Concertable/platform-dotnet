@@ -1,0 +1,67 @@
+<Solution>
+  <Folder Name="/Build/">
+    <Project Path="src/Concertable.Build/Concertable.Build.csproj" />
+  </Folder>
+  <Folder Name="/AppHost.Shared/">
+    <Project Path="src/Concertable.AppHost.Shared/Concertable.AppHost.Shared.csproj" />
+    <Project Path="src/Concertable.Shared/tests/Concertable.AppHost.Shared.UnitTests/Concertable.AppHost.Shared.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/DataAccess/">
+    <Project Path="src/Concertable.DataAccess/Concertable.DataAccess.Application/Concertable.DataAccess.Application.csproj" />
+    <Project Path="src/Concertable.DataAccess/Concertable.DataAccess.Infrastructure/Concertable.DataAccess.Infrastructure.csproj" />
+    <Project Path="src/Concertable.DataAccess/Tests/Concertable.DataAccess.IntegrationTests/Concertable.DataAccess.IntegrationTests.csproj" />
+    <Project Path="src/Concertable.DataAccess/Tests/Concertable.DataAccess.UnitTests/Concertable.DataAccess.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/Frontend.Hosting/">
+    <Project Path="src/Concertable.Frontend.Hosting/Concertable.Frontend.Hosting.csproj" />
+  </Folder>
+  <Folder Name="/Messaging/">
+    <Project Path="src/Concertable.Messaging/Concertable.Messaging.Application/Concertable.Messaging.Application.csproj" />
+    <Project Path="src/Concertable.Messaging/Concertable.Messaging.AzureServiceBus/Concertable.Messaging.AzureServiceBus.csproj" />
+    <Project Path="src/Concertable.Messaging/Concertable.Messaging.Contracts/Concertable.Messaging.Contracts.csproj" />
+    <Project Path="src/Concertable.Messaging/Concertable.Messaging.Domain/Concertable.Messaging.Domain.csproj" />
+    <Project Path="src/Concertable.Messaging/Concertable.Messaging.Infrastructure/Concertable.Messaging.Infrastructure.csproj" />
+    <Project Path="src/Concertable.Messaging/Tests/Concertable.Messaging.AzureServiceBus.UnitTests/Concertable.Messaging.AzureServiceBus.UnitTests.csproj" />
+    <Project Path="src/Concertable.Messaging/Tests/Concertable.Messaging.UnitTests/Concertable.Messaging.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/ServiceDefaults/">
+    <Project Path="src/Concertable.ServiceDefaults/Concertable.ServiceDefaults.csproj" />
+    <Project Path="src/Concertable.ServiceDefaults/tests/Concertable.ServiceDefaults.UnitTests/Concertable.ServiceDefaults.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/Shared/">
+    <Project Path="src/Concertable.Shared/src/Concertable.Contracts/Concertable.Contracts.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Grpc/Concertable.Grpc.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Kernel/Concertable.Kernel.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.Api/Concertable.Shared.Api.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.Blob/Concertable.Shared.Blob.Application/Concertable.Shared.Blob.Application.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.Blob/Concertable.Shared.Blob.Infrastructure/Concertable.Shared.Blob.Infrastructure.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.Email/Concertable.Shared.Email.Application/Concertable.Shared.Email.Application.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.Email/Concertable.Shared.Email.Infrastructure/Concertable.Shared.Email.Infrastructure.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.Geocoding/Concertable.Shared.Geocoding.Application/Concertable.Shared.Geocoding.Application.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.Geocoding/Concertable.Shared.Geocoding.Infrastructure/Concertable.Shared.Geocoding.Infrastructure.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.Imaging/Concertable.Shared.Imaging.Application/Concertable.Shared.Imaging.Application.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.Imaging/Concertable.Shared.Imaging.Infrastructure/Concertable.Shared.Imaging.Infrastructure.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.Notification/Concertable.Shared.Notification.Infrastructure/Concertable.Shared.Notification.Infrastructure.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.Pdf/Concertable.Shared.Pdf.Application/Concertable.Shared.Pdf.Application.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.Pdf/Concertable.Shared.Pdf.Infrastructure/Concertable.Shared.Pdf.Infrastructure.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.QrCode/Concertable.Shared.QrCode.Application/Concertable.Shared.QrCode.Application.csproj" />
+    <Project Path="src/Concertable.Shared/src/Concertable.Shared.QrCode/Concertable.Shared.QrCode.Infrastructure/Concertable.Shared.QrCode.Infrastructure.csproj" />
+    <Project Path="src/Concertable.Shared/tests/Concertable.Contracts.UnitTests/Concertable.Contracts.UnitTests.csproj" />
+    <Project Path="src/Concertable.Shared/tests/Concertable.Grpc.UnitTests/Concertable.Grpc.UnitTests.csproj" />
+    <Project Path="src/Concertable.Shared/tests/Concertable.Kernel.UnitTests/Concertable.Kernel.UnitTests.csproj" />
+    <Project Path="src/Concertable.Shared/tests/Concertable.Shared.Api.UnitTests/Concertable.Shared.Api.UnitTests.csproj" />
+    <Project Path="src/Concertable.Shared/tests/Concertable.Shared.Email.UnitTests/Concertable.Shared.Email.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/Seed/">
+    <Project Path="src/Concertable.Shared/src/Seed/Concertable.Seed.Identity/Concertable.Seed.Identity.csproj" />
+    <Project Path="src/Concertable.Shared/src/Seed/Concertable.Seed.Infrastructure/Concertable.Seed.Infrastructure.csproj" />
+    <Project Path="src/Concertable.Shared/src/Seed/Concertable.Seed.Shared/Concertable.Seed.Shared.csproj" />
+    <Project Path="src/Concertable.Shared/tests/Concertable.Seed.Shared.UnitTests/Concertable.Seed.Shared.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/Testing/">
+    <Project Path="src/Concertable.Shared/tests/Concertable.Testing/Concertable.Testing.csproj" />
+    <Project Path="src/Concertable.Shared/tests/Concertable.Testing.Architecture/Concertable.Testing.Architecture.csproj" />
+    <Project Path="src/Concertable.Shared/tests/Concertable.Testing.Integration/Concertable.Testing.Integration.csproj" />
+    <Project Path="src/Concertable.Shared/tests/Concertable.Testing.Unit/Concertable.Testing.Unit.csproj" />
+  </Folder>
+</Solution>

@@ -20,8 +20,7 @@
        *.Fixtures or *.Helpers library. Unit tier only, which is why the shared list cannot hold it.
        RS0030 fires on a symbol being USED, so a project may still reference the package. -->
   <ItemGroup Condition="'$(ConcertableTestTier)' == 'Unit'">
-    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.UnitTests.txt"
-                     Condition="Exists('$(MSBuildThisFileDirectory)BannedSymbols.UnitTests.txt')" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.UnitTests.txt" />
   </ItemGroup>
 
   <Target Name="ValidateTestConventions" BeforeTargets="BeforeBuild" Condition="'$(IsTestProject)' == 'true'">

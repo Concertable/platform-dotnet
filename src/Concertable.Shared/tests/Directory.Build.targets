@@ -42,9 +42,8 @@
     </ItemGroup>
     <StripFeatureTraits Files="@(_ReqnrollFeatureCs)" Category="$(ReqnrollCategory)" />
   </Target>
-  <Import Project="$(MSBuildThisFileDirectory)../../TestConventions.targets"
-          Condition="Exists('$(MSBuildThisFileDirectory)../../TestConventions.targets')" />
-  <Import Project="$(MSBuildThisFileDirectory)../../PlatformSourcePackages.targets"
-          Condition="Exists('$(MSBuildThisFileDirectory)../../PlatformSourcePackages.targets')" />
+  <!-- This file shadows the repository-root Directory.Build.targets, so it re-imports what that
+       file supplies. Unguarded: a wrong path here disables the test-tier gate silently. -->
+  <Import Project="$(MSBuildThisFileDirectory)../../../TestConventions.targets" />
 
 </Project>
