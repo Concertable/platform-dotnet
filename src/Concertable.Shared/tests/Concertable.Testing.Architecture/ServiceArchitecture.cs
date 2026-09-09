@@ -20,11 +20,11 @@ public sealed class ServiceArchitecture
         IReadOnlyList<Assembly> assemblies,
         IReadOnlyList<ModuleNamespace> namespaces)
     {
-        this.Company = company;
-        this.Service = service;
-        this.Assemblies = assemblies;
-        this.Namespaces = namespaces;
-        this.Modules = namespaces.Select(module => module.Module).ToHashSet(StringComparer.Ordinal);
+        Company = company;
+        Service = service;
+        Assemblies = assemblies;
+        Namespaces = namespaces;
+        Modules = namespaces.Select(module => module.Module).ToHashSet(StringComparer.Ordinal);
     }
 
     /// <summary>The company segment — <c>Concertable</c>.</summary>
@@ -82,11 +82,11 @@ public sealed class ServiceArchitecture
     /// <c>Concertable.B2B.Concert.Domain</c> into its module namespace, or <c>null</c> when it is not one of
     /// this service's.
     /// </summary>
-    public ModuleNamespace? Parse(string qualifiedName) => ModuleNamespace.Parse(qualifiedName, this.Company, this.Service);
+    public ModuleNamespace? Parse(string qualifiedName) => ModuleNamespace.Parse(qualifiedName, Company, Service);
 
     /// <summary>A namespace regex matching types in the given layers of any module — its whole subtree when no layer is named.</summary>
     public string NamespacePattern(params ArchitectureLayer[] layers) =>
-        Pattern($"({string.Join("|", this.Modules.Select(Regex.Escape))})", layers);
+        Pattern($"({string.Join("|", Modules.Select(Regex.Escape))})", layers);
 
     /// <summary>A namespace regex matching types in the given layers of one module — its whole subtree when no layer is named.</summary>
     public string NamespacePattern(string module, params ArchitectureLayer[] layers) =>
@@ -94,7 +94,7 @@ public sealed class ServiceArchitecture
 
     private string Pattern(string moduleGroup, ArchitectureLayer[] layers)
     {
-        var head = $@"^{Regex.Escape(this.Company)}\.{Regex.Escape(this.Service)}\.{moduleGroup}";
+        var head = $@"^{Regex.Escape(Company)}\.{Regex.Escape(Service)}\.{moduleGroup}";
         return layers.Length == 0
             ? $@"{head}($|\.)"
             : $@"{head}\.({string.Join("|", layers)})($|\.)";
