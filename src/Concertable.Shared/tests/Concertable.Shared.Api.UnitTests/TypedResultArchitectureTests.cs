@@ -301,7 +301,7 @@ public sealed partial class TypedResultArchitectureTests
     private static bool IsProductionSource(string path)
     {
         var separator = Path.DirectorySeparatorChar;
-        return path.Contains($"{separator}src{separator}", StringComparison.OrdinalIgnoreCase)
+        return !path.Contains($"{separator}tests{separator}", StringComparison.OrdinalIgnoreCase)
             && !path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase)
             && !path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase);
     }
