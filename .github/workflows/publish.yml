@@ -46,4 +46,5 @@ jobs:
     with:
       project: Concertable.Platform.Packages.slnx
       publish: ${{ inputs.publish || github.event_name == 'release' }}
-    secrets: inherit
+    secrets:
+      PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_TOKEN }}
