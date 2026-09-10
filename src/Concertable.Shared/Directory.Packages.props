@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ConcertableServiceHostingVersion>0.1.0-alpha.0.1357</ConcertableServiceHostingVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -51,16 +50,6 @@
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.assert" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.2" />
-  </ItemGroup>
-
-  <!-- Service hosting composition from the org feed. This repository produces the platform packages
-       from source, so only service-owned ids belong here; pinned lockstep via ConcertableServiceHostingVersion
-       above. Bump only to a version already published to the feed, else restore fails NU1101. -->
-  <ItemGroup>
-    <PackageVersion Include="Concertable.Auth.Hosting" Version="$(ConcertableServiceHostingVersion)" />
-    <PackageVersion Include="Concertable.B2B.Hosting" Version="$(ConcertableServiceHostingVersion)" />
-    <PackageVersion Include="Concertable.Customer.Hosting" Version="$(ConcertableServiceHostingVersion)" />
-    <PackageVersion Include="Concertable.Payment.Hosting" Version="$(ConcertableServiceHostingVersion)" />
   </ItemGroup>
 
   <ItemGroup>
