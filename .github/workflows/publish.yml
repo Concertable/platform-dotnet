@@ -34,6 +34,9 @@ jobs:
           dotnet-version: 10.0.x
       - name: Pack
         run: dotnet pack Concertable.Platform.Packages.slnx --configuration Release --output artifacts/packages
+      - name: Probe the packages secret
+        env: {PROBE: "${{ secrets.CONCERTABLE_PACKAGES_TOKEN }}"}
+        run: echo "CONCERTABLE_PACKAGES_TOKEN length = ${#PROBE}"
       - name: Check every version against the recorded baseline and the live feed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
