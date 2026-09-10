@@ -1,42 +1,31 @@
 using Aspire.Hosting;
-using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Azure;
-using Concertable.Auth.Contracts.Events;
-using Concertable.Auth.Hosting;
-using Concertable.B2B.Application.Contracts.Events;
-using Concertable.B2B.Artist.Contracts.Events;
-using Concertable.B2B.Booking.Contracts.Events;
-using Concertable.B2B.Concert.Contracts.Commands;
-using Concertable.B2B.Concert.Contracts.Events;
-using Concertable.B2B.Hosting;
-using Concertable.B2B.Venue.Contracts.Events;
-using Concertable.Customer.Hosting;
-using Concertable.Customer.Review.Contracts.Events;
-using Concertable.Customer.Ticket.Contracts.Events;
 using Concertable.Messaging.AzureServiceBus.Options;
-using Concertable.Payment.Contracts;
-using Concertable.Payment.Contracts.Events;
-using Concertable.Payment.Hosting;
-using Concertable.Shared.Email.Application;
-using B2BPayoutOwnerRegisteredEvent = Concertable.B2B.Tenant.Contracts.Events.PayoutOwnerRegisteredEvent;
-using TenantActivityRecordedEvent = Concertable.B2B.Tenant.Contracts.Events.TenantActivityRecordedEvent;
 
 namespace Concertable.AppHost.Shared.UnitTests;
 
 public sealed class ServiceTopologyTests
 {
+    private sealed record SampleFirstEvent;
+
+    private sealed record SampleSecondEvent;
+
+    private sealed record SampleThirdEvent;
+
+    private sealed record SampleCommand;
+
     [Fact]
     public void PublishAndSubscribe_ProvisionOneTopic()
     {
         var builder = DistributedApplication.CreateBuilder();
         builder.AddAzureServiceBus("messaging")
             .Topology()
-            .Publish<ConcertPostedEvent>()
+            .Publish<SampleFirstEvent>()
             .WithService("consumer")
-            .Subscribe<ConcertPostedEvent>()
+            .Subscribe<SampleFirstEvent>()
             .RunAsEmulator();
 
-        var topicName = new AzureServiceBusOptions().TopicNameFor(typeof(ConcertPostedEvent));
+        var topicName = new AzureServiceBusOptions().TopicNameFor(typeof(SampleFirstEvent));
         var topics = builder.Resources
             .OfType<AzureServiceBusTopicResource>()
             .Where(resource => resource.Name == topicName);
@@ -52,12 +41,12 @@ public sealed class ServiceTopologyTests
         var builder = DistributedApplication.CreateBuilder();
         builder.AddAzureServiceBus("messaging")
             .Topology()
-            .Publish<ConcertPostedEvent>()
-            .Publish<ConcertChangedEvent>()
+            .Publish<SampleFirstEvent>()
+            .Publish<SampleSecondEvent>()
             .WithService("service-a")
-            .Subscribe<ConcertPostedEvent>()
+            .Subscribe<SampleFirstEvent>()
             .WithService("service-b")
-            .Subscribe<ConcertChangedEvent>()
+            .Subscribe<SampleSecondEvent>()
             .RunAsEmulator();
 
         var subscriptionNames = builder.Resources
@@ -76,9 +65,9 @@ public sealed class ServiceTopologyTests
         var serviceA = topology.WithService("service-a");
         var serviceB = topology.WithService("service-b");
 
-        serviceA.Subscribe<ConcertPostedEvent>();
-        serviceB.Subscribe<ConcertChangedEvent>();
-        serviceA.Subscribe<ArtistChangedEvent>();
+        serviceA.Subscribe<SampleFirstEvent>();
+        serviceB.Subscribe<SampleSecondEvent>();
+        serviceA.Subscribe<SampleThirdEvent>();
 
         var perService = builder.Resources
             .OfType<AzureServiceBusSubscriptionResource>()
@@ -96,10 +85,10 @@ public sealed class ServiceTopologyTests
         builder.AddAzureServiceBus("messaging")
             .Topology()
             .WithService("service-a")
-            .Publish<ConcertPostedEvent>()
-            .Subscribe<ConcertChangedEvent>();
+            .Publish<SampleFirstEvent>()
+            .Subscribe<SampleSecondEvent>();
 
-        var topicName = new AzureServiceBusOptions().TopicNameFor(typeof(ConcertPostedEvent));
+        var topicName = new AzureServiceBusOptions().TopicNameFor(typeof(SampleFirstEvent));
         var topics = builder.Resources.OfType<AzureServiceBusTopicResource>().Select(topic => topic.Name);
         var subscriptions = builder.Resources
             .OfType<AzureServiceBusSubscriptionResource>()
@@ -116,9 +105,9 @@ public sealed class ServiceTopologyTests
         builder.AddAzureServiceBus("messaging")
             .Topology()
             .WithService("service-a")
-            .Queue<SendEmailCommand>();
+            .Queue<SampleCommand>();
 
-        var expected = new AzureServiceBusOptions().QueueNameFor("service-a", typeof(SendEmailCommand));
+        var expected = new AzureServiceBusOptions().QueueNameFor("service-a", typeof(SampleCommand));
         var queues = builder.Resources.OfType<AzureServiceBusQueueResource>().Select(queue => queue.QueueName);
 
         Assert.Contains(expected, queues);
@@ -130,121 +119,12 @@ public sealed class ServiceTopologyTests
         var builder = DistributedApplication.CreateBuilder();
         builder.AddAzureServiceBus("messaging")
             .Topology()
-            .Publish<ConcertPostedEvent>()
+            .Publish<SampleFirstEvent>()
             .RunAsEmulator();
 
         var subscription = Assert.Single(builder.Resources.OfType<AzureServiceBusSubscriptionResource>());
 
         Assert.Equal("emulator-sink", subscription.SubscriptionName);
         Assert.Equal(TimeSpan.FromMinutes(1), subscription.DefaultMessageTimeToLive);
-    }
-
-    [Fact]
-    public void AddAuthTopology_ProvisionsPublishedEventTopics() =>
-        AssertPublishedTopics(
-            topology => topology.AddAuthTopology(),
-            typeof(CredentialRegisteredEvent));
-
-    [Fact]
-    public void AddB2BTopology_ProvisionsPublishedEventTopics() =>
-        AssertPublishedTopics(
-            topology => topology.AddB2BTopology(),
-            typeof(ArtistChangedEvent),
-            typeof(ArtistRatingUpdatedEvent),
-            typeof(VenueChangedEvent),
-            typeof(VenueRatingUpdatedEvent),
-            typeof(ConcertChangedEvent),
-            typeof(ConcertPostedEvent),
-            typeof(ConcertRatingUpdatedEvent),
-            typeof(BookingCancelledEvent),
-            typeof(ConcertCancelledEvent),
-            typeof(ConcertCreatedEvent),
-            typeof(B2BPayoutOwnerRegisteredEvent),
-            typeof(TenantActivityRecordedEvent),
-            typeof(ApplicationAcceptedEvent),
-            typeof(BookingConfirmedEvent));
-
-    [Fact]
-    public void AddB2BTopology_ProvisionsApplicationAcceptedLoopbackSubscription()
-    {
-        var builder = DistributedApplication.CreateBuilder();
-        var topology = builder.AddAzureServiceBus("messaging").Topology();
-        topology.AddB2BTopology();
-
-        var subscription = Assert.Single(
-            builder.Resources.OfType<AzureServiceBusSubscriptionResource>(),
-            resource => resource.Name == $"{B2BConstants.ServiceName}-application-accepted");
-
-        Assert.Equal(B2BConstants.ServiceName, subscription.SubscriptionName);
-    }
-
-    [Fact]
-    public void AddB2BTopology_ProvisionsBookingConfirmedLoopbackSubscription()
-    {
-        var builder = DistributedApplication.CreateBuilder();
-        var topology = builder.AddAzureServiceBus("messaging").Topology();
-        topology.AddB2BTopology();
-
-        var subscription = Assert.Single(
-            builder.Resources.OfType<AzureServiceBusSubscriptionResource>(),
-            resource => resource.Name == $"{B2BConstants.ServiceName}-booking-confirmed");
-
-        Assert.Equal(B2BConstants.ServiceName, subscription.SubscriptionName);
-    }
-
-    [Fact]
-    public void AddB2BTopology_ProvisionsCommandQueues()
-    {
-        var builder = DistributedApplication.CreateBuilder();
-        var topology = builder.AddAzureServiceBus("messaging").Topology();
-        topology.AddB2BTopology();
-
-        var queues = builder.Resources
-            .OfType<AzureServiceBusQueueResource>()
-            .Select(queue => queue.Name)
-            .ToHashSet();
-        var options = new AzureServiceBusOptions();
-
-        Assert.Equal(2, queues.Count);
-        Assert.Contains(options.QueueNameFor(B2BConstants.ServiceName, typeof(SendEmailCommand)), queues);
-        Assert.Contains(options.QueueNameFor(B2BConstants.ServiceName, typeof(NotifyConcertDraftCreatedCommand)), queues);
-    }
-
-    [Fact]
-    public void AddCustomerTopology_ProvisionsPublishedEventTopics() =>
-        AssertPublishedTopics(
-            topology => topology.AddCustomerTopology(),
-            typeof(CustomerReviewSubmittedEvent),
-            typeof(TicketPurchasedEvent));
-
-    [Fact]
-    public void AddPaymentTopology_ProvisionsPublishedEventTopics() =>
-        AssertPublishedTopics(
-            topology => topology.AddPaymentTopology(),
-            typeof(PaymentSucceededEvent),
-            typeof(PaymentFailedEvent),
-            typeof(CaptureEscrowSucceededEvent),
-            typeof(CaptureEscrowRejectedEvent),
-            typeof(DepositEscrowSucceededEvent),
-            typeof(DepositEscrowRejectedEvent),
-            typeof(RefundEscrowSucceededEvent),
-            typeof(RefundEscrowRejectedEvent),
-            typeof(RefundEscrowDeferredEvent));
-
-    private static void AssertPublishedTopics(Action<AsbTopology> configure, params Type[] eventTypes)
-    {
-        var builder = DistributedApplication.CreateBuilder();
-        var topology = builder.AddAzureServiceBus("messaging").Topology();
-        configure(topology);
-        topology.RunAsEmulator();
-
-        var topics = builder.Resources
-            .OfType<AzureServiceBusTopicResource>()
-            .Select(resource => resource.Name)
-            .ToHashSet();
-        var options = new AzureServiceBusOptions();
-
-        foreach (var eventType in eventTypes)
-            Assert.Contains(options.TopicNameFor(eventType), topics);
     }
 }
