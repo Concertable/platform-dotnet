@@ -15,6 +15,7 @@ The imported conventions above already document every shared member and how to u
 what they do not:
 
 - `IntegrationTestHostExtensions` — the type composing the shared `ConfigureTestServices` steps
+- `RelationalTestDatabaseExtensions` — provider-dispatched identity-insert and temporary check-constraint SQL
 - `IResettable` — marker interface for mocks that flush state between tests
 - `Mocks/MockBusTransport` — no-op `IBusTransport` (suppresses real ASB)
 - `Mocks/MockEmailSender` / `IMockEmailSender` — captures sent emails, exposes `Sent` list
