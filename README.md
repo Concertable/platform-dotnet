@@ -36,6 +36,31 @@ dotnet build Concertable.Platform.slnx --configuration Release
 dotnet test Concertable.Platform.slnx --configuration Release
 ```
 
+## Verifying a change against a consumer
+
+`scripts/local-platform.ps1` packs the train to a local folder feed and points a consumer at it, so a
+platform change is proved against a real service with no publish:
+
+```sh
+pwsh ./scripts/local-platform.ps1 pack
+pwsh ./scripts/local-platform.ps1 test ../b2b/api/src/Modules/Tenant/Tests/Concertable.B2B.Tenant.IntegrationTests/Concertable.B2B.Tenant.IntegrationTests.csproj
+```
+
+`pack` mints `9999.0.0-local.<unix-ms>`, packs every project in `Concertable.Platform.Packages.slnx` at
+it, and refuses a packed set that does not match the solution. `restore`, `build` and `test` pass the
+generated `nuget.config` with `--configfile` and override `ConcertableDotNetPlatformVersion`, then assert
+the consumer resolved the local version — no file in the consumer repository is touched. `clean` removes
+the feed and the cached local versions.
+
+Three things the version scheme is carrying, all of them learned from a failure:
+
+- A consumer takes the **whole train or none**. Packages here cross-depend at their own version, so
+  pinning one locally is an `NU1605` downgrade against its siblings.
+- The local version must sort **above** the published train, because packages from other repositories
+  depend on these ids at published versions.
+- Every pack mints a **new** version. A folder feed is extracted into the global packages folder on first
+  restore, so repacking changed content at an already-cached version is silently ignored.
+
 ## Versioning
 
 Repository-local MinVer on tags prefixed `v`, floored at `0.2`. The monorepo published these same
