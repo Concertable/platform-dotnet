@@ -16,6 +16,12 @@ what they do not:
 
 - `IntegrationTestHostExtensions` — the type composing the shared `ConfigureTestServices` steps
 - `RelationalTestDatabaseExtensions` — provider-dispatched identity-insert and temporary check-constraint SQL
+- `DatabaseProvider` / `DatabaseProviderSelector` — the provider a fixture declares by overriding
+  `SqlFixture.Provider`, and the `CONCERTABLE_TEST_DB_PROVIDER` override that points one suite at the other
+  provider to compare them. Named values only: a number or a list is rejected before a container starts
+- `OwnedSchemaSelector` — which schemas a reset covers, checked against the catalog, and the migration
+  histories and extension-owned tables it leaves standing. PostgreSQL has no whole-database reset: call
+  `SqlFixture.InitializeRespawnerAsync(schemas)` with the schemas this service owns, after migrating
 - `IResettable` — marker interface for mocks that flush state between tests
 - `Mocks/MockBusTransport` — no-op `IBusTransport` (suppresses real ASB)
 - `Mocks/MockEmailSender` / `IMockEmailSender` — captures sent emails, exposes `Sent` list

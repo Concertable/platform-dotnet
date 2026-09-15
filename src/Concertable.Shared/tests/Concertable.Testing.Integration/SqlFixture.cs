@@ -30,8 +30,34 @@ public class SqlFixture : IAsyncLifetime
         await dbConnection.OpenAsync();
     }
 
-    public async Task InitializeRespawnerAsync() =>
-        respawner = await Respawner.CreateAsync(dbConnection, CreateRespawnerOptions(ActiveProvider));
+    public async Task InitializeRespawnerAsync()
+    {
+        if (ActiveProvider is DatabaseProvider.Postgres)
+            throw new InvalidOperationException(
+                $"A {DatabaseProvider.Postgres} reset has to name the schemas this service owns: left to the whole "
+                + "database it reaches the migration histories and the tables PostGIS installed, which it must "
+                + $"leave standing. Call {nameof(InitializeRespawnerAsync)} with them instead.");
+
+        respawner = await Respawner.CreateAsync(dbConnection, new RespawnerOptions
+        {
+            TablesToIgnore = [OwnedSchemaSelector.MigrationsHistory],
+            DbAdapter = DbAdapter.SqlServer,
+            WithReseed = true
+        });
+    }
+
+    public async Task InitializeRespawnerAsync(IReadOnlyCollection<string> schemas)
+    {
+        var owned = OwnedSchemaSelector.Select(ActiveProvider, schemas, await ReadSchemaCatalogAsync());
+
+        respawner = await Respawner.CreateAsync(dbConnection, new RespawnerOptions
+        {
+            SchemasToInclude = [.. owned],
+            TablesToIgnore = [.. OwnedSchemaSelector.TablesToIgnore(ActiveProvider, owned)],
+            DbAdapter = CreateAdapter(ActiveProvider),
+            WithReseed = true
+        });
+    }
 
     public async Task ResetAsync() => await respawner.ResetAsync(dbConnection);
 
@@ -45,6 +71,19 @@ public class SqlFixture : IAsyncLifetime
         DatabaseProviderSelector.Resolve(
             Provider,
             Environment.GetEnvironmentVariable(DatabaseProviderSelector.ProviderVariable));
+
+    private async Task<IReadOnlyList<string>> ReadSchemaCatalogAsync()
+    {
+        await using var command = dbConnection.CreateCommand();
+        command.CommandText = CatalogSchemaSql(ActiveProvider);
+
+        await using var reader = await command.ExecuteReaderAsync();
+        List<string> catalog = [];
+        while (await reader.ReadAsync())
+            catalog.Add(reader.GetString(0));
+
+        return catalog;
+    }
 
     private static IDatabaseContainer CreateContainer(DatabaseProvider provider) => provider switch
     {
@@ -60,21 +99,17 @@ public class SqlFixture : IAsyncLifetime
         _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, null)
     };
 
-    private static RespawnerOptions CreateRespawnerOptions(DatabaseProvider provider) => provider switch
+    private static IDbAdapter CreateAdapter(DatabaseProvider provider) => provider switch
     {
-        DatabaseProvider.SqlServer => new RespawnerOptions
-        {
-            TablesToIgnore = ["__EFMigrationsHistory"],
-            DbAdapter = DbAdapter.SqlServer,
-            WithReseed = true
-        },
-        DatabaseProvider.Postgres => new RespawnerOptions
-        {
-            TablesToIgnore = ["__EFMigrationsHistory"],
-            SchemasToInclude = ["public"],
-            DbAdapter = DbAdapter.Postgres,
-            WithReseed = true
-        },
+        DatabaseProvider.SqlServer => DbAdapter.SqlServer,
+        DatabaseProvider.Postgres => DbAdapter.Postgres,
+        _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, null)
+    };
+
+    private static string CatalogSchemaSql(DatabaseProvider provider) => provider switch
+    {
+        DatabaseProvider.SqlServer => "SELECT name FROM sys.schemas",
+        DatabaseProvider.Postgres => "SELECT nspname FROM pg_catalog.pg_namespace",
         _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, null)
     };
 
