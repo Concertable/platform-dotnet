@@ -51,6 +51,7 @@
     <Project Path="src/Concertable.Shared/tests/Concertable.Kernel.UnitTests/Concertable.Kernel.UnitTests.csproj" />
     <Project Path="src/Concertable.Shared/tests/Concertable.Shared.Api.UnitTests/Concertable.Shared.Api.UnitTests.csproj" />
     <Project Path="src/Concertable.Shared/tests/Concertable.Shared.Email.UnitTests/Concertable.Shared.Email.UnitTests.csproj" />
+    <Project Path="src/Concertable.Shared/tests/Concertable.Testing.Integration.UnitTests/Concertable.Testing.Integration.UnitTests.csproj" />
   </Folder>
   <Folder Name="/Seed/">
     <Project Path="src/Concertable.Shared/src/Seed/Concertable.Seed.Identity/Concertable.Seed.Identity.csproj" />
