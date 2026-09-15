@@ -56,7 +56,7 @@ public sealed class OwnedSchemaSelectorTests
     }
 
     [Fact]
-    public void Select_TheSchemaAService_CanOwnNamedLikeADefault_Keeps() =>
+    public void Select_ASchemaTheServiceOwnsThatIsNamedLikeADefault_Keeps() =>
         Assert.Equal(
             ["public"],
             OwnedSchemaSelector.Select(DatabaseProvider.Postgres, ["public"], Catalog));
