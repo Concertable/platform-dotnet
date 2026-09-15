@@ -14,7 +14,7 @@ permissions:
 jobs:
   verify:
     name: Build and test
-    uses: Concertable/.github/.github/workflows/dotnet-ci.yml@bc16cc0609dfeb923bd8e1a97f88b9890380f6f2
+    uses: Concertable/pipeline/.github/workflows/dotnet-ci.yml@bc16cc0609dfeb923bd8e1a97f88b9890380f6f2
     with:
       solution: Concertable.Platform.slnx
 
@@ -46,10 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {}
     steps:
-      - name: Require every gating job to pass
-        env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          for result in $RESULTS; do
-            test "$result" = "success" || { echo "::error::A gating job reported '$result'."; exit 1; }
-          done
+      - uses: Concertable/pipeline/.github/actions/require-jobs-green@3b4313ef1130400b2b35f7b3b3f5f57c22b23d82
+        with:
+          results: ${{ join(needs.*.result, " ") }}
