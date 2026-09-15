@@ -2,6 +2,8 @@ namespace Concertable.Testing.Integration.UnitTests;
 
 public sealed class DatabaseProviderSelectorTests
 {
+    private const DatabaseProvider Undeclared = (DatabaseProvider)99;
+
     #region Resolve
 
     [Theory]
@@ -31,6 +33,37 @@ public sealed class DatabaseProviderSelectorTests
             DatabaseProvider.SqlServer,
             DatabaseProviderSelector.Resolve(DatabaseProvider.Postgres, "SqlServer"));
 
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1")]
+    [InlineData("99")]
+    [InlineData("SqlServer,Postgres")]
+    [InlineData("Oracle")]
+    public void Resolve_ConfiguredWithAnythingButAName_Rejects(string configured) =>
+        Assert.Throws<InvalidOperationException>(
+            () => DatabaseProviderSelector.Resolve(DatabaseProvider.SqlServer, configured));
+
+    [Fact]
+    public void Resolve_UndeclaredDefault_RejectsWithNothingConfigured() =>
+        Assert.Throws<InvalidOperationException>(
+            () => DatabaseProviderSelector.Resolve(Undeclared, configured: null));
+
+    [Fact]
+    public void Resolve_UndeclaredDefault_RejectsThroughAValidOverride() =>
+        Assert.Throws<InvalidOperationException>(
+            () => DatabaseProviderSelector.Resolve(Undeclared, "Postgres"));
+
+    [Fact]
+    public void Resolve_UndeclaredDefault_NamesTheValueAndEveryAllowedName()
+    {
+        var error = Assert.Throws<InvalidOperationException>(
+            () => DatabaseProviderSelector.Resolve(Undeclared, configured: null));
+
+        Assert.Contains("99", error.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(DatabaseProvider.SqlServer), error.Message, StringComparison.Ordinal);
+        Assert.Contains(nameof(DatabaseProvider.Postgres), error.Message, StringComparison.Ordinal);
+    }
+
     #endregion
 
     #region Parse
@@ -42,6 +75,28 @@ public sealed class DatabaseProviderSelectorTests
     [InlineData("  Postgres  ", DatabaseProvider.Postgres)]
     public void Parse_KnownName_IgnoresCaseAndSurroundingSpace(string value, DatabaseProvider expected) =>
         Assert.Equal(expected, DatabaseProviderSelector.Parse(value));
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1")]
+    [InlineData("-1")]
+    [InlineData("99")]
+    public void Parse_TheNumberBehindAName_Rejects(string value) =>
+        Assert.Throws<InvalidOperationException>(() => DatabaseProviderSelector.Parse(value));
+
+    [Theory]
+    [InlineData("SqlServer,Postgres")]
+    [InlineData("SqlServer, Postgres")]
+    [InlineData("0,1")]
+    public void Parse_SeveralNamesAtOnce_Rejects(string value) =>
+        Assert.Throws<InvalidOperationException>(() => DatabaseProviderSelector.Parse(value));
+
+    [Theory]
+    [InlineData("Oracle")]
+    [InlineData("Sql Server")]
+    [InlineData("PostgreSQL")]
+    public void Parse_UnknownName_Rejects(string value) =>
+        Assert.Throws<InvalidOperationException>(() => DatabaseProviderSelector.Parse(value));
 
     [Fact]
     public void Parse_UnknownName_NamesTheVariableAndEveryAllowedValue()
