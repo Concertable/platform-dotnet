@@ -16,7 +16,7 @@ what they do not:
 
 - `IntegrationTestHostExtensions` — the type composing the shared `ConfigureTestServices` steps
 - `RelationalTestDatabaseExtensions` — provider-dispatched identity-insert and temporary check-constraint SQL
-- `DatabaseProvider` / `DatabaseProviderSelector` — the provider a fixture declares by overriding
+- `DatabaseProvider` / `DatabaseProviderResolver` — the provider a fixture declares by overriding
   `SqlFixture.Provider`, and the `CONCERTABLE_TEST_DB_PROVIDER` override that points one suite at the other
   provider to compare them. Named values only: a number or a list is rejected before a container starts
 - `OwnedSchemaSelector` — which schemas a reset covers, checked against the catalog, and the migration

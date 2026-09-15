@@ -13,7 +13,7 @@ public class SqlFixture : IAsyncLifetime
 {
     private DatabaseProvider? resolvedProvider;
     private IDatabaseContainer container = null!;
-    private DbConnection dbConnection = null!;
+    private DbConnection? dbConnection;
     private Respawner respawner = null!;
 
     protected virtual DatabaseProvider Provider => DatabaseProvider.SqlServer;
@@ -21,6 +21,11 @@ public class SqlFixture : IAsyncLifetime
     public DatabaseProvider ActiveProvider => resolvedProvider ??= ResolveProvider();
 
     public string ConnectionString => container.GetConnectionString();
+
+    private DbConnection Connection =>
+        dbConnection ?? throw new InvalidOperationException(
+            $"{nameof(InitializeAsync)} has to run before {nameof(InitializeRespawnerAsync)} and "
+            + $"{nameof(ResetAsync)}.");
 
     public async Task InitializeAsync()
     {
@@ -38,7 +43,7 @@ public class SqlFixture : IAsyncLifetime
                 + "database it reaches the migration histories and the tables PostGIS installed, which it must "
                 + $"leave standing. Call {nameof(InitializeRespawnerAsync)} with them instead.");
 
-        respawner = await Respawner.CreateAsync(dbConnection, new RespawnerOptions
+        respawner = await Respawner.CreateAsync(Connection, new RespawnerOptions
         {
             TablesToIgnore = [OwnedSchemaSelector.MigrationsHistory],
             DbAdapter = DbAdapter.SqlServer,
@@ -50,7 +55,7 @@ public class SqlFixture : IAsyncLifetime
     {
         var owned = OwnedSchemaSelector.Select(ActiveProvider, schemas, await ReadSchemaCatalogAsync());
 
-        respawner = await Respawner.CreateAsync(dbConnection, new RespawnerOptions
+        respawner = await Respawner.CreateAsync(Connection, new RespawnerOptions
         {
             SchemasToInclude = [.. owned],
             TablesToIgnore = [.. OwnedSchemaSelector.TablesToIgnore(ActiveProvider, owned)],
@@ -59,22 +64,23 @@ public class SqlFixture : IAsyncLifetime
         });
     }
 
-    public async Task ResetAsync() => await respawner.ResetAsync(dbConnection);
+    public async Task ResetAsync() => await respawner.ResetAsync(Connection);
 
     public async Task DisposeAsync()
     {
-        await dbConnection.DisposeAsync();
+        if (dbConnection is not null)
+            await dbConnection.DisposeAsync();
         await container.DisposeAsync();
     }
 
     private DatabaseProvider ResolveProvider() =>
-        DatabaseProviderSelector.Resolve(
+        DatabaseProviderResolver.Resolve(
             Provider,
-            Environment.GetEnvironmentVariable(DatabaseProviderSelector.ProviderVariable));
+            Environment.GetEnvironmentVariable(DatabaseProviderResolver.ProviderVariable));
 
     private async Task<IReadOnlyList<string>> ReadSchemaCatalogAsync()
     {
-        await using var command = dbConnection.CreateCommand();
+        await using var command = Connection.CreateCommand();
         command.CommandText = CatalogSchemaSql(ActiveProvider);
 
         await using var reader = await command.ExecuteReaderAsync();
@@ -113,7 +119,6 @@ public class SqlFixture : IAsyncLifetime
         _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, null)
     };
 
-    // PostGIS ships as its own image rather than an extension of the stock postgres one, and eight
-    // geography columns need it present from the first migration.
+    // PostGIS is its own image, not an extension, and geography columns need it from migration one.
     private const string PostgisImage = "postgis/postgis:17-3.5";
 }

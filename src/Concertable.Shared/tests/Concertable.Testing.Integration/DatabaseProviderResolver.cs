@@ -7,7 +7,7 @@ namespace Concertable.Testing.Integration;
 /// configuration names one, so a service declares its provider in code and a run can still be pointed at
 /// the other one to compare the two.
 /// </summary>
-public static class DatabaseProviderSelector
+public static class DatabaseProviderResolver
 {
     public const string ProviderVariable = "CONCERTABLE_TEST_DB_PROVIDER";
 
