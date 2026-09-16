@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Concertable.Messaging.Infrastructure;
 
-public static class EntityTypeBuilderExtensions
+public static class MessageStoreMappingExtensions
 {
     extension(EntityTypeBuilder<InboxMessageEntity> builder)
     {

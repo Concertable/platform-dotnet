@@ -55,6 +55,17 @@ public sealed class PostgresContainerResourceTests
     }
 
     [Fact]
+    public void WithPostGis_AfterAddPostgresContainer_KeepsThePerCheckoutVolume()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        var postgres = builder.AddPostgresContainer().WithPostGis();
+
+        var mount = Assert.Single(postgres.Resource.Annotations.OfType<ContainerMountAnnotation>());
+        Assert.StartsWith("concertable-postgres-data-", mount.Source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AddDatabase_KeepsTheNameTheSqlServerCompositionUsed()
     {
         var builder = DistributedApplication.CreateBuilder();
