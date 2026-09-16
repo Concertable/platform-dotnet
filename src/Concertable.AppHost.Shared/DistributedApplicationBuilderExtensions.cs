@@ -42,10 +42,9 @@ public static class DistributedApplicationBuilderExtensions
         return builder.AddSqlServer("sql").WithDataVolume($"{dataVolumeName}-{checkoutSuffix}");
     }
 
-    /// <summary>The Postgres counterpart of <see cref="AddSqlServerContainer"/>, carrying the same
-    /// per-checkout data volume for the same reason. A composition whose service stores geography
-    /// follows this with <c>WithPostGis()</c>: PostGIS ships as its own image rather than an
-    /// extension of the stock one, and a geography column needs it from the first migration.</summary>
+    /// <summary>A composition whose service stores geography follows this with <c>WithPostGis()</c>:
+    /// PostGIS ships as its own image rather than an extension of the stock one, and a geography
+    /// column needs it from the first migration.</summary>
     public static IResourceBuilder<PostgresServerResource> AddPostgresContainer(
         this IDistributedApplicationBuilder builder,
         string dataVolumeName = "concertable-postgres-data")
