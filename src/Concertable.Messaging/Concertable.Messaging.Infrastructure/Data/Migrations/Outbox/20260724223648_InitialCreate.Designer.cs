@@ -34,6 +34,7 @@ namespace Concertable.Messaging.Infrastructure.Data.Migrations.Outbox
                         .HasColumnType("int");
 
                     b.Property<string>("CorrelationId")
+                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTimeOffset?>("DispatchedAtUtc")
@@ -47,6 +48,7 @@ namespace Concertable.Messaging.Infrastructure.Data.Migrations.Outbox
 
                     b.Property<string>("MessageType")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTimeOffset?>("NextRetryAtUtc")

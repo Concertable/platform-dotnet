@@ -20,10 +20,10 @@ namespace Concertable.Messaging.Infrastructure.Data.Migrations.Outbox
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    MessageType = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    MessageType = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
                     Payload = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     OccurredAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    CorrelationId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    CorrelationId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
                     Kind = table.Column<int>(type: "int", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     DispatchedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
