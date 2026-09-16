@@ -1,6 +1,6 @@
+﻿using System.Data.Common;
 using System.Linq.Expressions;
 using FlexLabs.EntityFrameworkCore.Upsert;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.DataAccess.Infrastructure.Extensions;
@@ -19,7 +19,7 @@ public static class DbSetExtensions
         {
             await set.Upsert(candidate).On(matchOn).NoUpdate().RunAsync(cancellationToken);
         }
-        catch (SqlException ex) when (ex.IsDuplicateKey()) { }
+        catch (DbException ex) when (ex.IsDuplicateKey()) { }
 
         return await set.FirstAsync(find, cancellationToken);
     }
