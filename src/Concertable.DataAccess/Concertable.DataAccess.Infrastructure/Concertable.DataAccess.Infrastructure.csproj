@@ -19,6 +19,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="NetTopologySuite" />
+    <PackageReference Include="Npgsql" />
   </ItemGroup>
 
   <ItemGroup>
