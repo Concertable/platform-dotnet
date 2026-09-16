@@ -21,7 +21,7 @@ namespace Concertable.Messaging.Infrastructure.Data.Migrations.Inbox
                 {
                     MessageId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ConsumerName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
-                    MessageType = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    MessageType = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
                     ReceivedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
                 },
                 constraints: table =>

@@ -1,6 +1,7 @@
-using Concertable.DataAccess.Application;
+﻿using Concertable.DataAccess.Application;
 using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Domain;
+using Concertable.Messaging.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using MessagingSchema = Concertable.Messaging.Infrastructure.Schema;
 
@@ -29,17 +30,13 @@ public abstract class DbContextBase(DbContextOptions options) : DbContext(option
         modelBuilder.Entity<OutboxMessageEntity>(b =>
         {
             b.ToTable(MessagingSchema.Tables.Outbox, MessagingSchema.Name, t => t.ExcludeFromMigrations());
-            b.Property(m => m.Id).ValueGeneratedNever();
+            b.MapOutboxMessage();
         });
 
         modelBuilder.Entity<InboxMessageEntity>(b =>
         {
             b.ToTable(MessagingSchema.Tables.Inbox, MessagingSchema.Name, t => t.ExcludeFromMigrations());
-            b.HasKey(m => new { m.MessageId, m.ConsumerName });
-            b.Property(m => m.MessageId).ValueGeneratedNever();
-            b.Property(m => m.ConsumerName).IsRequired().HasMaxLength(256);
-            b.Property(m => m.MessageType).IsRequired().HasColumnType("nvarchar(450)");
-            b.Property(m => m.ReceivedAt).IsRequired();
+            b.MapInboxMessage();
         });
     }
 

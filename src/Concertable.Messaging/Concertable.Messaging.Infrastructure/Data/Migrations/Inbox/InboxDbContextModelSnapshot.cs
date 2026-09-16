@@ -33,6 +33,7 @@ namespace Concertable.Messaging.Infrastructure.Data.Migrations.Inbox
 
                     b.Property<string>("MessageType")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTimeOffset>("ReceivedAt")
