@@ -1,4 +1,4 @@
-﻿using Concertable.DataAccess.Application;
+using Concertable.DataAccess.Application;
 using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Domain;
 using Concertable.Messaging.Infrastructure;

@@ -10,5 +10,5 @@ public sealed class InboxMessageEntity
     public DateTimeOffset ReceivedAt { get; private set; }
 
     public static InboxMessageEntity Create(Guid messageId, string consumerName, string messageType, DateTimeOffset receivedAt) =>
-        new() { MessageId = messageId, ConsumerName = consumerName, MessageType = messageType, ReceivedAt = receivedAt };
+        new() { MessageId = messageId, ConsumerName = consumerName, MessageType = messageType, ReceivedAt = receivedAt.ToUniversalTime() };
 }

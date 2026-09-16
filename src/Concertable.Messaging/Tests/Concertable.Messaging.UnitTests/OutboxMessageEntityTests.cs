@@ -199,4 +199,39 @@ public sealed class OutboxMessageEntityTests
         Assert.Equal(OutboxStatus.DeadLettered, entity.Status);
         Assert.Null(entity.NextRetryAtUtc);
     }
+
+    [Fact]
+    public void Create_OccurredAtCarryingAnOffset_StoresTheSameInstantAtUtc()
+    {
+        var local = new DateTimeOffset(2026, 5, 20, 13, 0, 0, TimeSpan.FromHours(1));
+
+        var entity = OutboxMessageEntity.Create(typeof(FakeIntegrationEvent), "{}", local, MessageKind.Event);
+
+        Assert.Equal(TimeSpan.Zero, entity.OccurredAtUtc.Offset);
+        Assert.Equal(local.UtcDateTime, entity.OccurredAtUtc.UtcDateTime);
+    }
+
+    [Fact]
+    public void MarkDispatched_WhenCarryingAnOffset_StoresTheSameInstantAtUtc()
+    {
+        var entity = OutboxMessageEntity.Create(typeof(FakeIntegrationEvent), "{}", Now, MessageKind.Event);
+        var local = new DateTimeOffset(2026, 5, 20, 13, 0, 0, TimeSpan.FromHours(1));
+
+        entity.MarkDispatched(local);
+
+        Assert.Equal(TimeSpan.Zero, entity.DispatchedAtUtc!.Value.Offset);
+        Assert.Equal(local.UtcDateTime, entity.DispatchedAtUtc.Value.UtcDateTime);
+    }
+
+    [Fact]
+    public void RecordFailure_NowCarryingAnOffset_SchedulesTheRetryAtUtc()
+    {
+        var entity = OutboxMessageEntity.Create(typeof(FakeIntegrationEvent), "{}", Now, MessageKind.Event);
+        var local = new DateTimeOffset(2026, 5, 20, 13, 0, 0, TimeSpan.FromHours(1));
+
+        entity.RecordFailure("transport refused", maxAttempts: 5, local);
+
+        Assert.Equal(TimeSpan.Zero, entity.NextRetryAtUtc!.Value.Offset);
+        Assert.Equal(local.UtcDateTime.AddSeconds(1), entity.NextRetryAtUtc.Value.UtcDateTime);
+    }
 }

@@ -32,7 +32,7 @@ public sealed class OutboxMessageEntity : IGuidEntity
             Id = Guid.NewGuid(),
             MessageType = MessageTypeAttribute.Resolve(messageType),
             Payload = payload,
-            OccurredAtUtc = occurredAtUtc,
+            OccurredAtUtc = occurredAtUtc.ToUniversalTime(),
             Kind = kind,
             CorrelationId = correlationId,
             Status = OutboxStatus.Pending,
@@ -47,7 +47,7 @@ public sealed class OutboxMessageEntity : IGuidEntity
         if (Status is OutboxStatus.DeadLettered)
             throw new DomainException("Cannot dispatch a dead-lettered message.");
         Status = OutboxStatus.Dispatched;
-        DispatchedAtUtc = when;
+        DispatchedAtUtc = when.ToUniversalTime();
         LastError = null;
         NextRetryAtUtc = null;
     }
@@ -67,7 +67,7 @@ public sealed class OutboxMessageEntity : IGuidEntity
         else
         {
             Status = OutboxStatus.Pending;
-            NextRetryAtUtc = now.AddSeconds(Math.Min(Math.Pow(2, Attempts - 1), 300));
+            NextRetryAtUtc = now.ToUniversalTime().AddSeconds(Math.Min(Math.Pow(2, Attempts - 1), 300));
         }
     }
 }
