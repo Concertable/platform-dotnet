@@ -1,6 +1,19 @@
 name: Publish packages
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - '!src/**/*.md'
+      - 'eng/**'
+      - 'Directory.Build.props'
+      - 'Directory.Build.targets'
+      - 'TestConventions.targets'
+      - 'BannedSymbols.txt'
+      - 'BannedSymbols.UnitTests.txt'
+      - 'Concertable.Platform.Packages.slnx'
+      - '.github/workflows/publish.yml'
   workflow_dispatch:
     inputs:
       publish:
@@ -9,6 +22,10 @@ on:
         default: false
   release:
     types: [published]
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -45,6 +62,6 @@ jobs:
     uses: Concertable/pipeline/.github/workflows/nuget-publish.yml@bc16cc0609dfeb923bd8e1a97f88b9890380f6f2
     with:
       project: Concertable.Platform.Packages.slnx
-      publish: ${{ inputs.publish || github.event_name == 'release' }}
+      publish: ${{ inputs.publish || github.event_name != 'workflow_dispatch' }}
     secrets:
       PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_TOKEN }}
