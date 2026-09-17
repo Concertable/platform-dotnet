@@ -46,9 +46,16 @@ public sealed class WriteRepositoryExtensionsTests
     private static PostgresException PostgresError(string sqlState) =>
         new("violation", "ERROR", "ERROR", sqlState);
 
-    private sealed class ConflictingDbContext(DbContextOptions<ConflictingDbContext> options, Exception inner)
-        : DbContextBase(options, Options.Create(new OutboxOptions()))
+    private sealed class ConflictingDbContext : DbContextBase
     {
+        private readonly Exception inner;
+
+        public ConflictingDbContext(DbContextOptions<ConflictingDbContext> options, Exception inner)
+            : base(options, Options.Create(new OutboxOptions()))
+        {
+            this.inner = inner;
+        }
+
         public DbSet<TestEntity> Entities => Set<TestEntity>();
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>

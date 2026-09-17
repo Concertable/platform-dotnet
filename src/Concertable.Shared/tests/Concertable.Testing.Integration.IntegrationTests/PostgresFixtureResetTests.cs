@@ -18,12 +18,23 @@ public sealed class PostgresFixtureResetTests
         foreach (var cycle in new[] { "first", "second" })
         {
             await fixture.SeedSentinelsAsync($"{cycle}-a", $"{cycle}-b");
-            Assert.Equal(2, await SentinelCountAsync());
+            Assert.Equal(2, await SentinelCountAsync(ResetScopeFixture.OwnedSchema));
 
             await fixture.ResetAsync();
 
-            Assert.Equal(0, await SentinelCountAsync());
+            Assert.Equal(0, await SentinelCountAsync(ResetScopeFixture.OwnedSchema));
         }
+    }
+
+    [Fact]
+    public async Task ResetAsync_AServiceOwningThePublicSchema_EmptiesItsOwnTableThere()
+    {
+        await fixture.SeedSentinelsAsync("public-a", "public-b");
+        Assert.Equal(2, await SentinelCountAsync(ResetScopeFixture.PostgisSchema));
+
+        await fixture.ResetAsync();
+
+        Assert.Equal(0, await SentinelCountAsync(ResetScopeFixture.PostgisSchema));
     }
 
     [Fact]
@@ -70,10 +81,12 @@ public sealed class PostgresFixtureResetTests
 
         Assert.Equal(1, await fixture.ScalarAsync(
             $"""SELECT min("Id") FROM "{ResetScopeFixture.OwnedSchema}"."Sentinel" """));
+        Assert.Equal(1, await fixture.ScalarAsync(
+            $"""SELECT min("Id") FROM "{ResetScopeFixture.PostgisSchema}"."Sentinel" """));
     }
 
     #endregion
 
-    private Task<long> SentinelCountAsync() =>
-        fixture.ScalarAsync($"""SELECT count(*) FROM "{ResetScopeFixture.OwnedSchema}"."Sentinel" """);
+    private Task<long> SentinelCountAsync(string schema) =>
+        fixture.ScalarAsync($"""SELECT count(*) FROM "{schema}"."Sentinel" """);
 }

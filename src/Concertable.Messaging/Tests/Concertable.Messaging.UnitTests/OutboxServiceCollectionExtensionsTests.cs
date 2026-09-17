@@ -9,7 +9,12 @@ namespace Concertable.Messaging.UnitTests;
 
 public sealed class OutboxServiceCollectionExtensionsTests
 {
-    private readonly ServiceCollection services = new();
+    private readonly ServiceCollection services;
+
+    public OutboxServiceCollectionExtensionsTests()
+    {
+        this.services = new ServiceCollection();
+    }
 
     #region AddOutbox
 

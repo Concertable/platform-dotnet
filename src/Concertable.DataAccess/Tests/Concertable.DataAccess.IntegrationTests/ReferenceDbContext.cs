@@ -15,6 +15,8 @@ public sealed class ReferenceEntity : IEntity
 
 public sealed class ReferenceDbContext : DbContextBase
 {
+    public const string Table = "References";
+
     public ReferenceDbContext(DbContextOptions<ReferenceDbContext> options)
         : base(options, Options.Create(new OutboxOptions())) { }
 
@@ -26,7 +28,7 @@ public sealed class ReferenceDbContext : DbContextBase
 
         modelBuilder.Entity<ReferenceEntity>(reference =>
         {
-            reference.ToTable("References", DataAccessFixture.Schema);
+            reference.ToTable(Table, DataAccessFixture.Schema);
             reference.HasKey(entity => entity.Id);
             reference.Property(entity => entity.Code).IsRequired().HasMaxLength(64);
             reference.Property(entity => entity.Name).IsRequired().HasMaxLength(128);

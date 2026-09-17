@@ -11,33 +11,38 @@ public static class DbSetExtensions
 {
     private const string ContestedInsertSavepoint = "get_or_create";
 
-    public static async Task<TEntity> GetOrCreateAsync<TEntity>(
-        this DbSet<TEntity> set,
-        TEntity candidate,
-        Expression<Func<TEntity, object>> matchOn,
-        Expression<Func<TEntity, bool>> find,
-        CancellationToken cancellationToken = default)
+    extension<TEntity>(DbSet<TEntity> set)
         where TEntity : class
     {
-        // PostgreSQL aborts the whole transaction on the failed insert, so without a savepoint to roll
-        // back to, the read below fails with 25P02 instead of returning the row that won.
-        var transaction = set.GetService<ICurrentDbContext>().Context.Database.CurrentTransaction;
-        if (transaction is not null)
-            await transaction.CreateSavepointAsync(ContestedInsertSavepoint, cancellationToken);
-
-        try
+        public async Task<TEntity> GetOrCreateAsync(
+            TEntity candidate,
+            Expression<Func<TEntity, object>> matchOn,
+            Expression<Func<TEntity, bool>> find,
+            CancellationToken cancellationToken = default)
         {
-            await set.Upsert(candidate).On(matchOn).NoUpdate().RunAsync(cancellationToken);
-
+            var transaction = set.GetService<ICurrentDbContext>().Context.Database.CurrentTransaction;
             if (transaction is not null)
-                await transaction.ReleaseSavepointAsync(ContestedInsertSavepoint, cancellationToken);
-        }
-        catch (DbException ex) when (ex.IsDuplicateKey())
-        {
-            if (transaction is not null)
-                await transaction.RollbackToSavepointAsync(ContestedInsertSavepoint, cancellationToken);
-        }
+                await transaction.CreateSavepointAsync(ContestedInsertSavepoint, cancellationToken);
 
-        return await set.FirstAsync(find, cancellationToken);
+            try
+            {
+                await set.Upsert(candidate).On(matchOn).NoUpdate().RunAsync(cancellationToken);
+            }
+            catch (DbException ex)
+            {
+                // PostgreSQL aborts the caller's transaction on a failed statement; without this rewind the read below fails with 25P02.
+                if (transaction is not null)
+                    await transaction.RollbackToSavepointAsync(ContestedInsertSavepoint, cancellationToken);
+                if (!ex.IsDuplicateKey())
+                    throw;
+            }
+            finally
+            {
+                if (transaction is not null)
+                    await transaction.ReleaseSavepointAsync(ContestedInsertSavepoint, cancellationToken);
+            }
+
+            return await set.FirstAsync(find, cancellationToken);
+        }
     }
 }

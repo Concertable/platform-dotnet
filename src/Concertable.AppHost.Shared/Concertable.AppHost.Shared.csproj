@@ -18,4 +18,8 @@
     <ProjectReference Include="..\Concertable.Messaging\Concertable.Messaging.AzureServiceBus\Concertable.Messaging.AzureServiceBus.csproj" IsAspireProjectResource="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Concertable.AppHost.Shared.UnitTests" />
+  </ItemGroup>
+
 </Project>

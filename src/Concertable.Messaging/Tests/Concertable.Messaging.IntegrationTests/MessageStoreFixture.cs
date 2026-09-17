@@ -9,8 +9,8 @@ namespace Concertable.Messaging.IntegrationTests;
 
 public sealed class MessageStoreFixture : IAsyncLifetime
 {
-    private const string InboxHistory = $"{OwnedSchemaSelector.MigrationsHistory}_Inbox";
-    private const string OutboxHistory = $"{OwnedSchemaSelector.MigrationsHistory}_Outbox";
+    public const string InboxHistory = $"{OwnedSchemaSelector.MigrationsHistory}_Inbox";
+    public const string OutboxHistory = $"{OwnedSchemaSelector.MigrationsHistory}_Outbox";
 
     private readonly PostgresFixture postgres = new();
 
@@ -37,11 +37,11 @@ public sealed class MessageStoreFixture : IAsyncLifetime
             .UseNpgsql(ConnectionString, npgsql => npgsql.MigrationsHistoryTable(InboxHistory, Schema.Name))
             .Options);
 
-    public OutboxDbContext CreateOutboxContext(OutboxOptions? options = null) =>
+    public OutboxDbContext CreateOutboxContext() =>
         new(new DbContextOptionsBuilder<OutboxDbContext>()
                 .UseNpgsql(ConnectionString, npgsql => npgsql.MigrationsHistoryTable(OutboxHistory, Schema.Name))
                 .Options,
-            Options.Create(options ?? new OutboxOptions()));
+            Options.Create(new OutboxOptions()));
 }
 
 [CollectionDefinition(Name)]
