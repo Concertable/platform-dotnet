@@ -1,26 +1,48 @@
+using System.Data.Common;
 using System.Linq.Expressions;
 using FlexLabs.EntityFrameworkCore.Upsert;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Concertable.DataAccess.Infrastructure.Extensions;
 
 public static class DbSetExtensions
 {
-    public static async Task<TEntity> GetOrCreateAsync<TEntity>(
-        this DbSet<TEntity> set,
-        TEntity candidate,
-        Expression<Func<TEntity, object>> matchOn,
-        Expression<Func<TEntity, bool>> find,
-        CancellationToken cancellationToken = default)
+    private const string ContestedInsertSavepoint = "get_or_create";
+
+    extension<TEntity>(DbSet<TEntity> set)
         where TEntity : class
     {
-        try
+        public async Task<TEntity> GetOrCreateAsync(
+            TEntity candidate,
+            Expression<Func<TEntity, object>> matchOn,
+            Expression<Func<TEntity, bool>> find,
+            CancellationToken cancellationToken = default)
         {
-            await set.Upsert(candidate).On(matchOn).NoUpdate().RunAsync(cancellationToken);
-        }
-        catch (SqlException ex) when (ex.IsDuplicateKey()) { }
+            var transaction = set.GetService<ICurrentDbContext>().Context.Database.CurrentTransaction;
+            if (transaction is not null)
+                await transaction.CreateSavepointAsync(ContestedInsertSavepoint, cancellationToken);
 
-        return await set.FirstAsync(find, cancellationToken);
+            try
+            {
+                await set.Upsert(candidate).On(matchOn).NoUpdate().RunAsync(cancellationToken);
+            }
+            catch (DbException ex)
+            {
+                // PostgreSQL aborts the caller's transaction on a failed statement; without this rewind the read below fails with 25P02.
+                if (transaction is not null)
+                    await transaction.RollbackToSavepointAsync(ContestedInsertSavepoint, cancellationToken);
+                if (!ex.IsDuplicateKey())
+                    throw;
+            }
+            finally
+            {
+                if (transaction is not null)
+                    await transaction.ReleaseSavepointAsync(ContestedInsertSavepoint, cancellationToken);
+            }
+
+            return await set.FirstAsync(find, cancellationToken);
+        }
     }
 }

@@ -19,10 +19,10 @@ namespace Concertable.Messaging.Infrastructure.Data.Migrations.Inbox
                 schema: "messaging",
                 columns: table => new
                 {
-                    MessageId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ConsumerName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false),
-                    MessageType = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ReceivedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    MessageId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ConsumerName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    MessageType = table.Column<string>(type: "character varying(450)", maxLength: 450, nullable: false),
+                    ReceivedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {

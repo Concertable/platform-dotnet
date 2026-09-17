@@ -5,8 +5,10 @@ using Concertable.DataAccess.Infrastructure;
 using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Kernel;
 using Concertable.Kernel.Specifications;
+using Concertable.Messaging.Infrastructure.Outbox;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Concertable.DataAccess.IntegrationTests;
 
@@ -389,7 +391,7 @@ public sealed class RepositoryTests : IDisposable
         public Expression<Func<TestEntity, bool>> ToExpression() => entity => entity.Name == "Excluded";
     }
 
-    private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options)
+    private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options, Options.Create(new OutboxOptions()))
     {
         public DbSet<TestEntity> Entities => Set<TestEntity>();
         public DbSet<TestEntityDetail> Details => Set<TestEntityDetail>();

@@ -1,13 +1,24 @@
 using Concertable.DataAccess.Application;
 using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Domain;
+using Concertable.Messaging.Infrastructure;
+using Concertable.Messaging.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using MessagingSchema = Concertable.Messaging.Infrastructure.Schema;
 
 namespace Concertable.DataAccess.Infrastructure;
 
-public abstract class DbContextBase(DbContextOptions options) : DbContext(options), IDbContext
+public abstract class DbContextBase : DbContext, IDbContext
 {
+    private readonly string outboxSchema;
+
+    protected DbContextBase(DbContextOptions options, IOptions<OutboxOptions> outboxOptions)
+        : base(options)
+    {
+        this.outboxSchema = outboxOptions.Value.SchemaName;
+    }
+
     public IQueryable<TEntity> Query<TEntity>() where TEntity : class => Set<TEntity>();
 
     async Task IWriteDbContext.AddAsync<TEntity>(TEntity entity, CancellationToken ct) =>
@@ -28,18 +39,14 @@ public abstract class DbContextBase(DbContextOptions options) : DbContext(option
 
         modelBuilder.Entity<OutboxMessageEntity>(b =>
         {
-            b.ToTable(MessagingSchema.Tables.Outbox, MessagingSchema.Name, t => t.ExcludeFromMigrations());
-            b.Property(m => m.Id).ValueGeneratedNever();
+            b.ToTable(MessagingSchema.Tables.Outbox, outboxSchema, t => t.ExcludeFromMigrations());
+            b.MapOutboxMessage();
         });
 
         modelBuilder.Entity<InboxMessageEntity>(b =>
         {
             b.ToTable(MessagingSchema.Tables.Inbox, MessagingSchema.Name, t => t.ExcludeFromMigrations());
-            b.HasKey(m => new { m.MessageId, m.ConsumerName });
-            b.Property(m => m.MessageId).ValueGeneratedNever();
-            b.Property(m => m.ConsumerName).IsRequired().HasMaxLength(256);
-            b.Property(m => m.MessageType).IsRequired().HasColumnType("nvarchar(450)");
-            b.Property(m => m.ReceivedAt).IsRequired();
+            b.MapInboxMessage();
         });
     }
 

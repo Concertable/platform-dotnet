@@ -13,6 +13,13 @@ public static class OutboxServiceCollectionExtensions
         this IServiceCollection services,
         Action<DbContextOptionsBuilder> configureDb,
         Action<OutboxOptions>? configure = null,
+        bool runDispatcher = true) =>
+        services.AddOutbox((_, options) => configureDb(options), configure, runDispatcher);
+
+    public static IServiceCollection AddOutbox(
+        this IServiceCollection services,
+        Action<IServiceProvider, DbContextOptionsBuilder> configureDb,
+        Action<OutboxOptions>? configure = null,
         bool runDispatcher = true)
     {
         if (configure is not null) services.Configure(configure);

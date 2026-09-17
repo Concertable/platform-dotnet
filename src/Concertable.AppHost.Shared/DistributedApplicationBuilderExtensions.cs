@@ -26,7 +26,7 @@ public static class DistributedApplicationBuilderExtensions
     }
 
     /// <summary>Suffixes <paramref name="dataVolumeName"/> with a short hash of the AppHost assembly's own
-    /// build output path, so every git worktree gets its own SQL data volume automatically. Without this,
+    /// build output path, so every git worktree gets its own database volume automatically. Without this,
     /// two worktrees running the same service's AppHost at once share one Docker volume — a fresh
     /// worktree's migrations collide with whatever schema an older worktree already applied to it.
     /// Hashes <see cref="AppContext.BaseDirectory"/> rather than <see cref="Directory.GetCurrentDirectory"/>
@@ -34,13 +34,22 @@ public static class DistributedApplicationBuilderExtensions
     /// from inside the AppHost folder versus a script that `cd`s to the repo root first), which would give
     /// the same worktree two different volumes depending on invocation style. The build output path is
     /// fixed per checkout regardless of invocation.</summary>
-    public static IResourceBuilder<SqlServerServerResource> AddSqlServerContainer(
+    public static IResourceBuilder<PostgresServerResource> AddPostgresContainer(
         this IDistributedApplicationBuilder builder,
-        string dataVolumeName = "concertable-sql-data")
+        string dataVolumeName = "concertable-postgres-data")
     {
         var checkoutSuffix = CheckoutSuffix();
-        return builder.AddSqlServer("sql").WithDataVolume($"{dataVolumeName}-{checkoutSuffix}");
+        return builder.AddPostgres("postgres").WithDataVolume($"{dataVolumeName}-{checkoutSuffix}");
     }
+
+    extension(IResourceBuilder<PostgresServerResource> postgres)
+    {
+        public IResourceBuilder<PostgresServerResource> WithPostGis() =>
+            postgres.WithImage(PostgisImage, PostgisTag);
+    }
+
+    internal const string PostgisImage = "postgis/postgis";
+    internal const string PostgisTag = "17-3.5";
 
     private static string CheckoutSuffix()
     {

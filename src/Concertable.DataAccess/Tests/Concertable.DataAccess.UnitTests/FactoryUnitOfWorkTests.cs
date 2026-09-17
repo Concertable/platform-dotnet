@@ -1,6 +1,8 @@
 using Concertable.DataAccess.Infrastructure;
+using Concertable.Messaging.Infrastructure.Outbox;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Concertable.DataAccess.UnitTests;
 
@@ -139,7 +141,7 @@ public sealed class FactoryUnitOfWorkTests : IDisposable
                 .UseSqlite(connection)
                 .Options);
 
-    private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options)
+    private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options, Options.Create(new OutboxOptions()))
     {
         public DbSet<TestEntity> Entities => Set<TestEntity>();
 

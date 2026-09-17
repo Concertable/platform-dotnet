@@ -1,6 +1,7 @@
 using Concertable.Messaging.Application;
 using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -44,7 +45,7 @@ internal sealed class OutboxDispatcher : BackgroundService
         }
     }
 
-    private async Task DrainOnceAsync(CancellationToken ct)
+    internal async Task DrainOnceAsync(CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
         var reader = scope.ServiceProvider.GetRequiredService<IOutboxReader>();
@@ -72,6 +73,27 @@ internal sealed class OutboxDispatcher : BackgroundService
             }
         }
 
-        await reader.SaveChangesAsync(ct);
+        await SaveOutcomesAsync(reader, ct);
+    }
+
+    /// <summary>The claim leases a row, and the lease is a concurrency predicate on its completion, so a
+    /// worker whose lease expired mid-drain must lose only its own rows. Saved as one batch, the first
+    /// conflict would roll back every other row's outcome and leave the whole batch to be redelivered.</summary>
+    private async Task SaveOutcomesAsync(IOutboxReader reader, CancellationToken ct)
+    {
+        while (true)
+        {
+            try
+            {
+                await reader.SaveChangesAsync(ct);
+                return;
+            }
+            catch (DbUpdateConcurrencyException ex) when (ex.Entries.Count > 0)
+            {
+                foreach (var entry in ex.Entries)
+                    entry.State = EntityState.Detached;
+                logger.OutboxCompletionLost(ex.Entries.Count);
+            }
+        }
     }
 }
