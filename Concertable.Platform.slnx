@@ -22,6 +22,7 @@
     <Project Path="src/Concertable.Messaging/Concertable.Messaging.Domain/Concertable.Messaging.Domain.csproj" />
     <Project Path="src/Concertable.Messaging/Concertable.Messaging.Infrastructure/Concertable.Messaging.Infrastructure.csproj" />
     <Project Path="src/Concertable.Messaging/Tests/Concertable.Messaging.AzureServiceBus.UnitTests/Concertable.Messaging.AzureServiceBus.UnitTests.csproj" />
+    <Project Path="src/Concertable.Messaging/Tests/Concertable.Messaging.IntegrationTests/Concertable.Messaging.IntegrationTests.csproj" />
     <Project Path="src/Concertable.Messaging/Tests/Concertable.Messaging.UnitTests/Concertable.Messaging.UnitTests.csproj" />
   </Folder>
   <Folder Name="/ServiceDefaults/">
@@ -51,6 +52,7 @@
     <Project Path="src/Concertable.Shared/tests/Concertable.Kernel.UnitTests/Concertable.Kernel.UnitTests.csproj" />
     <Project Path="src/Concertable.Shared/tests/Concertable.Shared.Api.UnitTests/Concertable.Shared.Api.UnitTests.csproj" />
     <Project Path="src/Concertable.Shared/tests/Concertable.Shared.Email.UnitTests/Concertable.Shared.Email.UnitTests.csproj" />
+    <Project Path="src/Concertable.Shared/tests/Concertable.Testing.Integration.IntegrationTests/Concertable.Testing.Integration.IntegrationTests.csproj" />
     <Project Path="src/Concertable.Shared/tests/Concertable.Testing.Integration.UnitTests/Concertable.Testing.Integration.UnitTests.csproj" />
   </Folder>
   <Folder Name="/Seed/">

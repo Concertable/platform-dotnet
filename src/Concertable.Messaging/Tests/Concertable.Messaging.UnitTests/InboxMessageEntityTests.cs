@@ -31,4 +31,15 @@ public sealed class InboxMessageEntityTests
         Assert.Equal(row1.MessageId, row2.MessageId);
         Assert.NotEqual(row1.ConsumerName, row2.ConsumerName);
     }
+
+    [Fact]
+    public void Create_ReceivedAtCarryingAnOffset_StoresTheSameInstantAtUtc()
+    {
+        var local = new DateTimeOffset(2026, 5, 20, 13, 0, 0, TimeSpan.FromHours(1));
+
+        var entity = InboxMessageEntity.Create(MessageId, ConsumerName, MessageType, local);
+
+        Assert.Equal(TimeSpan.Zero, entity.ReceivedAt.Offset);
+        Assert.Equal(local.UtcDateTime, entity.ReceivedAt.UtcDateTime);
+    }
 }
