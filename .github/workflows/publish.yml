@@ -59,7 +59,7 @@ jobs:
   publish:
     name: Pack, verify and publish
     needs: version-guard
-    uses: Concertable/pipeline/.github/workflows/nuget-publish.yml@45446edf2849811184a3ba97c8cb6307775dabf3
+    uses: Concertable/pipeline/.github/workflows/nuget-publish.yml@463f8548f9324a045c07fd8a98fb68954bbc5e08
     with:
       project: Concertable.Platform.Packages.slnx
       publish: ${{ inputs.publish || github.event_name != 'workflow_dispatch' }}
