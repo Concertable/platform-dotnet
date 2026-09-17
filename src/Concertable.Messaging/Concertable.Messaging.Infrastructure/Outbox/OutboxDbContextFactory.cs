@@ -9,7 +9,7 @@ internal sealed class OutboxDbContextFactory : IDesignTimeDbContextFactory<Outbo
     public OutboxDbContext CreateDbContext(string[] args)
     {
         var options = new DbContextOptionsBuilder<OutboxDbContext>()
-            .UseSqlServer(DesignTimeConfiguration.ConnectionString())
+            .UseNpgsql(DesignTimeConfiguration.ConnectionString())
             .Options;
         return new OutboxDbContext(options, Options.Create(new OutboxOptions()));
     }

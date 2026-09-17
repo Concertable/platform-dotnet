@@ -100,3 +100,33 @@ instances above are covered by it rather than by hand-added declarations.
 `AppModelStartupContractTests` ends each case with `app.Services.GetService<IStartupValidator>()?.Validate()`. That service exists only once something has called `ValidateOnStart()`, and the only calls in `api/` are three in `Concertable.Payment.Infrastructure`. For Auth and Search the line therefore asserts nothing, and the gate's actual bite is the eager `?? throw` inside each host's `Configure` lambda firing during `builder.Build()`. The null-conditional keeps the tier forward-compatible as options validation lands, but it also means deleting a `ValidateOnStart()` weakens the gate without turning anything red.
 
 **Resolves when:** every executable host declares its required configuration through `IValidateOptions<T>` plus `ValidateOnStart()`, and `AppModelStartupContractTests` resolves `IStartupValidator` with `GetRequiredService` so a host that stops declaring its requirements fails the tier instead of silently skipping the check.
+
+---
+
+## LOW
+
+### The PostGIS image coordinate is hand-maintained in two packages
+
+`DistributedApplicationBuilderExtensions.PostgisImage`/`PostgisTag` pick the image a spatial composition
+runs, and `Concertable.Testing.Integration.PostgresFixture` declares the same `postgis/postgis:17-3.5`
+independently so integration suites run what the composition runs. Nothing ties the two together: bumping
+the AppHost to a newer PostGIS leaves every service's integration fixture on the old one, and no test turns
+red. The fixture cannot simply read the AppHost constants — `Concertable.Testing.Integration` would have to
+take an `Aspire.Hosting` dependency for every service test project that consumes it.
+
+**Resolves when:** one package owns the coordinate and the other reads it (or a check fails when the two
+literals drift), and neither repeats the string.
+
+---
+
+## LOW
+
+### `DistributedApplicationBuilderExtensions` mixes `extension()` blocks with legacy `this` parameters
+
+`AddContainerImage` and `WithPostGis` sit in `extension()` blocks while `AddPostgresContainer`,
+`AddServiceBus`, `Topology`, `AddAzureStorage`, `WithOptionalEnvironment` and `AddSecrets` remain legacy
+`this`-parameter statics. The `csharp-style` standard wants a container migrated whole rather than left in
+both forms; the mixing predates the Postgres cutover, which added to the new form rather than sweeping the
+file.
+
+**Resolves when:** every member of this container is declared in an `extension()` block.

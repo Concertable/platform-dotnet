@@ -1,4 +1,3 @@
-using System.Collections.Frozen;
 using Respawn.Graph;
 using MessagingSchema = Concertable.Messaging.Infrastructure.Schema;
 
@@ -18,32 +17,25 @@ public static class OwnedSchemaSelector
     private const string PostgisSchema = "public";
     private const string PostgisReferenceSystems = "spatial_ref_sys";
 
-    private static readonly FrozenSet<string> SqlServerSystemSchemas = new[]
-    {
-        "sys", "INFORMATION_SCHEMA", "guest", "db_owner", "db_accessadmin", "db_securityadmin",
-        "db_ddladmin", "db_backupoperator", "db_datareader", "db_datawriter", "db_denydatareader",
-        "db_denydatawriter"
-    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
-
     public static IReadOnlyList<string> Select(
-        DatabaseProvider provider,
         IReadOnlyCollection<string> requested,
         IReadOnlyCollection<string> catalog)
     {
         if (requested.Count == 0)
             throw new InvalidOperationException(
-                $"A {provider} reset needs the schemas this service owns, and none were named. Pass every schema "
-                + $"its own migrations create, plus '{MessagingSchema.Name}' when it hosts a shared message store.");
+                "A reset needs the schemas this service owns, and none were named. PostgreSQL has no "
+                + "whole-database reset: pass every schema its own migrations create, plus "
+                + $"'{MessagingSchema.Name}' when it hosts a shared message store.");
 
         foreach (var schema in requested)
         {
             if (string.IsNullOrWhiteSpace(schema))
                 throw new InvalidOperationException("A reset was given a blank schema name.");
 
-            if (IsSystemSchema(provider, schema))
+            if (IsSystemSchema(schema))
                 throw new InvalidOperationException(
-                    $"'{schema}' is a {provider} system schema, so no service owns it. Name only the schemas this "
-                    + "service's own migrations create.");
+                    $"'{schema}' is a PostgreSQL system schema, so no service owns it. Name only the schemas "
+                    + "this service's own migrations create.");
 
             if (!catalog.Contains(schema, StringComparer.Ordinal))
                 throw new InvalidOperationException(
@@ -54,29 +46,15 @@ public static class OwnedSchemaSelector
         return [.. requested];
     }
 
-    public static IReadOnlyList<Table> TablesToIgnore(
-        DatabaseProvider provider,
-        IReadOnlyCollection<string> owned)
-    {
-        List<Table> tables =
-        [
-            .. owned.Select(schema => new Table(schema, MigrationsHistory)),
-            new Table(MessagingSchema.Name, InboxMigrationsHistory),
-            new Table(MessagingSchema.Name, OutboxMigrationsHistory)
-        ];
+    public static IReadOnlyList<Table> TablesToIgnore(IReadOnlyCollection<string> owned) =>
+    [
+        .. owned.Select(schema => new Table(schema, MigrationsHistory)),
+        new Table(MessagingSchema.Name, InboxMigrationsHistory),
+        new Table(MessagingSchema.Name, OutboxMigrationsHistory),
+        new Table(PostgisSchema, PostgisReferenceSystems)
+    ];
 
-        if (provider is DatabaseProvider.Postgres)
-            tables.Add(new Table(PostgisSchema, PostgisReferenceSystems));
-
-        return tables;
-    }
-
-    private static bool IsSystemSchema(DatabaseProvider provider, string schema) => provider switch
-    {
-        DatabaseProvider.SqlServer => SqlServerSystemSchemas.Contains(schema),
-        DatabaseProvider.Postgres =>
-            schema.StartsWith("pg_", StringComparison.OrdinalIgnoreCase)
-            || schema.Equals("information_schema", StringComparison.OrdinalIgnoreCase),
-        _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, null)
-    };
+    private static bool IsSystemSchema(string schema) =>
+        schema.StartsWith("pg_", StringComparison.OrdinalIgnoreCase)
+        || schema.Equals("information_schema", StringComparison.OrdinalIgnoreCase);
 }

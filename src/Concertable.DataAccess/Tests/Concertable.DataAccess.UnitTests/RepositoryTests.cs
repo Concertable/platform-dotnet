@@ -5,9 +5,11 @@ using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.DataAccess.Infrastructure.Extensions;
 using Concertable.Kernel;
 using Concertable.Messaging.Domain;
+using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Testing.Unit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Options;
 
 namespace Concertable.DataAccess.UnitTests;
 
@@ -288,7 +290,7 @@ public sealed class RepositoryTests
             : base(context) { }
     }
 
-    private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options)
+    private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options, Options.Create(new OutboxOptions()))
     {
         public DbSet<TestEntity> Entities => Set<TestEntity>();
 
@@ -299,7 +301,7 @@ public sealed class RepositoryTests
         }
     }
 
-    private sealed class FailingDbContext(DbContextOptions<FailingDbContext> options) : DbContextBase(options)
+    private sealed class FailingDbContext(DbContextOptions<FailingDbContext> options) : DbContextBase(options, Options.Create(new OutboxOptions()))
     {
         public DbSet<TestEntity> Entities => Set<TestEntity>();
 

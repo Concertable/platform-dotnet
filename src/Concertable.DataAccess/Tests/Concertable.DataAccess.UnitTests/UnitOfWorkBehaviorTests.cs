@@ -1,8 +1,10 @@
 using System.Transactions;
 using Concertable.DataAccess.Application;
 using Concertable.DataAccess.Infrastructure;
+using Concertable.Messaging.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Options;
 
 namespace Concertable.DataAccess.UnitTests;
 
@@ -135,5 +137,5 @@ public sealed class UnitOfWorkBehaviorTests
             throw new NotSupportedException();
     }
 
-    private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options);
+    private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContextBase(options, Options.Create(new OutboxOptions()));
 }
