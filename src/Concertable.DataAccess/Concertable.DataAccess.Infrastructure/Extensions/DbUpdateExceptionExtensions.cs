@@ -1,4 +1,4 @@
-using Microsoft.Data.SqlClient;
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.DataAccess.Infrastructure.Extensions;
@@ -6,7 +6,7 @@ namespace Concertable.DataAccess.Infrastructure.Extensions;
 public static class DbUpdateExceptionExtensions
 {
     public static bool IsDuplicateKey(this DbUpdateException ex) =>
-        ex.InnerException is SqlException sqlEx && sqlEx.IsDuplicateKey();
+        ex.InnerException is DbException dbEx && dbEx.IsDuplicateKey();
 
     public static void DiscardFailedChanges(this DbUpdateException ex)
     {

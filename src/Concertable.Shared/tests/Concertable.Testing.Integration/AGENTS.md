@@ -15,13 +15,11 @@ The imported conventions above already document every shared member and how to u
 what they do not:
 
 - `IntegrationTestHostExtensions` — the type composing the shared `ConfigureTestServices` steps
-- `RelationalTestDatabaseExtensions` — provider-dispatched identity-insert and temporary check-constraint SQL
-- `DatabaseProvider` / `DatabaseProviderResolver` — the provider a fixture declares by overriding
-  `SqlFixture.Provider`, and the `CONCERTABLE_TEST_DB_PROVIDER` override that points one suite at the other
-  provider to compare them. Named values only: a number or a list is rejected before a container starts
+- `RelationalTestDatabaseExtensions` — identifier delimiting and temporary check-constraint SQL
+- `PostgresFixture` — the one PostgreSQL container, connection and Respawn adapter every suite runs against
 - `OwnedSchemaSelector` — which schemas a reset covers, checked against the catalog, and the migration
   histories and extension-owned tables it leaves standing. PostgreSQL has no whole-database reset: call
-  `SqlFixture.InitializeRespawnerAsync(schemas)` with the schemas this service owns, after migrating
+  `PostgresFixture.InitializeRespawnerAsync(schemas)` with the schemas this service owns, after migrating
 - `IResettable` — marker interface for mocks that flush state between tests
 - `Mocks/MockBusTransport` — no-op `IBusTransport` (suppresses real ASB)
 - `Mocks/MockEmailSender` / `IMockEmailSender` — captures sent emails, exposes `Sent` list
@@ -55,4 +53,4 @@ api/Concertable.Search/tests/Concertable.Search.IntegrationTests.Fixtures/      
 ```
 
 Each service-owned fixture uses its own root namespace (`Concertable.<Service>.IntegrationTests.Fixtures`)
-and references this shared project for `SqlFixture` / `TestAuthHandler` / `IResettable` / shared mocks.
+and references this shared project for `PostgresFixture` / `TestAuthHandler` / `IResettable` / shared mocks.

@@ -95,16 +95,16 @@ public sealed class ConcurrencyConflictInterceptor : IDbCommandInterceptor, ISav
         if (context.Model.FindEntityType(entityType) is not { } type ||
             type.GetTableName() is not { } table ||
             !command.CommandText.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase) ||
-            !command.CommandText.Contains($"[{table}]", StringComparison.Ordinal))
+            !command.CommandText.Contains(context.Database.DelimitIdentifier(table), StringComparison.Ordinal))
             return false;
 
         var tokens = type.GetProperties()
             .Where(property => property.IsConcurrencyToken)
-            .Select(property => property.GetColumnName())
+            .Select(property => context.Database.DelimitIdentifier(property.GetColumnName()))
             .ToArray();
 
         return tokens.Length > 0 &&
-            tokens.All(column => command.CommandText.Contains($"[{column}]", StringComparison.Ordinal));
+            tokens.All(column => command.CommandText.Contains(column, StringComparison.Ordinal));
     }
 
     private static bool HasPendingUpdate(DbContext context, Type entityType) =>
