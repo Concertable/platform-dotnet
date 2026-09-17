@@ -25,7 +25,7 @@ public sealed class OutboxReaderTests : IAsyncLifetime
     #region GetPendingAsync
 
     [Fact]
-    public async Task GetPendingAsync_PendingAndDispatchedRows_ClaimsOnlyThePendingOnesOldestFirst()
+    public async Task GetPendingAsync_PendingAndDispatchedRows_ClaimsOnlyThePendingOnes()
     {
         var older = Message("{\"i\":1}", Base);
         var newer = Message("{\"i\":2}", Base.AddMinutes(5));
@@ -36,18 +36,38 @@ public sealed class OutboxReaderTests : IAsyncLifetime
         await using var context = fixture.CreateOutboxContext();
         var pending = await NewReader(context).GetPendingAsync(batchSize: 50);
 
-        Assert.Equal([older.Id, newer.Id], pending.Select(row => row.Id));
+        Assert.Equal(new[] { older.Id, newer.Id }.Order(), pending.Select(row => row.Id).Order());
     }
 
     [Fact]
-    public async Task GetPendingAsync_MoreRowsThanTheBatch_ClaimsOnlyTheBatch()
+    public async Task GetPendingAsync_MoreRowsThanTheBatch_ClaimsTheOldestOnesUpToIt()
     {
-        await SeedAsync([.. Enumerable.Range(0, 5).Select(i => Message($"{{\"i\":{i}}}", Base.AddSeconds(i)))]);
+        var seeded = Enumerable.Range(0, 5)
+            .Select(i => Message($"{{\"i\":{i}}}", Base.AddSeconds(i)))
+            .ToArray();
+        await SeedAsync([.. seeded.Reverse()]);
 
         await using var context = fixture.CreateOutboxContext();
         var pending = await NewReader(context).GetPendingAsync(batchSize: 2);
 
-        Assert.Equal(2, pending.Count);
+        Assert.Equal(
+            seeded.Take(2).Select(row => row.Id).Order(),
+            pending.Select(row => row.Id).Order());
+    }
+
+    [Fact]
+    public async Task GetPendingAsync_ADeadLetteredRow_IsNeverClaimedAgain()
+    {
+        var exhausted = Message("{}", Base);
+        exhausted.RecordFailure("gave up", maxAttempts: 1, Base);
+        var ready = Message("{}", Base.AddSeconds(1));
+        await SeedAsync(exhausted, ready);
+
+        await using var context = fixture.CreateOutboxContext();
+        var pending = await NewReader(context, Base.AddDays(1)).GetPendingAsync(batchSize: 50);
+
+        Assert.Equal(OutboxStatus.DeadLettered, exhausted.Status);
+        Assert.Equal(ready.Id, Assert.Single(pending).Id);
     }
 
     [Fact]
@@ -106,34 +126,32 @@ public sealed class OutboxReaderTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetPendingAsync_TwoWorkersAtOnce_SplitTheBatchWithNoRowClaimedTwice()
+    public async Task GetPendingAsync_WhileAnotherWorkersClaimIsStillOpen_SkipsItsRowsInsteadOfWaiting()
     {
         await SeedAsync([.. Enumerable.Range(0, 20).Select(i => Message($"{{\"i\":{i}}}", Base.AddSeconds(i)))]);
 
-        await using var first = fixture.CreateOutboxContext();
-        await using var second = fixture.CreateOutboxContext();
-        var claims = await Task.WhenAll(
-            NewReader(first).GetPendingAsync(batchSize: 20),
-            NewReader(second).GetPendingAsync(batchSize: 20));
+        await using var holding = fixture.CreateOutboxContext();
+        await using var holdingTransaction = await holding.Database.BeginTransactionAsync();
+        var held = await NewReader(holding).GetPendingAsync(batchSize: 10);
 
-        var ids = claims.SelectMany(claim => claim.Select(row => row.Id)).ToList();
-        Assert.Equal(20, ids.Count);
-        Assert.Equal(20, ids.Distinct().Count());
+        await using var skipping = fixture.CreateOutboxContext();
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var skipped = await NewReader(skipping).GetPendingAsync(batchSize: 10, deadline.Token);
+
+        await holdingTransaction.CommitAsync();
+
+        Assert.Equal(10, held.Count);
+        Assert.Equal(10, skipped.Count);
+        Assert.Empty(held.Select(row => row.Id).Intersect(skipped.Select(row => row.Id)));
     }
 
     [Fact]
-    public async Task GetPendingAsync_AfterALeaseExpires_ReclaimsTheAbandonedRow()
-    {
-        await SeedAsync(Message("{}", Base));
+    public async Task GetPendingAsync_AtTheLeaseDeadline_ReclaimsTheAbandonedRow() =>
+        Assert.Single(await ReclaimAtAsync(Base.Add(Lease)));
 
-        await using var abandoning = fixture.CreateOutboxContext();
-        await NewReader(abandoning, Base).GetPendingAsync(batchSize: 50);
-
-        await using var reclaiming = fixture.CreateOutboxContext();
-        var reclaimed = await NewReader(reclaiming, Base.Add(Lease).AddSeconds(1)).GetPendingAsync(batchSize: 50);
-
-        Assert.Single(reclaimed);
-    }
+    [Fact]
+    public async Task GetPendingAsync_AMomentBeforeTheLeaseDeadline_LeavesTheRowToItsHolder() =>
+        Assert.Empty(await ReclaimAtAsync(Base.Add(Lease).AddSeconds(-1)));
 
     #endregion
 
@@ -142,6 +160,17 @@ public sealed class OutboxReaderTests : IAsyncLifetime
 
     private static OutboxMessageEntity Message(string payload, DateTimeOffset occurredAt) =>
         OutboxMessageEntity.Create(typeof(FakeIntegrationEvent), payload, occurredAt, MessageKind.Event);
+
+    private async Task<IReadOnlyList<OutboxMessageEntity>> ReclaimAtAsync(DateTimeOffset now)
+    {
+        await SeedAsync(Message("{}", Base));
+
+        await using var abandoning = fixture.CreateOutboxContext();
+        await NewReader(abandoning, Base).GetPendingAsync(batchSize: 50);
+
+        await using var reclaiming = fixture.CreateOutboxContext();
+        return await NewReader(reclaiming, now).GetPendingAsync(batchSize: 50);
+    }
 
     private async Task SeedAsync(params OutboxMessageEntity[] messages)
     {

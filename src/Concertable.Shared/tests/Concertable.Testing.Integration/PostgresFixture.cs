@@ -7,8 +7,6 @@ namespace Concertable.Testing.Integration;
 
 public sealed class PostgresFixture : IAsyncLifetime
 {
-    // PostGIS is its own image, not an extension of the stock one, and geography columns need it from
-    // migration one.
     private const string PostgisImage = "postgis/postgis:17-3.5";
 
     private PostgreSqlContainer? container;

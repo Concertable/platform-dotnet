@@ -16,10 +16,6 @@ public static class OutboxServiceCollectionExtensions
         bool runDispatcher = true) =>
         services.AddOutbox((_, options) => configureDb(options), configure, runDispatcher);
 
-    /// <summary>
-    /// The overload a host needs to put the outbox on a connection resolved per request. Without it an
-    /// outbox row and the write it belongs to are on two connections, so no transaction can span them.
-    /// </summary>
     public static IServiceCollection AddOutbox(
         this IServiceCollection services,
         Action<IServiceProvider, DbContextOptionsBuilder> configureDb,

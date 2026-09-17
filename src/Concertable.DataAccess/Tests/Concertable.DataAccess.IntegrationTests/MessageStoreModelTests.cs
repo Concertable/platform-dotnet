@@ -1,5 +1,6 @@
 using Concertable.DataAccess.Infrastructure;
 using Concertable.Messaging.Domain;
+using Concertable.Messaging.Infrastructure;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,7 @@ public sealed class MessageStoreModelTests : IDisposable
     [Fact]
     public void OnModelCreating_EveryMessageStoreColumn_NamesNoProviderSpecificType()
     {
-        using var context = this.CreateContext();
+        using var context = CreateContext();
 
         var declared = MessageStoreProperties(context)
             .Select(property => property.GetColumnType())
@@ -36,7 +37,7 @@ public sealed class MessageStoreModelTests : IDisposable
     [Fact]
     public void OnModelCreating_BoundedMessageStoreColumns_KeepTheLengthTheRealTableHas()
     {
-        using var context = this.CreateContext();
+        using var context = CreateContext();
 
         Assert.Equal(450, Property(context, typeof(OutboxMessageEntity), nameof(OutboxMessageEntity.MessageType)).GetMaxLength());
         Assert.Equal(450, Property(context, typeof(OutboxMessageEntity), nameof(OutboxMessageEntity.CorrelationId)).GetMaxLength());
@@ -47,7 +48,7 @@ public sealed class MessageStoreModelTests : IDisposable
     [Fact]
     public void OnModelCreating_OutboxDispatchQuery_IsIndexedAsTheOwningConfigurationDeclaresIt()
     {
-        using var context = this.CreateContext();
+        using var context = CreateContext();
 
         var index = Assert.Single(context.Model.FindEntityType(typeof(OutboxMessageEntity))!.GetIndexes());
 
@@ -59,7 +60,7 @@ public sealed class MessageStoreModelTests : IDisposable
     [Fact]
     public void GenerateCreateScript_ConsumerOwningTheseEntities_EmitsNoMessagingTableOrIndex()
     {
-        using var context = this.CreateContext();
+        using var context = CreateContext();
 
         var script = context.Database.GenerateCreateScript();
 
@@ -68,10 +69,33 @@ public sealed class MessageStoreModelTests : IDisposable
         Assert.Contains("CREATE TABLE \"Entities\"", script, StringComparison.Ordinal);
     }
 
-    public void Dispose() => this.connection.Dispose();
+    [Fact]
+    public void OnModelCreating_TheDefaultOptions_MapsBothMessageStoresAtTheMessagingSchema()
+    {
+        using var context = CreateContext();
+
+        Assert.Equal(Schema.Name, context.Model.FindEntityType(typeof(OutboxMessageEntity))!.GetSchema());
+        Assert.Equal(Schema.Name, context.Model.FindEntityType(typeof(InboxMessageEntity))!.GetSchema());
+    }
+
+    [Fact]
+    public void OnModelCreating_AHostThatMovedItsOutbox_MapsItWhereThatHostPollsIt()
+    {
+        // EF keys its model cache on the context type, so a second schema needs a second type, not a
+        // second options instance.
+        using var context = new MovedOutboxDbContext(
+            new DbContextOptionsBuilder<MovedOutboxDbContext>().UseSqlite(connection).Options,
+            Options.Create(new OutboxOptions { SchemaName = "tickets" }));
+
+        Assert.Equal("tickets", context.Model.FindEntityType(typeof(OutboxMessageEntity))!.GetSchema());
+        Assert.Equal(Schema.Name, context.Model.FindEntityType(typeof(InboxMessageEntity))!.GetSchema());
+    }
+
+    public void Dispose() => connection.Dispose();
 
     private ConsumerDbContext CreateContext() =>
-        new(new DbContextOptionsBuilder<ConsumerDbContext>().UseSqlite(this.connection).Options);
+        new(new DbContextOptionsBuilder<ConsumerDbContext>().UseSqlite(connection).Options,
+            Options.Create(new OutboxOptions()));
 
     private static IEnumerable<IProperty> MessageStoreProperties(DbContext context) =>
         new[] { typeof(OutboxMessageEntity), typeof(InboxMessageEntity) }
@@ -81,8 +105,19 @@ public sealed class MessageStoreModelTests : IDisposable
     private static IProperty Property(DbContext context, Type entityType, string propertyName) =>
         context.Model.FindEntityType(entityType)!.FindProperty(propertyName)!;
 
-    private sealed class ConsumerDbContext(DbContextOptions<ConsumerDbContext> options) : DbContextBase(options, Options.Create(new OutboxOptions()))
+    private sealed class ConsumerDbContext : DbContextBase
     {
+        public ConsumerDbContext(DbContextOptions<ConsumerDbContext> options, IOptions<OutboxOptions> outboxOptions)
+            : base(options, outboxOptions) { }
+
+        public DbSet<ConsumerEntity> Entities => Set<ConsumerEntity>();
+    }
+
+    private sealed class MovedOutboxDbContext : DbContextBase
+    {
+        public MovedOutboxDbContext(DbContextOptions<MovedOutboxDbContext> options, IOptions<OutboxOptions> outboxOptions)
+            : base(options, outboxOptions) { }
+
         public DbSet<ConsumerEntity> Entities => Set<ConsumerEntity>();
     }
 

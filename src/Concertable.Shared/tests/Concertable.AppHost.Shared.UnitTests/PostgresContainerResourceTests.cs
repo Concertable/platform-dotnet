@@ -20,14 +20,22 @@ public sealed class PostgresContainerResourceTests
     }
 
     [Fact]
+    public void AddPostgresContainer_TwiceInOneCheckout_SuffixesBothTheSameWay()
+    {
+        var first = DistributedApplication.CreateBuilder().AddPostgresContainer();
+        var second = DistributedApplication.CreateBuilder().AddPostgresContainer();
+
+        Assert.Equal(VolumeName(first), VolumeName(second));
+    }
+
+    [Fact]
     public void AddPostgresContainer_NamedVolume_SuffixesThatNameInstead()
     {
         var builder = DistributedApplication.CreateBuilder();
 
         var postgres = builder.AddPostgresContainer("search-data");
 
-        var mount = Assert.Single(postgres.Resource.Annotations.OfType<ContainerMountAnnotation>());
-        Assert.StartsWith("search-data-", mount.Source, StringComparison.Ordinal);
+        Assert.StartsWith("search-data-", VolumeName(postgres), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -42,8 +50,12 @@ public sealed class PostgresContainerResourceTests
         Assert.StartsWith("17.", image.Tag, StringComparison.Ordinal);
     }
 
+    #endregion
+
+    #region AddDatabase
+
     [Fact]
-    public void AddDatabase_KeepsTheNameTheCompositionAsksFor()
+    public void AddDatabase_ANamedServiceDatabase_KeepsTheNameTheCompositionAsksFor()
     {
         var builder = DistributedApplication.CreateBuilder();
 
@@ -65,8 +77,8 @@ public sealed class PostgresContainerResourceTests
         var postgres = builder.AddPostgresContainer().WithPostGis();
 
         var image = postgres.Resource.Annotations.OfType<ContainerImageAnnotation>().Last();
-        Assert.Equal("postgis/postgis", image.Image);
-        Assert.Equal("17-3.5", image.Tag);
+        Assert.Equal(DistributedApplicationBuilderExtensions.PostgisImage, image.Image);
+        Assert.Equal(DistributedApplicationBuilderExtensions.PostgisTag, image.Tag);
     }
 
     [Fact]
@@ -76,9 +88,11 @@ public sealed class PostgresContainerResourceTests
 
         var postgres = builder.AddPostgresContainer().WithPostGis();
 
-        var mount = Assert.Single(postgres.Resource.Annotations.OfType<ContainerMountAnnotation>());
-        Assert.StartsWith("concertable-postgres-data-", mount.Source, StringComparison.Ordinal);
+        Assert.StartsWith("concertable-postgres-data-", VolumeName(postgres), StringComparison.Ordinal);
     }
 
     #endregion
+
+    private static string VolumeName(IResourceBuilder<PostgresServerResource> postgres) =>
+        Assert.Single(postgres.Resource.Annotations.OfType<ContainerMountAnnotation>()).Source;
 }

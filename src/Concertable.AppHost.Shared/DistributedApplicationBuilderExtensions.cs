@@ -33,10 +33,7 @@ public static class DistributedApplicationBuilderExtensions
     /// — the process working directory varies with how the AppHost is launched (a developer's `dotnet run`
     /// from inside the AppHost folder versus a script that `cd`s to the repo root first), which would give
     /// the same worktree two different volumes depending on invocation style. The build output path is
-    /// fixed per checkout regardless of invocation.
-    /// A composition whose service stores geography follows this with <c>WithPostGis()</c>: PostGIS ships
-    /// as its own image rather than an extension of the stock one, and a geography column needs it from
-    /// the first migration.</summary>
+    /// fixed per checkout regardless of invocation.</summary>
     public static IResourceBuilder<PostgresServerResource> AddPostgresContainer(
         this IDistributedApplicationBuilder builder,
         string dataVolumeName = "concertable-postgres-data")
@@ -51,8 +48,8 @@ public static class DistributedApplicationBuilderExtensions
             postgres.WithImage(PostgisImage, PostgisTag);
     }
 
-    private const string PostgisImage = "postgis/postgis";
-    private const string PostgisTag = "17-3.5";
+    internal const string PostgisImage = "postgis/postgis";
+    internal const string PostgisTag = "17-3.5";
 
     private static string CheckoutSuffix()
     {
