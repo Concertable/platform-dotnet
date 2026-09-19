@@ -25,22 +25,18 @@ public static class DistributedApplicationBuilderExtensions
         }
     }
 
-    /// <summary>Suffixes <paramref name="dataVolumeName"/> with a short hash of the AppHost assembly's own
-    /// build output path, so every git worktree gets its own database volume automatically. Without this,
-    /// two worktrees running the same service's AppHost at once share one Docker volume — a fresh
-    /// worktree's migrations collide with whatever schema an older worktree already applied to it.
-    /// Hashes <see cref="AppContext.BaseDirectory"/> rather than <see cref="Directory.GetCurrentDirectory"/>
-    /// — the process working directory varies with how the AppHost is launched (a developer's `dotnet run`
-    /// from inside the AppHost folder versus a script that `cd`s to the repo root first), which would give
-    /// the same worktree two different volumes depending on invocation style. The build output path is
-    /// fixed per checkout regardless of invocation.</summary>
+    /// <summary>Adds the Postgres container, on a data volume unique to this git worktree.</summary>
     public static IResourceBuilder<PostgresServerResource> AddPostgresContainer(
         this IDistributedApplicationBuilder builder,
-        string dataVolumeName = "concertable-postgres-data")
-    {
-        var checkoutSuffix = CheckoutSuffix();
-        return builder.AddPostgres("postgres").WithDataVolume($"{dataVolumeName}-{checkoutSuffix}");
-    }
+        string dataVolumeName = "concertable-postgres-data") =>
+        builder.AddPostgres("postgres").WithDataVolume(CheckoutVolume(dataVolumeName));
+
+    /// <summary>Adds the SQL Server container, on a data volume unique to this git worktree. Services keep
+    /// one while they still host the Auth container, which runs on SQL Server until its own cut-over.</summary>
+    public static IResourceBuilder<SqlServerServerResource> AddSqlServerContainer(
+        this IDistributedApplicationBuilder builder,
+        string dataVolumeName = "concertable-sql-data") =>
+        builder.AddSqlServer("sql").WithDataVolume(CheckoutVolume(dataVolumeName));
 
     extension(IResourceBuilder<PostgresServerResource> postgres)
     {
@@ -51,10 +47,19 @@ public static class DistributedApplicationBuilderExtensions
     internal const string PostgisImage = "postgis/postgis";
     internal const string PostgisTag = "17-3.5";
 
-    private static string CheckoutSuffix()
+    /// <summary>Suffixes <paramref name="dataVolumeName"/> with a short hash of the AppHost assembly's own
+    /// build output path, so every git worktree gets its own database volume automatically. Without this,
+    /// two worktrees running the same service's AppHost at once share one Docker volume — a fresh
+    /// worktree's migrations collide with whatever schema an older worktree already applied to it.
+    /// Hashes <see cref="AppContext.BaseDirectory"/> rather than <see cref="Directory.GetCurrentDirectory"/>
+    /// — the process working directory varies with how the AppHost is launched (a developer's `dotnet run`
+    /// from inside the AppHost folder versus a script that `cd`s to the repo root first), which would give
+    /// the same worktree two different volumes depending on invocation style. The build output path is
+    /// fixed per checkout regardless of invocation.</summary>
+    private static string CheckoutVolume(string dataVolumeName)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(AppContext.BaseDirectory));
-        return Convert.ToHexStringLower(hash)[..8];
+        return $"{dataVolumeName}-{Convert.ToHexStringLower(hash)[..8]}";
     }
 
     public static IResourceBuilder<AzureServiceBusResource> AddServiceBus(
