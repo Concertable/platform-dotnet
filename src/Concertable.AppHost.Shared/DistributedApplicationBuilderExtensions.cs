@@ -23,7 +23,65 @@ public static class DistributedApplicationBuilderExtensions
                           .WithImage(image)
                           .WithImageSHA256(sha256);
         }
+
+        /// <summary>Adds the Postgres container, on a data volume unique to this git worktree.</summary>
+        public IResourceBuilder<PostgresServerResource> AddPostgresContainer(
+            string dataVolumeName = "concertable-postgres-data") =>
+            builder.AddPostgres("postgres").WithDataVolume(CheckoutVolume(dataVolumeName));
+
+        /// <summary>Adds the SQL Server container, on a data volume unique to this git worktree. Services
+        /// keep one while they still host the Auth container, which runs on SQL Server until its own
+        /// cut-over.</summary>
+        public IResourceBuilder<SqlServerServerResource> AddSqlServerContainer(
+            string dataVolumeName = "concertable-sql-data") =>
+            builder.AddSqlServer("sql").WithDataVolume(CheckoutVolume(dataVolumeName));
+
+        public IResourceBuilder<AzureServiceBusResource> AddServiceBus() =>
+            builder.AddAzureServiceBus("asb");
+
+        public (IResourceBuilder<AzureStorageResource> storage, IResourceBuilder<AzureBlobStorageResource> blobs) AddAzureStorage()
+        {
+            var storage = builder.AddAzureStorage("storage")
+                                 .RunAsEmulator(c => c.WithDataVolume("concertable-azurite-data"));
+            var blobs = storage.AddBlobs("blobs");
+            return (storage, blobs);
+        }
     }
+
+    extension(IResourceBuilder<PostgresServerResource> postgres)
+    {
+        public IResourceBuilder<PostgresServerResource> WithPostGis() =>
+            postgres.WithImage(PostgisImage, PostgisTag);
+    }
+
+    extension(IResourceBuilder<AzureServiceBusResource> asb)
+    {
+        public AsbTopology Topology() => new(asb);
+    }
+
+    extension<T>(IResourceBuilder<T> resource)
+        where T : IResourceWithEnvironment
+    {
+        public IResourceBuilder<T> WithOptionalEnvironment(string name, string? value) =>
+            string.IsNullOrEmpty(value) ? resource : resource.WithEnvironment(name, value);
+
+        public IResourceBuilder<T> AddSecrets(
+            IDistributedApplicationBuilder builder,
+            params string[] keys)
+        {
+            var configured = resource;
+            foreach (var key in keys)
+            {
+                var value = builder.Configuration[key];
+                if (!string.IsNullOrEmpty(value))
+                    configured = configured.WithEnvironment(key.Replace(":", "__"), value);
+            }
+            return configured;
+        }
+    }
+
+    internal const string PostgisImage = "postgis/postgis";
+    internal const string PostgisTag = "17-3.5";
 
     /// <summary>Suffixes <paramref name="dataVolumeName"/> with a short hash of the AppHost assembly's own
     /// build output path, so every git worktree gets its own database volume automatically. Without this,
@@ -34,66 +92,9 @@ public static class DistributedApplicationBuilderExtensions
     /// from inside the AppHost folder versus a script that `cd`s to the repo root first), which would give
     /// the same worktree two different volumes depending on invocation style. The build output path is
     /// fixed per checkout regardless of invocation.</summary>
-    public static IResourceBuilder<PostgresServerResource> AddPostgresContainer(
-        this IDistributedApplicationBuilder builder,
-        string dataVolumeName = "concertable-postgres-data")
-    {
-        var checkoutSuffix = CheckoutSuffix();
-        return builder.AddPostgres("postgres").WithDataVolume($"{dataVolumeName}-{checkoutSuffix}");
-    }
-
-    extension(IResourceBuilder<PostgresServerResource> postgres)
-    {
-        public IResourceBuilder<PostgresServerResource> WithPostGis() =>
-            postgres.WithImage(PostgisImage, PostgisTag);
-    }
-
-    internal const string PostgisImage = "postgis/postgis";
-    internal const string PostgisTag = "17-3.5";
-
-    private static string CheckoutSuffix()
+    private static string CheckoutVolume(string dataVolumeName)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(AppContext.BaseDirectory));
-        return Convert.ToHexStringLower(hash)[..8];
-    }
-
-    public static IResourceBuilder<AzureServiceBusResource> AddServiceBus(
-        this IDistributedApplicationBuilder builder) =>
-        builder.AddAzureServiceBus("asb");
-
-    public static AsbTopology Topology(this IResourceBuilder<AzureServiceBusResource> asb) => new(asb);
-
-    public static (IResourceBuilder<AzureStorageResource> storage, IResourceBuilder<AzureBlobStorageResource> blobs) AddAzureStorage(this IDistributedApplicationBuilder builder)
-    {
-        var storage = builder.AddAzureStorage("storage")
-                             .RunAsEmulator(c => c.WithDataVolume("concertable-azurite-data"));
-        var blobs = storage.AddBlobs("blobs");
-        return (storage, blobs);
-    }
-
-    public static IResourceBuilder<T> WithOptionalEnvironment<T>(
-        this IResourceBuilder<T> resource,
-        string name,
-        string? value)
-        where T : IResourceWithEnvironment
-    {
-        if (!string.IsNullOrEmpty(value))
-            resource = resource.WithEnvironment(name, value);
-        return resource;
-    }
-
-    public static IResourceBuilder<T> AddSecrets<T>(
-        this IResourceBuilder<T> resource,
-        IDistributedApplicationBuilder builder,
-        params string[] keys)
-        where T : IResourceWithEnvironment
-    {
-        foreach (var key in keys)
-        {
-            var value = builder.Configuration[key];
-            if (!string.IsNullOrEmpty(value))
-                resource = resource.WithEnvironment(key.Replace(":", "__"), value);
-        }
-        return resource;
+        return $"{dataVolumeName}-{Convert.ToHexStringLower(hash)[..8]}";
     }
 }
