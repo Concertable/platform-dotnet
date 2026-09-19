@@ -35,29 +35,26 @@ public sealed class TenantInterceptor : SaveChangesInterceptor
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (tenantContext.IsHost)
-            return;
-
-        foreach (var entry in context.ChangeTracker.Entries<ITenantScoped>())
+        foreach (var entry in context.ChangeTracker
+                     .Entries<ITenantScoped>()
+                     .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
         {
+            var current = tenantContext.TenantId
+                ?? throw new InvalidOperationException(
+                    "Cannot persist a tenant-scoped entity without a current tenant.");
+
             if (entry.State == EntityState.Added)
             {
-                var current = tenantContext.TenantId
-                    ?? throw new InvalidOperationException(
-                        "Cannot persist a tenant-scoped entity without a current tenant.");
-
                 if (entry.Entity.TenantId == Guid.Empty)
                     entry.Entity.TenantId = current;
                 else if (entry.Entity.TenantId != current)
                     throw new InvalidOperationException(
                         $"Cross-tenant write blocked: entity tenant {entry.Entity.TenantId} does not match current tenant {current}.");
             }
-            else if (entry.State == EntityState.Modified
-                && tenantContext.TenantId is { } current
-                && entry.Entity.TenantId != current)
+            else if (entry.Entity.TenantId != current)
             {
                 throw new InvalidOperationException(
-                    $"Cross-tenant modification blocked: entity tenant {entry.Entity.TenantId} does not match current tenant {current}.");
+                    $"Cross-tenant write blocked: entity tenant {entry.Entity.TenantId} does not match current tenant {current}.");
             }
         }
     }
