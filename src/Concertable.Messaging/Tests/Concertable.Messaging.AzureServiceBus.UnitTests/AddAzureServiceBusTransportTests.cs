@@ -76,4 +76,17 @@ public sealed class AddAzureServiceBusTransportTests
 
         Assert.Same(hosted, quiescence);
     }
+
+    [Fact]
+    public void Receiver_IsRegisteredWithAnImplementationType_SoAHostCanRemoveIt()
+    {
+        var services = new ServiceCollection()
+            .AddAzureServiceBusTransport(opts => opts.ServiceName = "b2b", _ => { });
+
+        var receiver = services.Single(descriptor =>
+            descriptor.ServiceType == typeof(IHostedService)
+            && descriptor.ImplementationType?.Name == "AzureServiceBusReceiver");
+
+        Assert.NotNull(receiver.ImplementationType);
+    }
 }
