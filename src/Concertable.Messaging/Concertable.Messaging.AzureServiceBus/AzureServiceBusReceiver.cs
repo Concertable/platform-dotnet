@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.AzureServiceBus;
 
-internal sealed class AzureServiceBusReceiver : BackgroundService
+internal sealed class AzureServiceBusReceiver : BackgroundService, IBusQuiescence
 {
     private readonly ServiceBusClient client;
     private readonly AzureServiceBusOptions options;
@@ -18,6 +18,8 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
     private readonly MessageSerializer serializer;
     private readonly ILogger<AzureServiceBusReceiver> logger;
     private readonly List<ServiceBusProcessor> processors = new();
+    private readonly TaskCompletionSource processorsStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly SemaphoreSlim quiescenceGate = new(1, 1);
 
     public AzureServiceBusReceiver(
         ServiceBusClient client,
@@ -37,27 +39,37 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        foreach (var eventType in registry.SubscribedEventTypes)
+        try
         {
-            var topic = options.TopicNameFor(eventType);
-            var processor = client.CreateProcessor(topic, options.ServiceName, new ServiceBusProcessorOptions { AutoCompleteMessages = false });
-            processor.ProcessMessageAsync += args => HandleEventAsync(args, eventType);
-            processor.ProcessErrorAsync += HandleErrorAsync;
-            processors.Add(processor);
-            await processor.StartProcessingAsync(stoppingToken);
-            logger.EventProcessorStarted(topic, options.ServiceName);
+            foreach (var eventType in registry.SubscribedEventTypes)
+            {
+                var topic = options.TopicNameFor(eventType);
+                var processor = client.CreateProcessor(topic, options.ServiceName, new ServiceBusProcessorOptions { AutoCompleteMessages = false });
+                processor.ProcessMessageAsync += args => HandleEventAsync(args, eventType);
+                processor.ProcessErrorAsync += HandleErrorAsync;
+                processors.Add(processor);
+                await processor.StartProcessingAsync(stoppingToken);
+                logger.EventProcessorStarted(topic, options.ServiceName);
+            }
+
+            foreach (var commandType in registry.HandledCommandTypes)
+            {
+                var queue = options.QueueNameFor(commandType);
+                var processor = client.CreateProcessor(queue, new ServiceBusProcessorOptions { AutoCompleteMessages = false });
+                processor.ProcessMessageAsync += args => HandleCommandAsync(args, commandType);
+                processor.ProcessErrorAsync += HandleErrorAsync;
+                processors.Add(processor);
+                await processor.StartProcessingAsync(stoppingToken);
+                logger.CommandProcessorStarted(queue);
+            }
+        }
+        catch (Exception ex)
+        {
+            processorsStarted.TrySetException(ex);
+            throw;
         }
 
-        foreach (var commandType in registry.HandledCommandTypes)
-        {
-            var queue = options.QueueNameFor(commandType);
-            var processor = client.CreateProcessor(queue, new ServiceBusProcessorOptions { AutoCompleteMessages = false });
-            processor.ProcessMessageAsync += args => HandleCommandAsync(args, commandType);
-            processor.ProcessErrorAsync += HandleErrorAsync;
-            processors.Add(processor);
-            await processor.StartProcessingAsync(stoppingToken);
-            logger.CommandProcessorStarted(queue);
-        }
+        processorsStarted.TrySetResult();
 
         try
         {
@@ -67,6 +79,44 @@ internal sealed class AzureServiceBusReceiver : BackgroundService
 
         foreach (var processor in processors)
             await processor.DisposeAsync();
+    }
+
+    public async Task PauseAsync(CancellationToken ct = default)
+    {
+        await processorsStarted.Task.WaitAsync(ct);
+        await quiescenceGate.WaitAsync(ct);
+        try
+        {
+            foreach (var processor in processors.Where(processor => processor.IsProcessing))
+                await processor.StopProcessingAsync(ct);
+            logger.MessageConsumptionPaused(processors.Count);
+        }
+        finally
+        {
+            quiescenceGate.Release();
+        }
+    }
+
+    public async Task ResumeAsync(CancellationToken ct = default)
+    {
+        await processorsStarted.Task.WaitAsync(ct);
+        await quiescenceGate.WaitAsync(ct);
+        try
+        {
+            foreach (var processor in processors.Where(processor => !processor.IsProcessing))
+                await processor.StartProcessingAsync(ct);
+            logger.MessageConsumptionResumed(processors.Count);
+        }
+        finally
+        {
+            quiescenceGate.Release();
+        }
+    }
+
+    public override void Dispose()
+    {
+        quiescenceGate.Dispose();
+        base.Dispose();
     }
 
     private async Task HandleEventAsync(ProcessMessageEventArgs args, Type eventType)

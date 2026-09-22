@@ -31,4 +31,10 @@ internal static partial class Log
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Service Bus received {MessageType} on {EntityPath}")]
     internal static partial void MessageReceived(this ILogger logger, object? messageType, string entityPath);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Service Bus consumption paused across {ProcessorCount} processors")]
+    internal static partial void MessageConsumptionPaused(this ILogger logger, int processorCount);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Service Bus consumption resumed across {ProcessorCount} processors")]
+    internal static partial void MessageConsumptionResumed(this ILogger logger, int processorCount);
 }

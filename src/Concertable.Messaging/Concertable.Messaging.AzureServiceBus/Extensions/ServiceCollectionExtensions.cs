@@ -37,7 +37,9 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<MessageSerializer>();
         services.AddSingleton<IBusTransport, AzureServiceBusTransport>();
-        services.AddHostedService<AzureServiceBusReceiver>();
+        services.AddSingleton<AzureServiceBusReceiver>();
+        services.AddHostedService(sp => sp.GetRequiredService<AzureServiceBusReceiver>());
+        services.AddSingleton<IBusQuiescence>(sp => sp.GetRequiredService<AzureServiceBusReceiver>());
 
         return services;
     }

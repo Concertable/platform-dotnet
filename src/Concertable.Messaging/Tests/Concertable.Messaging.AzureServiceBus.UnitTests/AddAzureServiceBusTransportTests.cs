@@ -1,6 +1,8 @@
 using Azure.Messaging.ServiceBus;
 using Concertable.Messaging.AzureServiceBus.Extensions;
+using Concertable.Messaging.Contracts;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Concertable.Messaging.AzureServiceBus.UnitTests;
 
@@ -53,5 +55,25 @@ public sealed class AddAzureServiceBusTransportTests
             .BuildServiceProvider();
 
         Assert.NotNull(provider.GetRequiredService<ServiceBusClient>());
+    }
+
+    [Fact]
+    public void BusQuiescence_ResolvesTheSameInstanceAsTheHostedReceiver()
+    {
+        var provider = new ServiceCollection()
+            .AddAzureServiceBusTransport(
+                opts =>
+                {
+                    opts.ServiceName = "b2b";
+                    opts.ConnectionString = FakeConnectionString;
+                },
+                _ => { })
+            .AddLogging()
+            .BuildServiceProvider();
+
+        var quiescence = provider.GetRequiredService<IBusQuiescence>();
+        var hosted = provider.GetServices<IHostedService>().Single();
+
+        Assert.Same(hosted, quiescence);
     }
 }
