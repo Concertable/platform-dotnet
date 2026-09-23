@@ -1,7 +1,7 @@
 using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Kernel;
 using Concertable.Messaging.Infrastructure.Outbox;
-using Concertable.Seed.Shared.Identity;
+using Concertable.Seed.Shared;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Concertable.Seed.Infrastructure;
