@@ -5,8 +5,8 @@
 > irreversible or ambiguous finding: record its durable disposition, take the safe path, and keep going.
 
 **Review status:** `complete`
-**Reviewed up to commit:** `4199004b0b2ebb60388caed48f2810f920540bf4`  `(2026-09-23)`
-**Judgment:** `changes-requested`
+**Reviewed up to commit:** `63f52e0094280f91a4f2d178cef425d397ca9831`  `(2026-09-23)`
+**Judgment:** `approved`
 
 ## Review pass — 2026-09-23 — full
 
@@ -104,3 +104,31 @@ Not a defect — the intended published break, recorded so it is owned rather th
   `Testing.Integration` 10/10.
 - `eng/verify-build-law.py`: all three build-law rules arrive through the `Concertable.Build`
   `PackageReference`.
+
+## Review pass — 2026-09-23 — incremental
+
+**Candidate base:** `4199004b0b2ebb60388caed48f2810f920540bf4`
+**Candidate head:** `63f52e0094280f91a4f2d178cef425d397ca9831`
+**Candidate branch:** `Refactor/PostgresPlatformSqlRemoval`
+**Candidate scope:** `all`
+**Candidate path-set:** `sha256:d46b08b839a0aa6aacd9ebeb900c518d54b17e2a96643ce770a9010b32df518d` `(5 paths)`
+**Candidate bundle:** not materialized — no Workflow v2 runtime in this repository
+**Candidate bundle identity:** not applicable
+**Work-order path:** `reviews/Refactor-PostgresPlatformSqlRemoval.md`
+**Work-order mode:** `append`
+**Pass judgment:** `approved`
+
+Covers the R1 remediation. No findings.
+
+The delta is a namespace move with no behavioural surface: `SeedingScope`'s declaration changes namespace,
+two consumers delete an import each that had become a duplicate of one they already held, and a third
+deletes its only `Identity` import. `SeedingScope`'s body, its `Activate`/`Dispose` depth semantics and its
+DI registration are untouched, so nothing that reads `IsActive` changes behaviour. Verified that no
+`Concertable.Seed.Shared.Identity` reference survives anywhere in `src/`.
+
+### Verification at the reviewed head
+
+- Non-incremental Release build of `Concertable.Platform.slnx`: 0 errors, 1 warning — the pre-existing
+  `CS8603` recorded in the first pass, which this branch deliberately does not fold in.
+- `Seed.Shared` 11/11, `Testing.Integration` unit 20/20, `Testing.Integration` integration 10/10,
+  `DataAccess` integration 31/31.
