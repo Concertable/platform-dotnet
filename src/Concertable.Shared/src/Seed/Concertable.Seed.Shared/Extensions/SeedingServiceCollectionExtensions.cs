@@ -1,4 +1,3 @@
-using Concertable.Seed.Shared.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
