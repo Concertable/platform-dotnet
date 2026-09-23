@@ -1,4 +1,3 @@
-using Concertable.Seed.Shared.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,9 +8,6 @@ public static class SeedingDbContextOptionsExtensions
 {
     extension(DbContextOptionsBuilder builder)
     {
-        public DbContextOptionsBuilder UseSeedingSupport(IServiceProvider provider)
-            => builder.AddInterceptors(provider.GetRequiredService<SeedingIdentityInterceptor>());
-
         public DbContextOptionsBuilder UseSeedChain(IServiceProvider provider)
             => builder
                 .UseSeeding((context, _) =>

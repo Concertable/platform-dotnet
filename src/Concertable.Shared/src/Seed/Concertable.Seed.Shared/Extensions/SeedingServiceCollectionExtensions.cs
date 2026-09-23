@@ -11,7 +11,6 @@ public static class SeedingServiceCollectionExtensions
         public IServiceCollection AddSeedingInfrastructure()
         {
             services.AddSingleton<SeedingScope>();
-            services.AddSingleton<SeedingIdentityInterceptor>();
             return services;
         }
 
