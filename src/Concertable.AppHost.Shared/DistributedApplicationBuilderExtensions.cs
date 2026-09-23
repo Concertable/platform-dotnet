@@ -29,13 +29,6 @@ public static class DistributedApplicationBuilderExtensions
             string dataVolumeName = "concertable-postgres-data") =>
             builder.AddPostgres("postgres").WithDataVolume(CheckoutVolume(dataVolumeName));
 
-        /// <summary>Adds the SQL Server container, on a data volume unique to this git worktree. Services
-        /// keep one while they still host the Auth container, which runs on SQL Server until its own
-        /// cut-over.</summary>
-        public IResourceBuilder<SqlServerServerResource> AddSqlServerContainer(
-            string dataVolumeName = "concertable-sql-data") =>
-            builder.AddSqlServer("sql").WithDataVolume(CheckoutVolume(dataVolumeName));
-
         public IResourceBuilder<AzureServiceBusResource> AddServiceBus() =>
             builder.AddAzureServiceBus("asb");
 

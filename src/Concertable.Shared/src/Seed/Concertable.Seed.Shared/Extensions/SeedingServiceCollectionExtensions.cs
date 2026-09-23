@@ -1,4 +1,3 @@
-using Concertable.Seed.Shared.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,7 +10,6 @@ public static class SeedingServiceCollectionExtensions
         public IServiceCollection AddSeedingInfrastructure()
         {
             services.AddSingleton<SeedingScope>();
-            services.AddSingleton<SeedingIdentityInterceptor>();
             return services;
         }
 

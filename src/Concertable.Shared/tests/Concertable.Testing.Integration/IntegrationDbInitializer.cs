@@ -2,7 +2,6 @@ using Concertable.DataAccess.Application;
 using Concertable.Messaging.Infrastructure.Inbox;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Seed.Shared;
-using Concertable.Seed.Shared.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Testing.Integration;
