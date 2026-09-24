@@ -1,8 +1,10 @@
+using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Infrastructure;
 using Concertable.Messaging.Infrastructure.Extensions;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.UnitTests;
@@ -61,6 +63,28 @@ public sealed class OutboxServiceCollectionExtensionsTests
     [Fact]
     public void AddOutbox_AnyOverload_ReturnsTheCollectionItWasGiven() =>
         Assert.Same(services, services.AddOutbox(options => options.UseInMemoryDatabase("outbox"), runDispatcher: false));
+
+    [Fact]
+    public void AddOutbox_WithDispatcher_RegistersTheDispatcherAsAnIngressQuiescerHostedService()
+    {
+        services.AddOutbox(options => options.UseInMemoryDatabase("outbox"));
+        services.AddLogging();
+
+        using var provider = services.BuildServiceProvider();
+        var dispatcher = provider.GetServices<IHostedService>().OfType<OutboxDispatcher>().Single();
+
+        Assert.IsAssignableFrom<IIngressQuiescer>(dispatcher);
+    }
+
+    [Fact]
+    public void AddOutbox_WithoutDispatcher_RegistersNoDispatcher()
+    {
+        services.AddOutbox(options => options.UseInMemoryDatabase("outbox"), runDispatcher: false);
+        services.AddLogging();
+
+        using var provider = services.BuildServiceProvider();
+        Assert.Empty(provider.GetServices<IHostedService>().OfType<OutboxDispatcher>());
+    }
 
     #endregion
 
