@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <PackageVersion Include="Aspire.Hosting.Testing" Version="13.3.2" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.23.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.29.2" />
     <PackageVersion Include="Dapper" Version="2.1.72" />
     <PackageVersion Include="FluentResults" Version="4.0.0" />
     <PackageVersion Include="FluentValidation" Version="11.11.0" />
