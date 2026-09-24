@@ -4,7 +4,6 @@ using Concertable.Messaging.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
 
 namespace Concertable.Messaging.Infrastructure.Extensions;
 
@@ -37,10 +36,6 @@ public static class OutboxServiceCollectionExtensions
             services.AddScoped<CommandDispatcher>();
             services.AddScoped<IMessageDispatchResolver, MessageDispatchResolver>();
             services.AddHostedService<OutboxDispatcher>();
-            services.AddSingleton<IIngressQuiescer>(sp =>
-                sp.GetServices<IHostedService>().OfType<OutboxDispatcher>().SingleOrDefault()
-                    ?? throw new InvalidOperationException(
-                        "Host ingress quiescence requires the outbox dispatcher hosted service, which this host has removed."));
         }
         services.TryAddSingleton<MessageSerializer>();
         services.TryAddSingleton(TimeProvider.System);

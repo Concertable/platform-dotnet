@@ -82,12 +82,6 @@ internal sealed class OutboxDispatcher : BackgroundService, IIngressQuiescer
         return Task.CompletedTask;
     }
 
-    public override void Dispose()
-    {
-        drainGate.Dispose();
-        base.Dispose();
-    }
-
     internal async Task DrainOnceAsync(CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();

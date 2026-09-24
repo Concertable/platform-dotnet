@@ -11,7 +11,7 @@ public static class ApplicationBuilderExtensions
         /// <see cref="Contracts.IHostQuiescence"/>. Place it early — before the endpoints whose handlers reach
         /// the database — and after <c>AddHttpRequestQuiescence()</c> has registered the participant.
         /// </summary>
-        public IApplicationBuilder UseHostQuiescence() =>
+        public IApplicationBuilder UseHttpRequestQuiescence() =>
             app.UseMiddleware<RequestQuiescenceMiddleware>();
     }
 }
