@@ -2,6 +2,7 @@ using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Infrastructure;
 using Concertable.Messaging.Infrastructure.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Concertable.Messaging.UnitTests;
 
@@ -12,7 +13,7 @@ public sealed class HostQuiescenceTests
     [Fact]
     public async Task PauseAsync_PausesEveryRegisteredParticipant()
     {
-        var host = new HostQuiescence([Recording("a"), Recording("b")]);
+        var host = new HostQuiescence([Recording("a"), Recording("b")], []);
 
         await host.PauseAsync();
 
@@ -22,7 +23,7 @@ public sealed class HostQuiescenceTests
     [Fact]
     public async Task ResumeAsync_ResumesParticipantsInReverseOrder()
     {
-        var host = new HostQuiescence([Recording("a"), Recording("b")]);
+        var host = new HostQuiescence([Recording("a"), Recording("b")], []);
 
         await host.ResumeAsync();
 
@@ -32,7 +33,8 @@ public sealed class HostQuiescenceTests
     [Fact]
     public async Task PauseAsync_WhenAParticipantThrows_ResumesThoseAlreadyPausedAndRethrows()
     {
-        var host = new HostQuiescence([Recording("a"), Recording("b", throwOnPause: true), Recording("c")]);
+        var host = new HostQuiescence(
+            [Recording("a"), Recording("b", throwOnPause: true), Recording("c")], []);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => host.PauseAsync());
 
@@ -40,11 +42,32 @@ public sealed class HostQuiescenceTests
     }
 
     [Fact]
-    public void AddHostQuiescence_RegistersTheAggregateOverEveryIngressQuiescer()
+    public async Task PauseAsync_DiscoversHostedServicesThatAreParticipants_AndSkipsPlainOnes()
+    {
+        var hosted = new RecordingHostedQuiescer(log, "hosted");
+        var host = new HostQuiescence([Recording("http")], [hosted, new PlainHostedService()]);
+
+        await host.PauseAsync();
+
+        Assert.Equal(["pause:http", "pause:hosted"], log);
+    }
+
+    [Fact]
+    public async Task PauseAsync_DoesNotDoublePauseAParticipantRegisteredBothWays()
+    {
+        var both = new RecordingHostedQuiescer(log, "both");
+        var host = new HostQuiescence([both], [both]);
+
+        await host.PauseAsync();
+
+        Assert.Equal(["pause:both"], log);
+    }
+
+    [Fact]
+    public void AddHostQuiescence_ResolvesTheAggregate()
     {
         var provider = new ServiceCollection()
             .AddSingleton<IIngressQuiescer>(Recording("a"))
-            .AddSingleton<IIngressQuiescer>(Recording("b"))
             .AddHostQuiescence()
             .BuildServiceProvider();
 
@@ -53,6 +76,41 @@ public sealed class HostQuiescenceTests
 
     private RecordingQuiescer Recording(string name, bool throwOnPause = false) =>
         new(log, name, throwOnPause);
+
+    private sealed class PlainHostedService : IHostedService
+    {
+        public Task StartAsync(CancellationToken ct) => Task.CompletedTask;
+
+        public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
+    }
+
+    private sealed class RecordingHostedQuiescer : IIngressQuiescer, IHostedService
+    {
+        private readonly List<string> log;
+        private readonly string name;
+
+        public RecordingHostedQuiescer(List<string> log, string name)
+        {
+            this.log = log;
+            this.name = name;
+        }
+
+        public Task PauseAsync(CancellationToken ct = default)
+        {
+            log.Add($"pause:{name}");
+            return Task.CompletedTask;
+        }
+
+        public Task ResumeAsync(CancellationToken ct = default)
+        {
+            log.Add($"resume:{name}");
+            return Task.CompletedTask;
+        }
+
+        public Task StartAsync(CancellationToken ct) => Task.CompletedTask;
+
+        public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
+    }
 
     private sealed class RecordingQuiescer : IIngressQuiescer
     {

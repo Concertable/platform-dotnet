@@ -9,7 +9,10 @@ namespace Concertable.Messaging.AspNetCore;
 /// waits for <see cref="ResumeAsync"/> before its handler runs. <see cref="PauseAsync"/> excludes the request
 /// that is itself driving the pause — read from <see cref="IHttpContextAccessor"/> — then returns once every
 /// other in-flight request has finished, so the caller can rely on no request touching the database until
-/// resume.
+/// resume. Call <see cref="PauseAsync"/> from within that request's own handler (inline, so its
+/// <see cref="HttpContext"/> flows through <see cref="IHttpContextAccessor"/>); dispatching the pause onto a
+/// detached execution context would lose the self-exclusion. Overlapping pause/resume calls are safe: a
+/// second pause joins the first's drain, and a resume releases any pause still waiting.
 /// </summary>
 internal sealed class HttpIngressQuiescer : IIngressQuiescer
 {
@@ -18,7 +21,7 @@ internal sealed class HttpIngressQuiescer : IIngressQuiescer
     private readonly HashSet<HttpContext> inFlight = new();
     private bool paused;
     private TaskCompletionSource resume = CreateCompletedSource();
-    private TaskCompletionSource? drained;
+    private TaskCompletionSource drained = CreateCompletedSource();
 
     public HttpIngressQuiescer(IHttpContextAccessor httpContextAccessor)
     {
@@ -48,7 +51,7 @@ internal sealed class HttpIngressQuiescer : IIngressQuiescer
         lock (gate)
         {
             if (inFlight.Remove(context) && paused && inFlight.Count == 0)
-                drained?.TrySetResult();
+                drained.TrySetResult();
         }
     }
 
@@ -61,15 +64,15 @@ internal sealed class HttpIngressQuiescer : IIngressQuiescer
             {
                 paused = true;
                 resume = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             }
 
             if (httpContextAccessor.HttpContext is { } pauser)
                 inFlight.Remove(pauser);
 
             if (inFlight.Count == 0)
-                return;
+                drained.TrySetResult();
 
-            drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             wait = drained.Task;
         }
         await wait.WaitAsync(ct);
@@ -80,8 +83,8 @@ internal sealed class HttpIngressQuiescer : IIngressQuiescer
         lock (gate)
         {
             paused = false;
-            drained = null;
             resume.TrySetResult();
+            drained.TrySetResult();
         }
         return Task.CompletedTask;
     }

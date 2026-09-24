@@ -58,7 +58,7 @@ public sealed class AddAzureServiceBusTransportTests
     }
 
     [Fact]
-    public void IngressQuiescer_ResolvesTheSameInstanceAsTheHostedReceiver()
+    public void TheHostedReceiver_IsAnIngressQuiescer_SoHostQuiescenceDiscoversItAndRemovalDropsIt()
     {
         var provider = new ServiceCollection()
             .AddAzureServiceBusTransport(
@@ -71,10 +71,9 @@ public sealed class AddAzureServiceBusTransportTests
             .AddLogging()
             .BuildServiceProvider();
 
-        var quiescer = provider.GetRequiredService<IIngressQuiescer>();
         var hosted = provider.GetServices<IHostedService>().Single();
 
-        Assert.Same(hosted, quiescer);
+        Assert.IsAssignableFrom<IIngressQuiescer>(hosted);
     }
 
     [Fact]

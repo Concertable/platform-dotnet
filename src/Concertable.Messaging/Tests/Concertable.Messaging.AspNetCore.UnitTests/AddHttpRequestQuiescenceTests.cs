@@ -1,4 +1,3 @@
-using Concertable.Messaging.AspNetCore;
 using Concertable.Messaging.AspNetCore.Extensions;
 using Concertable.Messaging.Contracts;
 using Microsoft.Extensions.DependencyInjection;

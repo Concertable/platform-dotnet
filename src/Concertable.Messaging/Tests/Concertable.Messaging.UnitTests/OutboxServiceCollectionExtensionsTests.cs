@@ -65,25 +65,25 @@ public sealed class OutboxServiceCollectionExtensionsTests
         Assert.Same(services, services.AddOutbox(options => options.UseInMemoryDatabase("outbox"), runDispatcher: false));
 
     [Fact]
-    public void AddOutbox_WithDispatcher_ExposesItAsTheSameIngressQuiescerInstance()
+    public void AddOutbox_WithDispatcher_RegistersTheDispatcherAsAnIngressQuiescerHostedService()
     {
         services.AddOutbox(options => options.UseInMemoryDatabase("outbox"));
         services.AddLogging();
 
         using var provider = services.BuildServiceProvider();
-        var quiescer = provider.GetRequiredService<IIngressQuiescer>();
-        var hosted = provider.GetServices<IHostedService>().OfType<OutboxDispatcher>().Single();
+        var dispatcher = provider.GetServices<IHostedService>().OfType<OutboxDispatcher>().Single();
 
-        Assert.Same(hosted, quiescer);
+        Assert.IsAssignableFrom<IIngressQuiescer>(dispatcher);
     }
 
     [Fact]
-    public void AddOutbox_WithoutDispatcher_RegistersNoIngressQuiescer()
+    public void AddOutbox_WithoutDispatcher_RegistersNoDispatcher()
     {
         services.AddOutbox(options => options.UseInMemoryDatabase("outbox"), runDispatcher: false);
+        services.AddLogging();
 
         using var provider = services.BuildServiceProvider();
-        Assert.Empty(provider.GetServices<IIngressQuiescer>());
+        Assert.Empty(provider.GetServices<IHostedService>().OfType<OutboxDispatcher>());
     }
 
     #endregion
