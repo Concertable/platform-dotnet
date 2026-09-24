@@ -3,7 +3,6 @@ using Concertable.Messaging.Application;
 using Concertable.Messaging.AzureServiceBus.Options;
 using Concertable.Messaging.Contracts;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.AzureServiceBus.Extensions;
@@ -39,10 +38,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<MessageSerializer>();
         services.AddSingleton<IBusTransport, AzureServiceBusTransport>();
         services.AddHostedService<AzureServiceBusReceiver>();
-        services.AddSingleton<IBusQuiescence>(sp =>
-            sp.GetServices<IHostedService>().OfType<AzureServiceBusReceiver>().SingleOrDefault()
-                ?? throw new InvalidOperationException(
-                    "IBusQuiescence requires the Azure Service Bus receiver hosted service, which this host has removed."));
 
         return services;
     }
