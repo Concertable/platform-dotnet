@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.AzureServiceBus;
 
-internal sealed class AzureServiceBusReceiver : BackgroundService, IBusQuiescence
+internal sealed class AzureServiceBusReceiver : BackgroundService, IIngressQuiescer
 {
     private readonly ServiceBusClient client;
     private readonly AzureServiceBusOptions options;

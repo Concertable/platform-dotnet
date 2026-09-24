@@ -39,10 +39,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<MessageSerializer>();
         services.AddSingleton<IBusTransport, AzureServiceBusTransport>();
         services.AddHostedService<AzureServiceBusReceiver>();
-        services.AddSingleton<IBusQuiescence>(sp =>
+        services.AddSingleton<IIngressQuiescer>(sp =>
             sp.GetServices<IHostedService>().OfType<AzureServiceBusReceiver>().SingleOrDefault()
                 ?? throw new InvalidOperationException(
-                    "IBusQuiescence requires the Azure Service Bus receiver hosted service, which this host has removed."));
+                    "Host ingress quiescence requires the Azure Service Bus receiver hosted service, which this host has removed."));
 
         return services;
     }

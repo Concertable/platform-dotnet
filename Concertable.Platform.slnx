@@ -17,10 +17,12 @@
   </Folder>
   <Folder Name="/Messaging/">
     <Project Path="src/Concertable.Messaging/Concertable.Messaging.Application/Concertable.Messaging.Application.csproj" />
+    <Project Path="src/Concertable.Messaging/Concertable.Messaging.AspNetCore/Concertable.Messaging.AspNetCore.csproj" />
     <Project Path="src/Concertable.Messaging/Concertable.Messaging.AzureServiceBus/Concertable.Messaging.AzureServiceBus.csproj" />
     <Project Path="src/Concertable.Messaging/Concertable.Messaging.Contracts/Concertable.Messaging.Contracts.csproj" />
     <Project Path="src/Concertable.Messaging/Concertable.Messaging.Domain/Concertable.Messaging.Domain.csproj" />
     <Project Path="src/Concertable.Messaging/Concertable.Messaging.Infrastructure/Concertable.Messaging.Infrastructure.csproj" />
+    <Project Path="src/Concertable.Messaging/Tests/Concertable.Messaging.AspNetCore.UnitTests/Concertable.Messaging.AspNetCore.UnitTests.csproj" />
     <Project Path="src/Concertable.Messaging/Tests/Concertable.Messaging.AzureServiceBus.UnitTests/Concertable.Messaging.AzureServiceBus.UnitTests.csproj" />
     <Project Path="src/Concertable.Messaging/Tests/Concertable.Messaging.IntegrationTests/Concertable.Messaging.IntegrationTests.csproj" />
     <Project Path="src/Concertable.Messaging/Tests/Concertable.Messaging.UnitTests/Concertable.Messaging.UnitTests.csproj" />
