@@ -5,6 +5,7 @@
   <Project Path="src/Concertable.DataAccess/Concertable.DataAccess.Infrastructure/Concertable.DataAccess.Infrastructure.csproj" />
   <Project Path="src/Concertable.Frontend.Hosting/Concertable.Frontend.Hosting.csproj" />
   <Project Path="src/Concertable.Messaging/Concertable.Messaging.Application/Concertable.Messaging.Application.csproj" />
+  <Project Path="src/Concertable.Messaging/Concertable.Messaging.AspNetCore/Concertable.Messaging.AspNetCore.csproj" />
   <Project Path="src/Concertable.Messaging/Concertable.Messaging.AzureServiceBus/Concertable.Messaging.AzureServiceBus.csproj" />
   <Project Path="src/Concertable.Messaging/Concertable.Messaging.Contracts/Concertable.Messaging.Contracts.csproj" />
   <Project Path="src/Concertable.Messaging/Concertable.Messaging.Domain/Concertable.Messaging.Domain.csproj" />

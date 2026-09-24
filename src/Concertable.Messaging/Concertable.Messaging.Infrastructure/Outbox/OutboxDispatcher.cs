@@ -9,12 +9,14 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.Infrastructure.Outbox;
 
-internal sealed class OutboxDispatcher : BackgroundService
+internal sealed class OutboxDispatcher : BackgroundService, IIngressQuiescer
 {
     private readonly IServiceScopeFactory scopeFactory;
     private readonly OutboxOptions options;
     private readonly TimeProvider timeProvider;
     private readonly ILogger<OutboxDispatcher> logger;
+    private readonly SemaphoreSlim drainGate = new(1, 1);
+    private volatile bool paused;
 
     public OutboxDispatcher(
         IServiceScopeFactory scopeFactory,
@@ -34,15 +36,56 @@ internal sealed class OutboxDispatcher : BackgroundService
         {
             try
             {
-                await DrainOnceAsync(stoppingToken);
+                await drainGate.WaitAsync(stoppingToken);
+                try
+                {
+                    if (!paused)
+                        await DrainOnceAsync(stoppingToken);
+                }
+                finally
+                {
+                    drainGate.Release();
+                }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
             {
                 logger.OutboxDrainFailed(ex);
             }
             try { await Task.Delay(options.PollInterval, timeProvider, stoppingToken); }
             catch (OperationCanceledException) { }
         }
+    }
+
+    /// <summary>Acquiring the gate waits out a drain already running, and <see cref="paused"/> then keeps the
+    /// loop from starting another under that same gate — so once this returns no drain touches the database
+    /// until <see cref="ResumeAsync"/>.</summary>
+    public async Task PauseAsync(CancellationToken ct = default)
+    {
+        await drainGate.WaitAsync(ct);
+        try
+        {
+            paused = true;
+        }
+        finally
+        {
+            drainGate.Release();
+        }
+    }
+
+    public Task ResumeAsync(CancellationToken ct = default)
+    {
+        paused = false;
+        return Task.CompletedTask;
+    }
+
+    public override void Dispose()
+    {
+        drainGate.Dispose();
+        base.Dispose();
     }
 
     internal async Task DrainOnceAsync(CancellationToken ct)
