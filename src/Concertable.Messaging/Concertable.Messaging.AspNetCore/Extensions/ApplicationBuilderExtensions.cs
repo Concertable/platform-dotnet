@@ -7,11 +7,10 @@ public static class ApplicationBuilderExtensions
     extension(IApplicationBuilder app)
     {
         /// <summary>
-        /// Inserts <see cref="RequestQuiescenceMiddleware"/> so in-flight requests are tracked and drained by
-        /// <see cref="Contracts.IHostQuiescence"/>. Place it early — before the endpoints whose handlers reach
-        /// the database — and after <c>AddHttpRequestQuiescence()</c> has registered the participant.
+        /// Inserts <see cref="GateMiddleware"/>. Place it before the endpoints whose handlers reach the database,
+        /// and after <c>AddGate()</c> has registered it.
         /// </summary>
-        public IApplicationBuilder UseHttpRequestQuiescence() =>
-            app.UseMiddleware<RequestQuiescenceMiddleware>();
+        public IApplicationBuilder UseGate() =>
+            app.UseMiddleware<GateMiddleware>();
     }
 }

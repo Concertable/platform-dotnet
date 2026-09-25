@@ -58,7 +58,7 @@ public sealed class AddAzureServiceBusTransportTests
     }
 
     [Fact]
-    public void TheHostedReceiver_IsAnIngressQuiescer_SoHostQuiescenceDiscoversItAndRemovalDropsIt()
+    public void TheHostedReceiver_IsPausable_SoHostPauserDiscoversItAndRemovalDropsIt()
     {
         var provider = new ServiceCollection()
             .AddAzureServiceBusTransport(
@@ -73,7 +73,7 @@ public sealed class AddAzureServiceBusTransportTests
 
         var hosted = provider.GetServices<IHostedService>().Single();
 
-        Assert.IsAssignableFrom<IIngressQuiescer>(hosted);
+        Assert.IsAssignableFrom<IPausable>(hosted);
     }
 
     [Fact]

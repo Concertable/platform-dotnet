@@ -4,13 +4,14 @@ namespace Concertable.Grpc;
 
 public static class RpcExceptionExtensions
 {
-    public static bool IsClientCancellation(
-        this RpcException exception,
-        CancellationToken cancellationToken)
+    extension(RpcException exception)
     {
-        ArgumentNullException.ThrowIfNull(exception);
+        public bool IsClientCancellation(CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(exception);
 
-        return exception.StatusCode == StatusCode.Cancelled
-            && cancellationToken.IsCancellationRequested;
+            return exception.StatusCode == StatusCode.Cancelled
+                && cancellationToken.IsCancellationRequested;
+        }
     }
 }

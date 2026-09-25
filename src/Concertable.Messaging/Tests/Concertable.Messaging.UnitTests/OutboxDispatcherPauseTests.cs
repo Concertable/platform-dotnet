@@ -7,14 +7,14 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.UnitTests;
 
-public sealed class OutboxDispatcherQuiescenceTests
+public sealed class OutboxDispatcherPauseTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
     private readonly GatedOutboxReader reader = new();
     private readonly OutboxDispatcher dispatcher;
 
-    public OutboxDispatcherQuiescenceTests()
+    public OutboxDispatcherPauseTests()
     {
         var services = new ServiceCollection();
         services.AddSingleton<IOutboxReader>(reader);

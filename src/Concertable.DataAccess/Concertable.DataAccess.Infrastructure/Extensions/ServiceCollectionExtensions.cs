@@ -6,10 +6,13 @@ namespace Concertable.DataAccess.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddDataAccessSpecifications(this IServiceCollection services)
+    extension(IServiceCollection services)
     {
-        services.AddScoped(typeof(IUpcomingSpecification<>), typeof(UpcomingSpecification<>));
-        services.AddScoped(typeof(IDateRangeSpecification<>), typeof(DateRangeSpecification<>));
-        return services;
+        public IServiceCollection AddDataAccessSpecifications()
+        {
+            services.AddScoped(typeof(IUpcomingSpecification<>), typeof(UpcomingSpecification<>));
+            services.AddScoped(typeof(IDateRangeSpecification<>), typeof(DateRangeSpecification<>));
+            return services;
+        }
     }
 }

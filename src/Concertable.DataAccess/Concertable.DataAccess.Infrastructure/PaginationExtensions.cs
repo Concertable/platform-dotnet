@@ -5,15 +5,17 @@ namespace Concertable.DataAccess.Infrastructure;
 
 public static class PaginationExtensions
 {
-    public static async Task<IPagination<T>> ToPaginationAsync<T>(
-        this IQueryable<T> query, IPageParams pageParams, CancellationToken ct = default)
+    extension<T>(IQueryable<T> query)
     {
-        int totalCount = await query.CountAsync(ct);
-        var data = await query
-            .Skip((pageParams.PageNumber - 1) * pageParams.PageSize)
-            .Take(pageParams.PageSize)
-            .ToListAsync(ct);
+        public async Task<IPagination<T>> ToPaginationAsync(IPageParams pageParams, CancellationToken ct = default)
+        {
+            int totalCount = await query.CountAsync(ct);
+            var data = await query
+                .Skip((pageParams.PageNumber - 1) * pageParams.PageSize)
+                .Take(pageParams.PageSize)
+                .ToListAsync(ct);
 
-        return new Pagination<T>(data, totalCount, pageParams.PageNumber, pageParams.PageSize);
+            return new Pagination<T>(data, totalCount, pageParams.PageNumber, pageParams.PageSize);
+        }
     }
 }
