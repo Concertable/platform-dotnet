@@ -19,19 +19,22 @@ internal static class ErrorHttpExtensions
             [ErrorKind.PaymentRequired] = HttpStatusCode.PaymentRequired
         }.ToFrozenDictionary();
 
-    internal static ApplicationErrorResult ToProblemActionResult<TError>(this TError error)
+    extension<TError>(TError error)
         where TError : IError
     {
-        if (error is null)
-            throw new ArgumentNullException(nameof(error));
+        internal ApplicationErrorResult ToProblemActionResult()
+        {
+            if (error is null)
+                throw new ArgumentNullException(nameof(error));
 
-        var definition = error.Definition
-            ?? throw new InvalidOperationException("An error definition is required.");
-        var statusCode = httpStatusCodes[definition.Kind];
-        var problemDetails = CreateProblemDetails(definition, statusCode);
-        problemDetails.Extensions[ApplicationProblemDetails.CodeExtensionKey] = definition.Code;
+            var definition = error.Definition
+                ?? throw new InvalidOperationException("An error definition is required.");
+            var statusCode = httpStatusCodes[definition.Kind];
+            var problemDetails = CreateProblemDetails(definition, statusCode);
+            problemDetails.Extensions[ApplicationProblemDetails.CodeExtensionKey] = definition.Code;
 
-        return new ApplicationErrorResult(problemDetails);
+            return new ApplicationErrorResult(problemDetails);
+        }
     }
 
     private static ProblemDetails CreateProblemDetails(

@@ -167,6 +167,23 @@ retyped or removed with its callers, the three package references are dropped, a
 widened from `Functional/` to the whole Kernel so the carrier cannot come back. Publish-first: the
 overload removal is breaking, so it migrates through a platform sync.
 
+### `Concertable.Kernel.Functional` is a second Result/Option carrier family beside Reunion
+
+Reunion is the one carrier family, and the services have moved to it: B2B, Customer and Auth have no
+`Concertable.Kernel.Functional` import, and Payment keeps it in two Stripe test files
+(`StripeAccountResolver`, `StripeAccountResolverTests`). Inside this repo the Kernel carrier (`Result`,
+`UnitResult`, `ValueResult`, `Option` and their task/collection extensions) serves its own Kernel unit
+tests and `Shared.Api`'s `ResultHttpExtensions` terminals. Whether any service still calls those terminals,
+rather than a Reunion equivalent of the same name, was not verified.
+
+Its seven extension classes (`Functional/*Extensions*.cs`, `ResultHttpExtensions`) are the only ones left
+in the legacy `this`-parameter form. They were deliberately left out of the C# 14 extension-block sweep,
+since converting ~130 methods of a carrier due for deletion is wasted work.
+
+**Resolves when:** no consumer in any repo imports `Concertable.Kernel.Functional` or calls
+`ResultHttpExtensions`, and `Concertable.Kernel/Functional`, `ResultHttpExtensions` and their tests are
+deleted. Publish-first: the removal is breaking for pinned consumers, so it lands after they migrate.
+
 ## `Concertable.Payment.Hosting` is pinned at the platform version, not the split Payment version
 
 `api/Concertable.Shared/Directory.Packages.props` pins `Concertable.Payment.Hosting` at

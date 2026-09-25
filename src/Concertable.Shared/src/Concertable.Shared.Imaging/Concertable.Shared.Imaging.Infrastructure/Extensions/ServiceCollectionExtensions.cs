@@ -5,9 +5,12 @@ namespace Concertable.Shared.Imaging.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddSharedImaging(this IServiceCollection services)
+    extension(IServiceCollection services)
     {
-        services.AddScoped<IImageService, ImageService>();
-        return services;
+        public IServiceCollection AddSharedImaging()
+        {
+            services.AddScoped<IImageService, ImageService>();
+            return services;
+        }
     }
 }

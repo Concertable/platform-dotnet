@@ -7,12 +7,15 @@ namespace Concertable.Shared.Notification.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddNotificationClient(this IServiceCollection services)
+    extension(IServiceCollection services)
     {
-        services.AddSignalR()
-            .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(
-                new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false)));
-        services.AddSingleton<INotificationClient, SignalRNotificationClient>();
-        return services;
+        public IServiceCollection AddNotificationClient()
+        {
+            services.AddSignalR()
+                .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(
+                    new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false)));
+            services.AddSingleton<INotificationClient, SignalRNotificationClient>();
+            return services;
+        }
     }
 }
