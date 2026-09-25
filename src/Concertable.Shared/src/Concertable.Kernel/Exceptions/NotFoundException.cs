@@ -27,15 +27,23 @@ public sealed class NotFoundException : HttpException
 /// rather than on it.</summary>
 public static class NotFoundExtensions
 {
-    // Self-naming — the type carries its own display name via [DisplayName]; ZERO string at the call site.
-    public static async Task<T> OrNotFound<T>(this Task<T?> task) where T : class
-        => await task ?? throw new NotFoundException($"{DisplayNameResolver.Of<T>()} not found");
+    extension<T>(Task<T?> task)
+        where T : class
+    {
+        // Self-naming — the type carries its own display name via [DisplayName]; ZERO string at the call site.
+        public async Task<T> OrNotFound()
+            => await task ?? throw new NotFoundException($"{DisplayNameResolver.Of<T>()} not found");
 
-    // Explicit label — DTOs/projections + id-bearing/contextual messages (name is irreducible here).
-    public static async Task<T> OrNotFound<T>(this Task<T?> task, string entity) where T : class
-        => await task ?? throw new NotFoundException($"{entity} not found");
+        // Explicit label — DTOs/projections + id-bearing/contextual messages (name is irreducible here).
+        public async Task<T> OrNotFound(string entity)
+            => await task ?? throw new NotFoundException($"{entity} not found");
+    }
 
-    // Value types — the sites a `where T : class` helper can't touch (Guid?/int? id projections).
-    public static async Task<T> OrNotFound<T>(this Task<T?> task, string entity) where T : struct
-        => await task ?? throw new NotFoundException($"{entity} not found");
+    extension<T>(Task<T?> task)
+        where T : struct
+    {
+        // Value types — the sites a `where T : class` helper can't touch (Guid?/int? id projections).
+        public async Task<T> OrNotFound(string entity)
+            => await task ?? throw new NotFoundException($"{entity} not found");
+    }
 }

@@ -20,56 +20,62 @@ namespace Concertable.ServiceDefaults;
 /// </summary>
 public static class RateLimitingExtensions
 {
-    public static IHostApplicationBuilder AddDefaultRateLimiting(this IHostApplicationBuilder builder)
+    extension(IHostApplicationBuilder builder)
     {
-        builder.Services.AddRateLimiter(limiter =>
+        public IHostApplicationBuilder AddDefaultRateLimiting()
         {
-            limiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            limiter.OnRejected = OnRejectedAsync;
-        });
+            builder.Services.AddRateLimiter(limiter =>
+            {
+                limiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                limiter.OnRejected = OnRejectedAsync;
+            });
 
-        return builder;
+            return builder;
+        }
+
+        /// <summary>
+        /// Declares one named fixed-window policy for an abuse surface. The window binds from
+        /// <c>RateLimiting:&lt;policyName&gt;</c> over <paramref name="defaults"/>, resolved lazily per request
+        /// so a host or test that layers configuration after builder creation still wins. <paramref name="perUser"/>
+        /// partitions on the authenticated <c>sub</c> (falling back to IP); pass <see langword="false"/> for an
+        /// anonymous surface, which always partitions on client IP.
+        /// </summary>
+        public IHostApplicationBuilder AddRateLimitPolicy(
+            string policyName, RateLimitWindow defaults, bool perUser)
+        {
+            builder.Services.AddOptions<RateLimitWindow>(policyName)
+                .Configure(window =>
+                {
+                    window.PermitLimit = defaults.PermitLimit;
+                    window.WindowSeconds = defaults.WindowSeconds;
+                    window.QueueLimit = defaults.QueueLimit;
+                })
+                .BindConfiguration($"{RateLimitWindow.ConfigRoot}:{policyName}");
+
+            builder.Services.Configure<RateLimiterOptions>(limiter =>
+                limiter.AddPolicy(policyName, context =>
+                {
+                    var window = context.RequestServices
+                        .GetRequiredService<IOptionsMonitor<RateLimitWindow>>()
+                        .Get(policyName);
+                    return CreatePartition(context, window, perUser);
+                }));
+
+            return builder;
+        }
     }
 
-    /// <summary>
-    /// Declares one named fixed-window policy for an abuse surface. The window binds from
-    /// <c>RateLimiting:&lt;policyName&gt;</c> over <paramref name="defaults"/>, resolved lazily per request
-    /// so a host or test that layers configuration after builder creation still wins. <paramref name="perUser"/>
-    /// partitions on the authenticated <c>sub</c> (falling back to IP); pass <see langword="false"/> for an
-    /// anonymous surface, which always partitions on client IP.
-    /// </summary>
-    public static IHostApplicationBuilder AddRateLimitPolicy(
-        this IHostApplicationBuilder builder, string policyName, RateLimitWindow defaults, bool perUser)
+    extension(WebApplication app)
     {
-        builder.Services.AddOptions<RateLimitWindow>(policyName)
-            .Configure(window =>
-            {
-                window.PermitLimit = defaults.PermitLimit;
-                window.WindowSeconds = defaults.WindowSeconds;
-                window.QueueLimit = defaults.QueueLimit;
-            })
-            .BindConfiguration($"{RateLimitWindow.ConfigRoot}:{policyName}");
-
-        builder.Services.Configure<RateLimiterOptions>(limiter =>
-            limiter.AddPolicy(policyName, context =>
-            {
-                var window = context.RequestServices
-                    .GetRequiredService<IOptionsMonitor<RateLimitWindow>>()
-                    .Get(policyName);
-                return CreatePartition(context, window, perUser);
-            }));
-
-        return builder;
-    }
-
-    /// <summary>
-    /// Must run after authentication (so <c>sub</c> is populated for per-user partitioning) and routing
-    /// (so endpoint-metadata policies resolve), and before the endpoint terminals.
-    /// </summary>
-    public static WebApplication UseDefaultRateLimiting(this WebApplication app)
-    {
-        app.UseRateLimiter();
-        return app;
+        /// <summary>
+        /// Must run after authentication (so <c>sub</c> is populated for per-user partitioning) and routing
+        /// (so endpoint-metadata policies resolve), and before the endpoint terminals.
+        /// </summary>
+        public WebApplication UseDefaultRateLimiting()
+        {
+            app.UseRateLimiter();
+            return app;
+        }
     }
 
     internal static RateLimitPartition<string> CreatePartition(HttpContext context, RateLimitWindow window, bool perUser) =>

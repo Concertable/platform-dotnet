@@ -18,59 +18,59 @@ namespace Concertable.Kernel.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddSharedInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    extension(IServiceCollection services)
     {
-        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
-        services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
-        services.AddSingleton<IBackgroundTaskRunner, BackgroundTaskRunner>();
-        services.TryAddSingleton(typeof(IScoped<>), typeof(Scoped<>));
+        public IServiceCollection AddSharedInfrastructure(IConfiguration configuration)
+        {
+            services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+            services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+            services.AddSingleton<IBackgroundTaskRunner, BackgroundTaskRunner>();
+            services.TryAddSingleton(typeof(IScoped<>), typeof(Scoped<>));
 
-        return services;
+            return services;
+        }
+
+        public IServiceCollection AddGeometry()
+        {
+            services.AddKeyedSingleton<IGeometryProvider, GeographicGeometryProvider>(GeometryProviderType.Geographic, (_, _) =>
+                new GeographicGeometryProvider(NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326)));
+            services.AddKeyedSingleton<IGeometryProvider, MetricGeometryProvider>(GeometryProviderType.Metric, (_, _) =>
+                new MetricGeometryProvider(NtsGeometryServices.Instance.CreateGeometryFactory(srid: 3857)));
+            services.AddSingleton<IGeometryCalculator, GeometryCalculator>();
+            return services;
+        }
+
+        public IServiceCollection AddQueueHostedService()
+        {
+            services.AddHostedService<QueueHostedService>();
+            return services;
+        }
+
+        public IServiceCollection AddClientCredentials(Action<TokenServiceOptions> configure)
+        {
+            services.Configure(configure);
+
+            // The authority is the Refit base address — resolve it now from the same delegate the options bind from.
+            var options = new TokenServiceOptions();
+            configure(options);
+
+            services.AddRefitClient<ITokenApi>()
+                .ConfigureHttpClient(client =>
+                {
+                    // Empty authority defers the failure to the first token request (as before), not to startup.
+                    if (!string.IsNullOrWhiteSpace(options.Authority))
+                        client.BaseAddress = new Uri(options.Authority.TrimEnd('/'));
+                });
+
+            services.AddSingleton<ITokenService, ClientCredentialsTokenService>();
+            return services;
+        }
+
+        public IServiceCollection AddCurrentUser()
+        {
+            services.AddHttpContextAccessor();
+            services.AddScoped<ICurrentUser, CurrentUserAccessor>();
+            return services;
+        }
     }
-
-    public static IServiceCollection AddGeometry(this IServiceCollection services)
-    {
-        services.AddKeyedSingleton<IGeometryProvider, GeographicGeometryProvider>(GeometryProviderType.Geographic, (_, _) =>
-            new GeographicGeometryProvider(NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326)));
-        services.AddKeyedSingleton<IGeometryProvider, MetricGeometryProvider>(GeometryProviderType.Metric, (_, _) =>
-            new MetricGeometryProvider(NtsGeometryServices.Instance.CreateGeometryFactory(srid: 3857)));
-        services.AddSingleton<IGeometryCalculator, GeometryCalculator>();
-        return services;
-    }
-
-    public static IServiceCollection AddQueueHostedService(this IServiceCollection services)
-    {
-        services.AddHostedService<QueueHostedService>();
-        return services;
-    }
-
-    public static IServiceCollection AddClientCredentials(
-        this IServiceCollection services,
-        Action<TokenServiceOptions> configure)
-    {
-        services.Configure(configure);
-
-        // The authority is the Refit base address — resolve it now from the same delegate the options bind from.
-        var options = new TokenServiceOptions();
-        configure(options);
-
-        services.AddRefitClient<ITokenApi>()
-            .ConfigureHttpClient(client =>
-            {
-                // Empty authority defers the failure to the first token request (as before), not to startup.
-                if (!string.IsNullOrWhiteSpace(options.Authority))
-                    client.BaseAddress = new Uri(options.Authority.TrimEnd('/'));
-            });
-
-        services.AddSingleton<ITokenService, ClientCredentialsTokenService>();
-        return services;
-    }
-
-    public static IServiceCollection AddCurrentUser(this IServiceCollection services)
-    {
-        services.AddHttpContextAccessor();
-        services.AddScoped<ICurrentUser, CurrentUserAccessor>();
-        return services;
-    }
-
 }

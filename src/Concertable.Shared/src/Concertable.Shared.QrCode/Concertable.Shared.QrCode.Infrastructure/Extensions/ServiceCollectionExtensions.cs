@@ -5,10 +5,13 @@ namespace Concertable.Shared.QrCode.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddQrCode(this IServiceCollection services)
+    extension(IServiceCollection services)
     {
-        services.AddSingleton<QRCoder.QRCodeGenerator>();
-        services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
-        return services;
+        public IServiceCollection AddQrCode()
+        {
+            services.AddSingleton<QRCoder.QRCodeGenerator>();
+            services.AddSingleton<IQrCodeGenerator, QrCodeGenerator>();
+            return services;
+        }
     }
 }

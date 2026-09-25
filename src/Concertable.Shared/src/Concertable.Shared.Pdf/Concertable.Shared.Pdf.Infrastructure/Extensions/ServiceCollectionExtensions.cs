@@ -6,11 +6,14 @@ namespace Concertable.Shared.Pdf.Infrastructure.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddSharedPdf(this IServiceCollection services)
+    extension(IServiceCollection services)
     {
-        QuestPDF.Settings.License = LicenseType.Community;
-        services.AddScoped<PdfRenderer>();
-        services.AddScoped<IPdfRenderer>(sp => sp.GetRequiredService<PdfRenderer>());
-        return services;
+        public IServiceCollection AddSharedPdf()
+        {
+            QuestPDF.Settings.License = LicenseType.Community;
+            services.AddScoped<PdfRenderer>();
+            services.AddScoped<IPdfRenderer>(sp => sp.GetRequiredService<PdfRenderer>());
+            return services;
+        }
     }
 }

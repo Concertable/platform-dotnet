@@ -12,28 +12,34 @@ public static class HttpClientExtensions
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
-    public static async Task<HttpResponseMessage> PostAsync<T>(this HttpClient client, string url, T body)
+    extension(HttpClient client)
     {
-        return await client.PostAsJsonAsync(url, body, JsonOptions);
+        public async Task<HttpResponseMessage> PostAsync<T>(string url, T body)
+        {
+            return await client.PostAsJsonAsync(url, body, JsonOptions);
+        }
+
+        public async Task<HttpResponseMessage> PostAsync(string url)
+        {
+            return await client.PostAsJsonAsync<object?>(url, null, JsonOptions);
+        }
+
+        public async Task<HttpResponseMessage> PutAsync<T>(string url, T body)
+        {
+            return await client.PutAsJsonAsync(url, body, JsonOptions);
+        }
+
+        public async Task<HttpResponseMessage> DeleteAsync(string url)
+        {
+            return await client.DeleteAsync(url);
+        }
     }
 
-    public static async Task<HttpResponseMessage> PostAsync(this HttpClient client, string url)
+    extension(HttpContent content)
     {
-        return await client.PostAsJsonAsync<object?>(url, null, JsonOptions);
-    }
-
-    public static async Task<HttpResponseMessage> PutAsync<T>(this HttpClient client, string url, T body)
-    {
-        return await client.PutAsJsonAsync(url, body, JsonOptions);
-    }
-
-    public static async Task<HttpResponseMessage> DeleteAsync(this HttpClient client, string url)
-    {
-        return await client.DeleteAsync(url);
-    }
-
-    public static async Task<T?> ReadAsync<T>(this HttpContent content)
-    {
-        return await content.ReadFromJsonAsync<T>(JsonOptions);
+        public async Task<T?> ReadAsync<T>()
+        {
+            return await content.ReadFromJsonAsync<T>(JsonOptions);
+        }
     }
 }
