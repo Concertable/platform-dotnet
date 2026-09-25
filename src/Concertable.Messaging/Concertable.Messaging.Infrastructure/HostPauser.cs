@@ -11,11 +11,11 @@ namespace Concertable.Messaging.Infrastructure;
 /// WebSocket or SignalR message) never re-enters the request pipeline, so a host that accepts such work must
 /// register its own <see cref="IPausable"/> for it.
 /// </summary>
-public sealed class CompositePausable : IPausable
+public sealed class HostPauser
 {
     private readonly IReadOnlyList<IPausable> pausables;
 
-    public CompositePausable(IEnumerable<IPausable> pausables, IEnumerable<IHostedService> hostedServices)
+    public HostPauser(IEnumerable<IPausable> pausables, IEnumerable<IHostedService> hostedServices)
     {
         this.pausables = pausables
             .Concat(hostedServices.OfType<IPausable>())

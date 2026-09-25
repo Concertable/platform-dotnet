@@ -58,7 +58,7 @@ public sealed class AddAzureServiceBusTransportTests
     }
 
     [Fact]
-    public void TheHostedReceiver_IsPausable_SoCompositePausableDiscoversItAndRemovalDropsIt()
+    public void TheHostedReceiver_IsPausable_SoHostPauserDiscoversItAndRemovalDropsIt()
     {
         var provider = new ServiceCollection()
             .AddAzureServiceBusTransport(

@@ -79,9 +79,9 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
-        public IServiceCollection AddCompositePausable()
+        public IServiceCollection AddHostPauser()
         {
-            services.AddSingleton<CompositePausable>();
+            services.AddSingleton<HostPauser>();
             return services;
         }
     }
