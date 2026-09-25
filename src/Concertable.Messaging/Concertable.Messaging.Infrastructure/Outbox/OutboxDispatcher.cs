@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.Infrastructure.Outbox;
 
-internal sealed class OutboxDispatcher : BackgroundService, IIngressQuiescer
+internal sealed class OutboxDispatcher : BackgroundService, IPausable
 {
     private readonly IServiceScopeFactory scopeFactory;
     private readonly OutboxOptions options;

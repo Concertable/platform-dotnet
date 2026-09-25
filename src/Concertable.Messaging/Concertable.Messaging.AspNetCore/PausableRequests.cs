@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 namespace Concertable.Messaging.AspNetCore;
 
 /// <summary>
-/// The HTTP request pipeline as an <see cref="IIngressQuiescer"/>. <see cref="RequestQuiescenceMiddleware"/>
+/// The HTTP request pipeline as an <see cref="IPausable"/>. <see cref="PausableRequestsMiddleware"/>
 /// registers each gated request here for the life of its handler; while paused, a newly arriving request
 /// waits for <see cref="ResumeAsync"/> before its handler runs. <see cref="PauseAsync"/> excludes the request
 /// that is itself driving the pause — read from <see cref="IHttpContextAccessor"/> — then returns once every
@@ -14,7 +14,7 @@ namespace Concertable.Messaging.AspNetCore;
 /// detached execution context would lose the self-exclusion. Overlapping pause/resume calls are safe: a
 /// second pause joins the first's drain, and a resume releases any pause still waiting.
 /// </summary>
-internal sealed class HttpIngressQuiescer : IIngressQuiescer
+internal sealed class PausableRequests : IPausable
 {
     private readonly IHttpContextAccessor httpContextAccessor;
     private readonly object gate = new();
@@ -23,7 +23,7 @@ internal sealed class HttpIngressQuiescer : IIngressQuiescer
     private TaskCompletionSource resume = CreateCompletedSource();
     private TaskCompletionSource drained = CreateCompletedSource();
 
-    public HttpIngressQuiescer(IHttpContextAccessor httpContextAccessor)
+    public PausableRequests(IHttpContextAccessor httpContextAccessor)
     {
         this.httpContextAccessor = httpContextAccessor;
     }

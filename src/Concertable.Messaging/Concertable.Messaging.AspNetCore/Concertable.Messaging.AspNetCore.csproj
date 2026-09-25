@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
-    <Description>Concertable host-ingress quiescence for ASP.NET Core: drains in-flight HTTP requests as an IIngressQuiescer so a host can reach a quiescent state.</Description>
+    <Description>Concertable pausable HTTP requests for ASP.NET Core: holds new requests and waits for in-flight ones while the host is paused.</Description>
   </PropertyGroup>
 
   <ItemGroup>
