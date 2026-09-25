@@ -64,7 +64,7 @@ public sealed class CompositePausableTests
     }
 
     [Fact]
-    public void AddCompositePausable_ResolvesTheComposite()
+    public void AddCompositePausable_ResolvesTheCompositeWithoutRegisteringItAsAPausable()
     {
         var provider = new ServiceCollection()
             .AddSingleton<IPausable>(Recording("a"))
@@ -72,6 +72,7 @@ public sealed class CompositePausableTests
             .BuildServiceProvider();
 
         Assert.NotNull(provider.GetRequiredService<CompositePausable>());
+        Assert.DoesNotContain(provider.GetServices<IPausable>(), pausable => pausable is CompositePausable);
     }
 
     private RecordingPausable Recording(string name, bool throwOnPause = false) =>

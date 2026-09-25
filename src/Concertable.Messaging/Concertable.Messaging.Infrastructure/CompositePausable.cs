@@ -4,14 +4,12 @@ using Microsoft.Extensions.Hosting;
 namespace Concertable.Messaging.Infrastructure;
 
 /// <summary>
-/// Pauses every <see cref="IPausable"/> in the host together: the registered ones (such as HTTP requests)
-/// plus every hosted service that is one (the ASB receiver, the outbox dispatcher). Hosted ones are found
-/// through <see cref="IHostedService"/> so a host that removes such a service, as the integration harness
-/// removes the ASB receiver, drops it here too instead of leaving a registration that resolves to nothing.
-/// If one fails to pause, those already paused are resumed before the failure is rethrown; resume runs in
-/// reverse order. Work arriving over an already-open connection (a WebSocket or SignalR message) never
-/// re-enters the request pipeline, so a host that accepts such work must register its own
-/// <see cref="IPausable"/> for it.
+/// Pauses every <see cref="IPausable"/> in the host together: the registered ones (such as the request gate)
+/// plus every hosted service that is one (the ASB receiver, the outbox dispatcher), so removing a hosted
+/// service also removes it from here. If one fails to pause, those already paused are resumed before the
+/// failure is rethrown; resume runs in reverse order. Work arriving over an already-open connection (a
+/// WebSocket or SignalR message) never re-enters the request pipeline, so a host that accepts such work must
+/// register its own <see cref="IPausable"/> for it.
 /// </summary>
 public sealed class CompositePausable : IPausable
 {

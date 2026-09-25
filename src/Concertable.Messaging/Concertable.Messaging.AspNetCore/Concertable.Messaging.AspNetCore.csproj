@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
-    <Description>Concertable pausable HTTP requests for ASP.NET Core: holds new requests and waits for in-flight ones while the host is paused.</Description>
+    <Description>Concertable request gate for ASP.NET Core: holds new requests and waits for in-flight ones while the host is paused.</Description>
   </PropertyGroup>
 
   <ItemGroup>
