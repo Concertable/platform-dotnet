@@ -6,14 +6,14 @@ using Microsoft.Extensions.Hosting;
 
 namespace Concertable.Messaging.UnitTests;
 
-public sealed class HostQuiescenceTests
+public sealed class CompositePausableTests
 {
     private readonly List<string> log = new();
 
     [Fact]
-    public async Task PauseAsync_PausesEveryRegisteredParticipant()
+    public async Task PauseAsync_PausesEveryRegisteredPausable()
     {
-        var host = new HostQuiescence([Recording("a"), Recording("b")], []);
+        var host = new CompositePausable([Recording("a"), Recording("b")], []);
 
         await host.PauseAsync();
 
@@ -21,9 +21,9 @@ public sealed class HostQuiescenceTests
     }
 
     [Fact]
-    public async Task ResumeAsync_ResumesParticipantsInReverseOrder()
+    public async Task ResumeAsync_ResumesInReverseOrder()
     {
-        var host = new HostQuiescence([Recording("a"), Recording("b")], []);
+        var host = new CompositePausable([Recording("a"), Recording("b")], []);
 
         await host.ResumeAsync();
 
@@ -31,9 +31,9 @@ public sealed class HostQuiescenceTests
     }
 
     [Fact]
-    public async Task PauseAsync_WhenAParticipantThrows_ResumesThoseAlreadyPausedAndRethrows()
+    public async Task PauseAsync_WhenOneThrows_ResumesThoseAlreadyPausedAndRethrows()
     {
-        var host = new HostQuiescence(
+        var host = new CompositePausable(
             [Recording("a"), Recording("b", throwOnPause: true), Recording("c")], []);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => host.PauseAsync());
@@ -42,10 +42,10 @@ public sealed class HostQuiescenceTests
     }
 
     [Fact]
-    public async Task PauseAsync_DiscoversHostedServicesThatAreParticipants_AndSkipsPlainOnes()
+    public async Task PauseAsync_DiscoversHostedServicesThatArePausable_AndSkipsPlainOnes()
     {
-        var hosted = new RecordingHostedQuiescer(log, "hosted");
-        var host = new HostQuiescence([Recording("http")], [hosted, new PlainHostedService()]);
+        var hosted = new RecordingHostedPausable(log, "hosted");
+        var host = new CompositePausable([Recording("http")], [hosted, new PlainHostedService()]);
 
         await host.PauseAsync();
 
@@ -53,10 +53,10 @@ public sealed class HostQuiescenceTests
     }
 
     [Fact]
-    public async Task PauseAsync_DoesNotDoublePauseAParticipantRegisteredBothWays()
+    public async Task PauseAsync_DoesNotDoublePauseOneRegisteredBothWays()
     {
-        var both = new RecordingHostedQuiescer(log, "both");
-        var host = new HostQuiescence([both], [both]);
+        var both = new RecordingHostedPausable(log, "both");
+        var host = new CompositePausable([both], [both]);
 
         await host.PauseAsync();
 
@@ -64,17 +64,17 @@ public sealed class HostQuiescenceTests
     }
 
     [Fact]
-    public void AddHostQuiescence_ResolvesTheAggregate()
+    public void AddCompositePausable_ResolvesTheComposite()
     {
         var provider = new ServiceCollection()
-            .AddSingleton<IIngressQuiescer>(Recording("a"))
-            .AddHostQuiescence()
+            .AddSingleton<IPausable>(Recording("a"))
+            .AddCompositePausable()
             .BuildServiceProvider();
 
-        Assert.NotNull(provider.GetRequiredService<IHostQuiescence>());
+        Assert.NotNull(provider.GetRequiredService<CompositePausable>());
     }
 
-    private RecordingQuiescer Recording(string name, bool throwOnPause = false) =>
+    private RecordingPausable Recording(string name, bool throwOnPause = false) =>
         new(log, name, throwOnPause);
 
     private sealed class PlainHostedService : IHostedService
@@ -84,12 +84,12 @@ public sealed class HostQuiescenceTests
         public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
     }
 
-    private sealed class RecordingHostedQuiescer : IIngressQuiescer, IHostedService
+    private sealed class RecordingHostedPausable : IPausable, IHostedService
     {
         private readonly List<string> log;
         private readonly string name;
 
-        public RecordingHostedQuiescer(List<string> log, string name)
+        public RecordingHostedPausable(List<string> log, string name)
         {
             this.log = log;
             this.name = name;
@@ -112,13 +112,13 @@ public sealed class HostQuiescenceTests
         public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
     }
 
-    private sealed class RecordingQuiescer : IIngressQuiescer
+    private sealed class RecordingPausable : IPausable
     {
         private readonly List<string> log;
         private readonly string name;
         private readonly bool throwOnPause;
 
-        public RecordingQuiescer(List<string> log, string name, bool throwOnPause)
+        public RecordingPausable(List<string> log, string name, bool throwOnPause)
         {
             this.log = log;
             this.name = name;

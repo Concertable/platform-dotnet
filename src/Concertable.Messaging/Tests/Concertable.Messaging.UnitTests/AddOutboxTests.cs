@@ -9,11 +9,11 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.UnitTests;
 
-public sealed class OutboxServiceCollectionExtensionsTests
+public sealed class AddOutboxTests
 {
     private readonly ServiceCollection services;
 
-    public OutboxServiceCollectionExtensionsTests()
+    public AddOutboxTests()
     {
         this.services = new ServiceCollection();
     }
@@ -65,7 +65,7 @@ public sealed class OutboxServiceCollectionExtensionsTests
         Assert.Same(services, services.AddOutbox(options => options.UseInMemoryDatabase("outbox"), runDispatcher: false));
 
     [Fact]
-    public void AddOutbox_WithDispatcher_RegistersTheDispatcherAsAnIngressQuiescerHostedService()
+    public void AddOutbox_WithDispatcher_RegistersTheDispatcherAsAPausableHostedService()
     {
         services.AddOutbox(options => options.UseInMemoryDatabase("outbox"));
         services.AddLogging();
@@ -73,7 +73,7 @@ public sealed class OutboxServiceCollectionExtensionsTests
         using var provider = services.BuildServiceProvider();
         var dispatcher = provider.GetServices<IHostedService>().OfType<OutboxDispatcher>().Single();
 
-        Assert.IsAssignableFrom<IIngressQuiescer>(dispatcher);
+        Assert.IsAssignableFrom<IPausable>(dispatcher);
     }
 
     [Fact]

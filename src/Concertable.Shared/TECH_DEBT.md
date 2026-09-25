@@ -35,7 +35,7 @@ and the misleading `IsPackable=true` is dropped. Decision + execution steps:
 consistency with the Shared-repo model — the cost is that every shared-test-helper edit then takes the
 publish-first cycle.
 
-### Outbox quiescence across an integration reset lives in B2B's fixture, not the shared library
+### Pausing the outbox across an integration reset lives in B2B's fixture, not the shared library
 
 `ApiFixture.ResetAsync` Respawns the database between tests while `OutboxDispatcher`, a `BackgroundService`
 polling every second, may already hold a claimed batch it has not yet delivered — so the previous test's

@@ -3,14 +3,14 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.AspNetCore;
 
-internal sealed class RequestQuiescenceMiddleware : IMiddleware
+internal sealed class PausableRequestsMiddleware : IMiddleware
 {
-    private readonly HttpIngressQuiescer quiescer;
-    private readonly HttpQuiescenceOptions options;
+    private readonly PausableRequests requests;
+    private readonly PausableRequestsOptions options;
 
-    public RequestQuiescenceMiddleware(HttpIngressQuiescer quiescer, IOptions<HttpQuiescenceOptions> options)
+    public PausableRequestsMiddleware(PausableRequests requests, IOptions<PausableRequestsOptions> options)
     {
-        this.quiescer = quiescer;
+        this.requests = requests;
         this.options = options.Value;
     }
 
@@ -22,14 +22,14 @@ internal sealed class RequestQuiescenceMiddleware : IMiddleware
             return;
         }
 
-        await quiescer.EnterAsync(context, context.RequestAborted);
+        await requests.EnterAsync(context, context.RequestAborted);
         try
         {
             await next(context);
         }
         finally
         {
-            quiescer.Exit(context);
+            requests.Exit(context);
         }
     }
 }

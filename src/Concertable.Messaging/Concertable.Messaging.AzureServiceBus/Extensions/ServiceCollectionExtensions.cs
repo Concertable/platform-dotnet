@@ -9,36 +9,38 @@ namespace Concertable.Messaging.AzureServiceBus.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddAzureServiceBusTransport(
-        this IServiceCollection services,
-        Action<AzureServiceBusOptions> configure,
-        Action<MessageTypeRegistry> register)
+    extension(IServiceCollection services)
     {
-        var options = new AzureServiceBusOptions();
-        configure(options);
-        if (string.IsNullOrWhiteSpace(options.ServiceName))
-            throw new InvalidOperationException(
-                "AzureServiceBusOptions.ServiceName is required — it scopes command queue names; an empty value yields a malformed 'command--<type>' queue.");
-
-        services.Configure(configure);
-
-        var registry = new MessageTypeRegistry();
-        register(registry);
-        services.AddSingleton(registry);
-
-        services.AddSingleton(sp =>
+        public IServiceCollection AddAzureServiceBusTransport(
+            Action<AzureServiceBusOptions> configure,
+            Action<MessageTypeRegistry> register)
         {
-            var opts = sp.GetRequiredService<IOptions<AzureServiceBusOptions>>().Value;
-            if (string.IsNullOrWhiteSpace(opts.ConnectionString))
+            var options = new AzureServiceBusOptions();
+            configure(options);
+            if (string.IsNullOrWhiteSpace(options.ServiceName))
                 throw new InvalidOperationException(
-                    "AzureServiceBusOptions.ConnectionString is required — bind the 'asb' connection string.");
-            return new ServiceBusClient(opts.ConnectionString);
-        });
+                    "AzureServiceBusOptions.ServiceName is required — it scopes command queue names; an empty value yields a malformed 'command--<type>' queue.");
 
-        services.AddSingleton<MessageSerializer>();
-        services.AddSingleton<IBusTransport, AzureServiceBusTransport>();
-        services.AddHostedService<AzureServiceBusReceiver>();
+            services.Configure(configure);
 
-        return services;
+            var registry = new MessageTypeRegistry();
+            register(registry);
+            services.AddSingleton(registry);
+
+            services.AddSingleton(sp =>
+            {
+                var opts = sp.GetRequiredService<IOptions<AzureServiceBusOptions>>().Value;
+                if (string.IsNullOrWhiteSpace(opts.ConnectionString))
+                    throw new InvalidOperationException(
+                        "AzureServiceBusOptions.ConnectionString is required — bind the 'asb' connection string.");
+                return new ServiceBusClient(opts.ConnectionString);
+            });
+
+            services.AddSingleton<MessageSerializer>();
+            services.AddSingleton<IBusTransport, AzureServiceBusTransport>();
+            services.AddHostedService<AzureServiceBusReceiver>();
+
+            return services;
+        }
     }
 }
