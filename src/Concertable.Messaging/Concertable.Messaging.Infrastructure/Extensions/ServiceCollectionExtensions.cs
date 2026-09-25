@@ -79,10 +79,6 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
-        /// <summary>
-        /// Registers <see cref="CompositePausable"/>, which pauses every <see cref="IPausable"/> in the host at
-        /// once. Resolve it by its concrete type: registered as <see cref="IPausable"/> it would enumerate itself.
-        /// </summary>
         public IServiceCollection AddCompositePausable()
         {
             services.AddSingleton<CompositePausable>();
