@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.AzureServiceBus;
 
-internal sealed class AzureServiceBusReceiver : BackgroundService, IIngressQuiescer
+internal sealed class AzureServiceBusReceiver : BackgroundService, IPausable
 {
     private readonly ServiceBusClient client;
     private readonly AzureServiceBusOptions options;
@@ -19,7 +19,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService, IIngressQuies
     private readonly ILogger<AzureServiceBusReceiver> logger;
     private readonly List<ServiceBusProcessor> processors = new();
     private readonly TaskCompletionSource processorsStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private readonly SemaphoreSlim quiescenceGate = new(1, 1);
+    private readonly SemaphoreSlim pauseGate = new(1, 1);
 
     public AzureServiceBusReceiver(
         ServiceBusClient client,
@@ -84,7 +84,7 @@ internal sealed class AzureServiceBusReceiver : BackgroundService, IIngressQuies
     public async Task PauseAsync(CancellationToken ct = default)
     {
         await processorsStarted.Task.WaitAsync(ct);
-        await quiescenceGate.WaitAsync(ct);
+        await pauseGate.WaitAsync(ct);
         try
         {
             foreach (var processor in processors.Where(processor => processor.IsProcessing))
@@ -93,14 +93,14 @@ internal sealed class AzureServiceBusReceiver : BackgroundService, IIngressQuies
         }
         finally
         {
-            quiescenceGate.Release();
+            pauseGate.Release();
         }
     }
 
     public async Task ResumeAsync(CancellationToken ct = default)
     {
         await processorsStarted.Task.WaitAsync(ct);
-        await quiescenceGate.WaitAsync(ct);
+        await pauseGate.WaitAsync(ct);
         try
         {
             foreach (var processor in processors.Where(processor => !processor.IsProcessing))
@@ -109,13 +109,13 @@ internal sealed class AzureServiceBusReceiver : BackgroundService, IIngressQuies
         }
         finally
         {
-            quiescenceGate.Release();
+            pauseGate.Release();
         }
     }
 
     public override void Dispose()
     {
-        quiescenceGate.Dispose();
+        pauseGate.Dispose();
         base.Dispose();
     }
 

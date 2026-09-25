@@ -8,20 +8,18 @@ public static class ServiceCollectionExtensions
     extension(IServiceCollection services)
     {
         /// <summary>
-        /// Registers the HTTP request pipeline as an <see cref="IIngressQuiescer"/> so
-        /// <see cref="IHostQuiescence"/> drains in-flight requests. Pair it with
-        /// <c>UseHostQuiescence()</c>, which inserts <see cref="RequestQuiescenceMiddleware"/>.
+        /// Registers <see cref="GateMiddleware"/> as an <see cref="IPausable"/>, so pausing the host holds new
+        /// requests and waits for in-flight ones. Pair it with <c>UseGate()</c>.
         /// </summary>
-        public IServiceCollection AddHttpRequestQuiescence(Action<HttpQuiescenceOptions>? configure = null)
+        public IServiceCollection AddGate(Action<GateOptions>? configure = null)
         {
             services.AddHttpContextAccessor();
             if (configure is not null)
                 services.Configure(configure);
             else
-                services.AddOptions<HttpQuiescenceOptions>();
-            services.AddSingleton<HttpIngressQuiescer>();
-            services.AddSingleton<IIngressQuiescer>(sp => sp.GetRequiredService<HttpIngressQuiescer>());
-            services.AddSingleton<RequestQuiescenceMiddleware>();
+                services.AddOptions<GateOptions>();
+            services.AddSingleton<GateMiddleware>();
+            services.AddSingleton<IPausable>(sp => sp.GetRequiredService<GateMiddleware>());
             return services;
         }
     }

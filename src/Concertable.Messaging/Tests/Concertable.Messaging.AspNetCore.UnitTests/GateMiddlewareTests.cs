@@ -1,17 +1,18 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 
 namespace Concertable.Messaging.AspNetCore.UnitTests;
 
-public sealed class HttpIngressQuiescerTests
+public sealed class GateMiddlewareTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
     [Fact]
     public async Task PauseAsync_WithNothingInFlight_ReturnsImmediately()
     {
-        var quiescer = new HttpIngressQuiescer(new HttpContextAccessor());
+        var gate = new GateMiddleware(new HttpContextAccessor(), Options.Create(new GateOptions()));
 
-        var pause = quiescer.PauseAsync();
+        var pause = gate.PauseAsync();
 
         await pause.WaitAsync(Timeout);
         Assert.True(pause.IsCompletedSuccessfully);
@@ -21,10 +22,10 @@ public sealed class HttpIngressQuiescerTests
     public async Task PauseAsync_ExcludesTheRequestDrivingThePause()
     {
         var pauser = new DefaultHttpContext();
-        var quiescer = new HttpIngressQuiescer(new HttpContextAccessor { HttpContext = pauser });
-        await quiescer.EnterAsync(pauser, CancellationToken.None);
+        var gate = new GateMiddleware(new HttpContextAccessor { HttpContext = pauser }, Options.Create(new GateOptions()));
+        await gate.EnterAsync(pauser, CancellationToken.None);
 
-        var pause = quiescer.PauseAsync();
+        var pause = gate.PauseAsync();
 
         await pause.WaitAsync(Timeout);
         Assert.True(pause.IsCompletedSuccessfully);
@@ -34,16 +35,16 @@ public sealed class HttpIngressQuiescerTests
     public async Task PauseAsync_WaitsForAnUnrelatedInFlightRequestToExit()
     {
         var pauser = new DefaultHttpContext();
-        var quiescer = new HttpIngressQuiescer(new HttpContextAccessor { HttpContext = pauser });
+        var gate = new GateMiddleware(new HttpContextAccessor { HttpContext = pauser }, Options.Create(new GateOptions()));
         var other = new DefaultHttpContext();
-        await quiescer.EnterAsync(other, CancellationToken.None);
-        await quiescer.EnterAsync(pauser, CancellationToken.None);
+        await gate.EnterAsync(other, CancellationToken.None);
+        await gate.EnterAsync(pauser, CancellationToken.None);
 
-        var pause = quiescer.PauseAsync();
+        var pause = gate.PauseAsync();
         await Task.Delay(100);
         Assert.False(pause.IsCompleted);
 
-        quiescer.Exit(other);
+        gate.Exit(other);
 
         await pause.WaitAsync(Timeout);
         Assert.True(pause.IsCompletedSuccessfully);
@@ -52,17 +53,17 @@ public sealed class HttpIngressQuiescerTests
     [Fact]
     public async Task PauseAsync_OverlappingCalls_BothCompleteWhenTheInFlightRequestExits()
     {
-        var quiescer = new HttpIngressQuiescer(new HttpContextAccessor());
+        var gate = new GateMiddleware(new HttpContextAccessor(), Options.Create(new GateOptions()));
         var other = new DefaultHttpContext();
-        await quiescer.EnterAsync(other, CancellationToken.None);
+        await gate.EnterAsync(other, CancellationToken.None);
 
-        var pauseA = quiescer.PauseAsync();
-        var pauseB = quiescer.PauseAsync();
+        var pauseA = gate.PauseAsync();
+        var pauseB = gate.PauseAsync();
         await Task.Delay(100);
         Assert.False(pauseA.IsCompleted);
         Assert.False(pauseB.IsCompleted);
 
-        quiescer.Exit(other);
+        gate.Exit(other);
 
         await Task.WhenAll(pauseA, pauseB).WaitAsync(Timeout);
     }
@@ -70,15 +71,15 @@ public sealed class HttpIngressQuiescerTests
     [Fact]
     public async Task ResumeAsync_WhileAPauseIsStillDraining_ReleasesTheWaitingPause()
     {
-        var quiescer = new HttpIngressQuiescer(new HttpContextAccessor());
+        var gate = new GateMiddleware(new HttpContextAccessor(), Options.Create(new GateOptions()));
         var other = new DefaultHttpContext();
-        await quiescer.EnterAsync(other, CancellationToken.None);
+        await gate.EnterAsync(other, CancellationToken.None);
 
-        var pause = quiescer.PauseAsync();
+        var pause = gate.PauseAsync();
         await Task.Delay(100);
         Assert.False(pause.IsCompleted);
 
-        await quiescer.ResumeAsync();
+        await gate.ResumeAsync();
 
         await pause.WaitAsync(Timeout);
         Assert.True(pause.IsCompletedSuccessfully);
@@ -87,14 +88,14 @@ public sealed class HttpIngressQuiescerTests
     [Fact]
     public async Task EnterAsync_WhilePaused_WaitsForResume()
     {
-        var quiescer = new HttpIngressQuiescer(new HttpContextAccessor());
-        await quiescer.PauseAsync();
+        var gate = new GateMiddleware(new HttpContextAccessor(), Options.Create(new GateOptions()));
+        await gate.PauseAsync();
 
-        var entry = quiescer.EnterAsync(new DefaultHttpContext(), CancellationToken.None);
+        var entry = gate.EnterAsync(new DefaultHttpContext(), CancellationToken.None);
         await Task.Delay(100);
         Assert.False(entry.IsCompleted);
 
-        await quiescer.ResumeAsync();
+        await gate.ResumeAsync();
 
         await entry.WaitAsync(Timeout);
         Assert.True(entry.IsCompletedSuccessfully);

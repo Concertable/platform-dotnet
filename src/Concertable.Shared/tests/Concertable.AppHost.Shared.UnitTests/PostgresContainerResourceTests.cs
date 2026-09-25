@@ -93,6 +93,6 @@ public sealed class PostgresContainerResourceTests
 
     #endregion
 
-    private static string VolumeName(IResourceBuilder<PostgresServerResource> postgres) =>
+    private static string? VolumeName(IResourceBuilder<PostgresServerResource> postgres) =>
         Assert.Single(postgres.Resource.Annotations.OfType<ContainerMountAnnotation>()).Source;
 }

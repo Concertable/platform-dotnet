@@ -45,14 +45,17 @@ internal sealed class XunitLogger : ILogger
 
 internal static class LogLevelExtensions
 {
-    public static string ToShortString(this LogLevel level) => level switch
+    extension(LogLevel level)
     {
-        LogLevel.Trace => "trce",
-        LogLevel.Debug => "dbug",
-        LogLevel.Information => "info",
-        LogLevel.Warning => "warn",
-        LogLevel.Error => "fail",
-        LogLevel.Critical => "crit",
-        _ => level.ToString()
-    };
+        public string ToShortString() => level switch
+        {
+            LogLevel.Trace => "trce",
+            LogLevel.Debug => "dbug",
+            LogLevel.Information => "info",
+            LogLevel.Warning => "warn",
+            LogLevel.Error => "fail",
+            LogLevel.Critical => "crit",
+            _ => level.ToString()
+        };
+    }
 }

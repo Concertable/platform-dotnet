@@ -5,6 +5,9 @@ namespace Concertable.Shared.Api.Http;
 
 internal static class HttpStatusCodeExtensions
 {
-    internal static string ToReasonPhrase(this HttpStatusCode statusCode) =>
-        ReasonPhrases.GetReasonPhrase((int)statusCode);
+    extension(HttpStatusCode statusCode)
+    {
+        internal string ToReasonPhrase() =>
+            ReasonPhrases.GetReasonPhrase((int)statusCode);
+    }
 }

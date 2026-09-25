@@ -10,22 +10,24 @@ namespace Concertable.Testing.Architecture;
 
 public static class CompositionValidationExtensions
 {
-    public static void ValidateComposition(
-        this IServiceCollection descriptors,
-        IServiceProvider services,
-        CompositionValidationOptions options)
+    extension(IServiceCollection descriptors)
     {
-        var errors = new List<Exception>();
-        var assemblies = LoadApplicationAssemblies(options.RootAssemblies);
-        var activationTypes = GetActivationTypes(services, assemblies, options.IsFunction).ToArray();
+        public void ValidateComposition(
+            IServiceProvider services,
+            CompositionValidationOptions options)
+        {
+            var errors = new List<Exception>();
+            var assemblies = LoadApplicationAssemblies(options.RootAssemblies);
+            var activationTypes = GetActivationTypes(services, assemblies, options.IsFunction).ToArray();
 
-        ValidateDescriptors(descriptors, services, assemblies, errors);
-        ValidateOpenGenericConsumers(descriptors, services, activationTypes, options.HandlerServiceDefinitions, errors);
-        ValidateActivationTypes(services, activationTypes, errors);
-        ValidateHostedServices(services, errors);
+            ValidateDescriptors(descriptors, services, assemblies, errors);
+            ValidateOpenGenericConsumers(descriptors, services, activationTypes, options.HandlerServiceDefinitions, errors);
+            ValidateActivationTypes(services, activationTypes, errors);
+            ValidateHostedServices(services, errors);
 
-        if (errors.Count > 0)
-            throw new AggregateException("Composition validation failed.", errors);
+            if (errors.Count > 0)
+                throw new AggregateException("Composition validation failed.", errors);
+        }
     }
 
     private static IReadOnlySet<Assembly> LoadApplicationAssemblies(IEnumerable<Assembly> roots)
