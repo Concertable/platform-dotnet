@@ -18,6 +18,27 @@ services (e.g. `AzureServiceBusOptions` binder defaults) lives in the root [`api
 
 ---
 
+### `HostPauser.PauseAsync` can leave the host partially paused on failure or cancellation
+
+`HostPauser.PauseAsync` (`Concertable.Messaging.Infrastructure/HostPauser.cs`) adds a pausable to its
+rollback `paused` list only after that pausable's own `PauseAsync` returns, so when a pausable's
+`PauseAsync` itself throws or is cancelled, the catch block resumes everything *before* it but never the
+one that failed. Two `IPausable`s can leave themselves paused exactly that way: `GateMiddleware.PauseAsync`
+sets `paused = true` under its lock before awaiting `drained.Task.WaitAsync(ct)`, so a cancelled wait
+leaves the HTTP gate holding every later non-exempt request in `EnterAsync` with no `ResumeAsync` ever
+called; `AzureServiceBusReceiver.PauseAsync` has the same shape — a cancelled `StopProcessingAsync` loop
+leaves some processors stopped and others still running. This contradicts `HostPauser`'s documented
+rollback contract ("those already paused are resumed"). B2B's E2E reset only survives this because it
+wraps its own pause in a `finally` calling `HostPauser.ResumeAsync` (every current `ResumeAsync` is
+idempotent), but any other caller trusting the rollback contract is exposed.
+
+**Resolves when:** `HostPauser`'s rollback also resumes the pausable whose `PauseAsync` threw or was
+cancelled (e.g. add it to the rollback set before awaiting its own pause, relying on idempotent resume),
+or every `IPausable` guarantees it is not left paused when its own `PauseAsync` throws; covered by a
+`HostPauserTests` case with a pausable that sets its paused state and then throws on cancellation.
+
+---
+
 ## LOW
 
 ### `OutboxOptions.SchemaName` is honoured at runtime but baked into the migration
