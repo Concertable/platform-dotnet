@@ -30,8 +30,8 @@ public sealed class RowLockTests : IAsyncLifetime
         var locked = await holder.References.WithRowLock().SingleAsync(entity => entity.Id == id);
 
         Assert.Equal("VENUE", locked.Code);
-        var blocked = await Assert.ThrowsAsync<PostgresException>(() => RenameWithoutWaitingAsync(id));
-        Assert.Equal(PostgresErrorCodes.LockNotAvailable, blocked.SqlState);
+        var blocked = await Assert.ThrowsAsync<InvalidOperationException>(() => RenameWithoutWaitingAsync(id));
+        Assert.Equal(PostgresErrorCodes.LockNotAvailable, Assert.IsType<PostgresException>(blocked.InnerException).SqlState);
     }
 
     [Fact]
@@ -47,8 +47,8 @@ public sealed class RowLockTests : IAsyncLifetime
             .SingleAsync(entity => entity.Id == id);
 
         Assert.Empty(locked.Notes);
-        var blocked = await Assert.ThrowsAsync<PostgresException>(() => RenameWithoutWaitingAsync(id));
-        Assert.Equal(PostgresErrorCodes.LockNotAvailable, blocked.SqlState);
+        var blocked = await Assert.ThrowsAsync<InvalidOperationException>(() => RenameWithoutWaitingAsync(id));
+        Assert.Equal(PostgresErrorCodes.LockNotAvailable, Assert.IsType<PostgresException>(blocked.InnerException).SqlState);
     }
 
     [Fact]
