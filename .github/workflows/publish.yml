@@ -64,5 +64,3 @@ jobs:
       project: Concertable.Platform.Packages.slnx
       publish: ${{ inputs.publish || github.event_name != 'workflow_dispatch' }}
       publish-on-push: true
-    secrets:
-      PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_TOKEN }}
