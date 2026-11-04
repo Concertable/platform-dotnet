@@ -1,4 +1,6 @@
 using Concertable.DataAccess.Application;
+using Concertable.DataAccess.Infrastructure.Locking;
+using Concertable.Kernel.ValueObjects;
 using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Domain;
 using Concertable.Messaging.Infrastructure;
@@ -32,6 +34,21 @@ public abstract class DbContextBase : DbContext, IDbContext
     void IWriteDbContext.Remove<TEntity>(TEntity entity) => Set<TEntity>().Remove(entity);
 
     Task<int> IWriteDbContext.SaveChangesAsync(CancellationToken ct) => SaveChangesAsync(ct);
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        optionsBuilder.AddInterceptors(RowLockInterceptor.Instance);
+    }
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+        configurationBuilder.Properties<Sha256Digest>()
+            .HaveConversion<Sha256Digest.EfCoreValueConverter>()
+            .HaveMaxLength(Sha256Digest.Length)
+            .AreFixedLength();
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
