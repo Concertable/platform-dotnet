@@ -1,5 +1,6 @@
 using Concertable.DataAccess.Infrastructure;
 using Concertable.Kernel;
+using Concertable.Kernel.ValueObjects;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -11,6 +12,7 @@ public sealed class ReferenceEntity : IEntity
     public int Id { get; set; }
     public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
+    public Sha256Digest? Fingerprint { get; set; }
     public List<ReferenceNoteEntity> Notes { get; set; } = [];
 }
 
