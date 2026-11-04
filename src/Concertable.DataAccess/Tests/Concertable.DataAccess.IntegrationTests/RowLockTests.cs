@@ -1,5 +1,6 @@
 using Concertable.DataAccess.Infrastructure.Locking;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Npgsql;
 
 namespace Concertable.DataAccess.IntegrationTests;
@@ -7,6 +8,8 @@ namespace Concertable.DataAccess.IntegrationTests;
 [Collection(DataAccessCollection.Name)]
 public sealed class RowLockTests : IAsyncLifetime
 {
+    private const int LockNamespace = 4242;
+
     private readonly DataAccessFixture fixture;
 
     public RowLockTests(DataAccessFixture fixture)
@@ -30,8 +33,7 @@ public sealed class RowLockTests : IAsyncLifetime
         var locked = await holder.References.WithRowLock().SingleAsync(entity => entity.Id == id);
 
         Assert.Equal("VENUE", locked.Code);
-        var blocked = await Assert.ThrowsAsync<InvalidOperationException>(() => RenameWithoutWaitingAsync(id));
-        Assert.Equal(PostgresErrorCodes.LockNotAvailable, Assert.IsType<PostgresException>(blocked.InnerException).SqlState);
+        await AssertLockTimeoutAsync(() => RenameWithoutWaitingAsync(id));
     }
 
     [Fact]
@@ -47,8 +49,7 @@ public sealed class RowLockTests : IAsyncLifetime
             .SingleAsync(entity => entity.Id == id);
 
         Assert.Empty(locked.Notes);
-        var blocked = await Assert.ThrowsAsync<InvalidOperationException>(() => RenameWithoutWaitingAsync(id));
-        Assert.Equal(PostgresErrorCodes.LockNotAvailable, Assert.IsType<PostgresException>(blocked.InnerException).SqlState);
+        await AssertLockTimeoutAsync(() => RenameWithoutWaitingAsync(id));
     }
 
     [Fact]
@@ -84,6 +85,49 @@ public sealed class RowLockTests : IAsyncLifetime
         Assert.Equal("Renamed", (await probe.References.SingleAsync(entity => entity.Id == id)).Name);
     }
 
+    [Fact]
+    public async Task WithRowLock_KeyShare_BlocksADeleteButNotAnUpdate()
+    {
+        var id = await InsertAsync("VENUE");
+        await using var holder = fixture.CreateContext();
+        await using var transaction = await holder.Database.BeginTransactionAsync();
+        await holder.References.WithRowLock(RowLock.KeyShare).SingleAsync(entity => entity.Id == id);
+
+        await RenameWithoutWaitingAsync(id);
+
+        await AssertLockTimeoutAsync(() => DeleteWithoutWaitingAsync(id));
+    }
+
+    #endregion
+
+    #region AcquireAdvisoryLockAsync
+
+    [Fact]
+    public async Task AcquireAdvisoryLockAsync_KeyHeldByAnotherTransaction_Blocks()
+    {
+        var key = Guid.NewGuid();
+        await using var holder = fixture.CreateContext();
+        await using var transaction = await holder.Database.BeginTransactionAsync();
+        await holder.Database.AcquireAdvisoryLockAsync(LockNamespace, key);
+
+        await AssertLockTimeoutAsync(
+            () => AcquireWithoutWaitingAsync(database => database.AcquireAdvisoryLockAsync(LockNamespace, key)));
+    }
+
+    [Fact]
+    public async Task AcquireSharedAdvisoryLockAsync_KeyHeldShared_IsGrantedButBlocksExclusive()
+    {
+        var key = Guid.NewGuid();
+        await using var holder = fixture.CreateContext();
+        await using var transaction = await holder.Database.BeginTransactionAsync();
+        await holder.Database.AcquireSharedAdvisoryLockAsync(LockNamespace, key);
+
+        await AcquireWithoutWaitingAsync(database => database.AcquireSharedAdvisoryLockAsync(LockNamespace, key));
+
+        await AssertLockTimeoutAsync(
+            () => AcquireWithoutWaitingAsync(database => database.AcquireAdvisoryLockAsync(LockNamespace, key)));
+    }
+
     #endregion
 
     private async Task<int> InsertAsync(string code)
@@ -104,5 +148,32 @@ public sealed class RowLockTests : IAsyncLifetime
             .Where(entity => entity.Id == id)
             .ExecuteUpdateAsync(setters => setters.SetProperty(entity => entity.Name, "Renamed"));
         await transaction.CommitAsync();
+    }
+
+    private async Task DeleteWithoutWaitingAsync(int id)
+    {
+        await using var writer = fixture.CreateContext();
+        await using var transaction = await writer.Database.BeginTransactionAsync();
+        await writer.Database.ExecuteSqlRawAsync("SET LOCAL lock_timeout = '200ms'");
+        await writer.References.Where(entity => entity.Id == id).ExecuteDeleteAsync();
+        await transaction.CommitAsync();
+    }
+
+    private async Task AcquireWithoutWaitingAsync(
+        Func<DatabaseFacade, Task> acquire)
+    {
+        await using var contender = fixture.CreateContext();
+        await using var transaction = await contender.Database.BeginTransactionAsync();
+        await contender.Database.ExecuteSqlRawAsync("SET LOCAL lock_timeout = '200ms'");
+        await acquire(contender.Database);
+        await transaction.CommitAsync();
+    }
+
+    private static async Task AssertLockTimeoutAsync(Func<Task> contend)
+    {
+        var failure = await Record.ExceptionAsync(contend);
+
+        var postgres = Assert.IsType<PostgresException>(failure as PostgresException ?? failure?.InnerException);
+        Assert.Equal(PostgresErrorCodes.LockNotAvailable, postgres.SqlState);
     }
 }
