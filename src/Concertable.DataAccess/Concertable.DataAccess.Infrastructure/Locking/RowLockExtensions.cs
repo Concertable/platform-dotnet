@@ -9,13 +9,10 @@ public static class RowLockExtensions
 
     extension<TEntity>(IQueryable<TEntity> query)
     {
-        public IQueryable<TEntity> WithRowLock(RowLock mode = RowLock.NoKeyUpdate) =>
-            query.TagWith(TagPrefix + mode);
-
-        public async Task<bool> AnyWithRowLockAsync(
+        public async Task<bool> LockRowsAsync(
             Expression<Func<TEntity, bool>> predicate,
             RowLock mode = RowLock.NoKeyUpdate,
             CancellationToken ct = default) =>
-            (await query.WithRowLock(mode).Where(predicate).Select(_ => 1).ToListAsync(ct)).Count > 0;
+            (await query.TagWith(TagPrefix + mode).Where(predicate).Select(_ => 1).ToListAsync(ct)).Count > 0;
     }
 }
