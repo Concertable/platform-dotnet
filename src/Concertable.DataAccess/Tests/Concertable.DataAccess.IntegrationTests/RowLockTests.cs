@@ -8,7 +8,6 @@ namespace Concertable.DataAccess.IntegrationTests;
 [Collection(DataAccessCollection.Name)]
 public sealed class RowLockTests : IAsyncLifetime
 {
-    private const int LockNamespace = 4242;
 
     private readonly DataAccessFixture fixture;
 
@@ -100,6 +99,34 @@ public sealed class RowLockTests : IAsyncLifetime
 
     #endregion
 
+    #region AnyWithRowLockAsync
+
+    [Fact]
+    public async Task AnyWithRowLockAsync_MatchingRow_IsTrueAndHoldsTheLock()
+    {
+        var id = await InsertAsync("VENUE");
+        await using var holder = fixture.CreateContext();
+        await using var transaction = await holder.Database.BeginTransactionAsync();
+
+        var exists = await holder.References.AnyWithRowLockAsync(entity => entity.Id == id, RowLock.KeyShare);
+
+        Assert.True(exists);
+        await AssertLockTimeoutAsync(() => DeleteWithoutWaitingAsync(id));
+    }
+
+    [Fact]
+    public async Task AnyWithRowLockAsync_NoMatchingRow_IsFalse()
+    {
+        await using var context = fixture.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
+
+        var exists = await context.References.AnyWithRowLockAsync(entity => entity.Id == -1);
+
+        Assert.False(exists);
+    }
+
+    #endregion
+
     #region AcquireAdvisoryLockAsync
 
     [Fact]
@@ -108,10 +135,10 @@ public sealed class RowLockTests : IAsyncLifetime
         var key = Guid.NewGuid();
         await using var holder = fixture.CreateContext();
         await using var transaction = await holder.Database.BeginTransactionAsync();
-        await holder.Database.AcquireAdvisoryLockAsync(LockNamespace, key);
+        await holder.Database.AcquireAdvisoryLockAsync(TestLock.Reference, key);
 
         await AssertLockTimeoutAsync(
-            () => AcquireWithoutWaitingAsync(database => database.AcquireAdvisoryLockAsync(LockNamespace, key)));
+            () => AcquireWithoutWaitingAsync(database => database.AcquireAdvisoryLockAsync(TestLock.Reference, key)));
     }
 
     [Fact]
@@ -120,12 +147,12 @@ public sealed class RowLockTests : IAsyncLifetime
         var key = Guid.NewGuid();
         await using var holder = fixture.CreateContext();
         await using var transaction = await holder.Database.BeginTransactionAsync();
-        await holder.Database.AcquireSharedAdvisoryLockAsync(LockNamespace, key);
+        await holder.Database.AcquireSharedAdvisoryLockAsync(TestLock.Reference, key);
 
-        await AcquireWithoutWaitingAsync(database => database.AcquireSharedAdvisoryLockAsync(LockNamespace, key));
+        await AcquireWithoutWaitingAsync(database => database.AcquireSharedAdvisoryLockAsync(TestLock.Reference, key));
 
         await AssertLockTimeoutAsync(
-            () => AcquireWithoutWaitingAsync(database => database.AcquireAdvisoryLockAsync(LockNamespace, key)));
+            () => AcquireWithoutWaitingAsync(database => database.AcquireAdvisoryLockAsync(TestLock.Reference, key)));
     }
 
     #endregion
@@ -175,5 +202,10 @@ public sealed class RowLockTests : IAsyncLifetime
 
         var postgres = Assert.IsType<PostgresException>(failure as PostgresException ?? failure?.InnerException);
         Assert.Equal(PostgresErrorCodes.LockNotAvailable, postgres.SqlState);
+    }
+
+    private enum TestLock
+    {
+        Reference = 4242
     }
 }
