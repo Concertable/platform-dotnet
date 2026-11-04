@@ -1,6 +1,6 @@
 using Concertable.DataAccess.Application;
+using Concertable.DataAccess.Infrastructure.Extensions;
 using Concertable.DataAccess.Infrastructure.Locking;
-using Concertable.Kernel.ValueObjects;
 using Concertable.Messaging.Contracts;
 using Concertable.Messaging.Domain;
 using Concertable.Messaging.Infrastructure;
@@ -44,10 +44,7 @@ public abstract class DbContextBase : DbContext, IDbContext
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
-        configurationBuilder.Properties<Sha256Digest>()
-            .HaveConversion<Sha256Digest.EfCoreValueConverter>()
-            .HaveMaxLength(Sha256Digest.Length)
-            .AreFixedLength();
+        configurationBuilder.MapValueObjects();
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

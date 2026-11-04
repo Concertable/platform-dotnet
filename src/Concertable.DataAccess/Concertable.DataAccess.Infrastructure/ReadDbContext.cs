@@ -1,5 +1,6 @@
 using Concertable.DataAccess.Application;
 using Concertable.DataAccess.Infrastructure.Data;
+using Concertable.DataAccess.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.DataAccess.Infrastructure;
@@ -21,6 +22,12 @@ public abstract class ReadDbContext : DbContext, IReadDbContext
     }
 
     public IQueryable<TEntity> Query<TEntity>() where TEntity : class => Set<TEntity>();
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+        configurationBuilder.MapValueObjects();
+    }
 
     protected sealed override void OnModelCreating(ModelBuilder modelBuilder)
     {

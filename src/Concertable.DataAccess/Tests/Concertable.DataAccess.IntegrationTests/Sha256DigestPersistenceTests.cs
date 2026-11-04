@@ -1,3 +1,5 @@
+using Concertable.DataAccess.Infrastructure;
+using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Kernel.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
@@ -46,5 +48,34 @@ public sealed class Sha256DigestPersistenceTests : IAsyncLifetime
         Assert.True(property.IsFixedLength());
     }
 
+    [Fact]
+    public void Sha256Digest_ReadContext_MapsTheSameFixedLengthColumn()
+    {
+        using var context = new ReferenceReadDbContext(
+            new DbContextOptionsBuilder<ReferenceReadDbContext>().UseNpgsql("Host=model-only").Options);
+
+        var property = context.Model.FindEntityType(typeof(ReferenceEntity))!.FindProperty(nameof(ReferenceEntity.Fingerprint))!;
+
+        Assert.Equal(Sha256Digest.Length, property.GetMaxLength());
+        Assert.True(property.IsFixedLength());
+    }
+
     #endregion
+
+    private sealed class ReferenceReadDbContext : ReadDbContext
+    {
+        public ReferenceReadDbContext(DbContextOptions<ReferenceReadDbContext> options)
+            : base(options, new ReferenceConfigurationProvider(), DataAccessFixture.Schema) { }
+    }
+
+    private sealed class ReferenceConfigurationProvider : IEntityTypeConfigurationProvider
+    {
+        public void Configure(ModelBuilder modelBuilder) =>
+            modelBuilder.Entity<ReferenceEntity>(reference =>
+            {
+                reference.ToTable(ReferenceDbContext.Table);
+                reference.HasKey(entity => entity.Id);
+                reference.Ignore(entity => entity.Notes);
+            });
+    }
 }
