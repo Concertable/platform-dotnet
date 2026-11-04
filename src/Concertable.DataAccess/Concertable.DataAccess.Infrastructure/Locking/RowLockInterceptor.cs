@@ -32,7 +32,8 @@ internal sealed partial class RowLockInterceptor : DbCommandInterceptor
 
     private static void Lock(DbCommand command)
     {
-        if (!RowLockTag().IsMatch(command.CommandText))
+        var tag = RowLockTag().Match(command.CommandText);
+        if (!tag.Success)
             return;
         if (command is not NpgsqlCommand)
             throw new NotSupportedException("WithRowLock emits a PostgreSQL locking clause.");
@@ -41,10 +42,19 @@ internal sealed partial class RowLockInterceptor : DbCommandInterceptor
         if (!root.Success)
             throw new InvalidOperationException("WithRowLock could not find the root table of the query.");
 
-        command.CommandText += $"\nFOR NO KEY UPDATE OF {root.Groups["alias"].Value}";
+        command.CommandText += $"\n{Clause(Enum.Parse<RowLock>(tag.Groups["mode"].Value))} OF {root.Groups["alias"].Value}";
     }
 
-    [GeneratedRegex($@"^-- {RowLockExtensions.Tag}\r?$", RegexOptions.Multiline)]
+    private static string Clause(RowLock mode) => mode switch
+    {
+        RowLock.KeyShare => "FOR KEY SHARE",
+        RowLock.Share => "FOR SHARE",
+        RowLock.NoKeyUpdate => "FOR NO KEY UPDATE",
+        RowLock.Update => "FOR UPDATE",
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
+    };
+
+    [GeneratedRegex($@"^-- {RowLockExtensions.TagPrefix}(?<mode>\w+)\r?$", RegexOptions.Multiline)]
     private static partial Regex RowLockTag();
 
     [GeneratedRegex(@"^(?:FROM \S+|\)) AS (?<alias>\S+)\r?$", RegexOptions.Multiline)]
