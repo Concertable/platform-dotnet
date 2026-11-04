@@ -36,11 +36,11 @@ internal sealed partial class RowLockInterceptor : DbCommandInterceptor
         if (!tag.Success)
             return;
         if (command is not NpgsqlCommand)
-            throw new NotSupportedException("WithRowLock emits a PostgreSQL locking clause.");
+            throw new NotSupportedException("A row lock is a PostgreSQL locking clause.");
 
-        var root = RootAlias().Match(command.CommandText);
-        if (!root.Success)
-            throw new InvalidOperationException("WithRowLock could not find the root table of the query.");
+        var root = RootTable().Match(command.CommandText);
+        if (!root.Success || Join().IsMatch(command.CommandText))
+            throw new InvalidOperationException("A row lock covers one table; lock with LockRowsAsync, then load.");
 
         command.CommandText += $"\n{Clause(Enum.Parse<RowLock>(tag.Groups["mode"].Value))} OF {root.Groups["alias"].Value}";
     }
@@ -57,6 +57,9 @@ internal sealed partial class RowLockInterceptor : DbCommandInterceptor
     [GeneratedRegex($@"^-- {RowLockExtensions.TagPrefix}(?<mode>\w+)\r?$", RegexOptions.Multiline)]
     private static partial Regex RowLockTag();
 
-    [GeneratedRegex(@"^(?:FROM \S+|\)) AS (?<alias>\S+)\r?$", RegexOptions.Multiline)]
-    private static partial Regex RootAlias();
+    [GeneratedRegex(@"^FROM \S+ AS (?<alias>\S+)\r?$", RegexOptions.Multiline)]
+    private static partial Regex RootTable();
+
+    [GeneratedRegex(@"^\s*(?:LEFT |INNER |CROSS |RIGHT |FULL )?(?:OUTER )?JOIN ", RegexOptions.Multiline)]
+    private static partial Regex Join();
 }

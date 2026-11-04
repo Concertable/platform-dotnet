@@ -20,44 +20,39 @@ public sealed class RowLockTests : IAsyncLifetime
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    #region WithRowLock
+    #region LockRowsAsync
 
     [Fact]
-    public async Task WithRowLock_RowLoadedInAnOpenTransaction_BlocksAnotherWriter()
+    public async Task LockRowsAsync_MatchingRow_IsTrueAndBlocksAnotherWriter()
     {
         var id = await InsertAsync("VENUE");
         await using var holder = fixture.CreateContext();
         await using var transaction = await holder.Database.BeginTransactionAsync();
 
-        var locked = await holder.References.WithRowLock().SingleAsync(entity => entity.Id == id);
+        var locked = await holder.References.LockRowsAsync(entity => entity.Id == id);
 
-        Assert.Equal("VENUE", locked.Code);
+        Assert.True(locked);
         await AssertLockTimeoutAsync(() => RenameWithoutWaitingAsync(id));
     }
 
     [Fact]
-    public async Task WithRowLock_IncludeOfAnOptionalCollection_LocksTheRootRow()
+    public async Task LockRowsAsync_NoMatchingRow_IsFalse()
     {
-        var id = await InsertAsync("VENUE");
-        await using var holder = fixture.CreateContext();
-        await using var transaction = await holder.Database.BeginTransactionAsync();
+        await using var context = fixture.CreateContext();
+        await using var transaction = await context.Database.BeginTransactionAsync();
 
-        var locked = await holder.References
-            .WithRowLock()
-            .Include(entity => entity.Notes)
-            .SingleAsync(entity => entity.Id == id);
+        var locked = await context.References.LockRowsAsync(entity => entity.Id == -1);
 
-        Assert.Empty(locked.Notes);
-        await AssertLockTimeoutAsync(() => RenameWithoutWaitingAsync(id));
+        Assert.False(locked);
     }
 
     [Fact]
-    public async Task WithRowLock_ChildInsertReferencingTheLockedRow_IsNotBlocked()
+    public async Task LockRowsAsync_NoKeyUpdate_DoesNotBlockAChildInsert()
     {
         var id = await InsertAsync("VENUE");
         await using var holder = fixture.CreateContext();
         await using var transaction = await holder.Database.BeginTransactionAsync();
-        await holder.References.WithRowLock().SingleAsync(entity => entity.Id == id);
+        await holder.References.LockRowsAsync(entity => entity.Id == id);
 
         await using var writer = fixture.CreateContext();
         await using var writerTransaction = await writer.Database.BeginTransactionAsync();
@@ -71,58 +66,37 @@ public sealed class RowLockTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task WithRowLock_Omitted_LeavesTheRowWritable()
-    {
-        var id = await InsertAsync("VENUE");
-        await using var reader = fixture.CreateContext();
-        await using var transaction = await reader.Database.BeginTransactionAsync();
-        await reader.References.SingleAsync(entity => entity.Id == id);
-
-        await RenameWithoutWaitingAsync(id);
-
-        await using var probe = fixture.CreateContext();
-        Assert.Equal("Renamed", (await probe.References.SingleAsync(entity => entity.Id == id)).Name);
-    }
-
-    [Fact]
-    public async Task WithRowLock_KeyShare_BlocksADeleteButNotAnUpdate()
+    public async Task LockRowsAsync_KeyShare_BlocksADeleteButNotAnUpdate()
     {
         var id = await InsertAsync("VENUE");
         await using var holder = fixture.CreateContext();
         await using var transaction = await holder.Database.BeginTransactionAsync();
-        await holder.References.WithRowLock(RowLock.KeyShare).SingleAsync(entity => entity.Id == id);
+        await holder.References.LockRowsAsync(entity => entity.Id == id, RowLock.KeyShare);
 
         await RenameWithoutWaitingAsync(id);
 
         await AssertLockTimeoutAsync(() => DeleteWithoutWaitingAsync(id));
     }
 
-    #endregion
-
-    #region AnyWithRowLockAsync
-
     [Fact]
-    public async Task AnyWithRowLockAsync_MatchingRow_IsTrueAndHoldsTheLock()
+    public async Task LockRowsAsync_LoadAfterTheLockIsGranted_SeesTheHoldersCommittedChildren()
     {
         var id = await InsertAsync("VENUE");
         await using var holder = fixture.CreateContext();
-        await using var transaction = await holder.Database.BeginTransactionAsync();
+        await using var holderTransaction = await holder.Database.BeginTransactionAsync();
+        await holder.References.LockRowsAsync(entity => entity.Id == id);
+        holder.ReferenceNotes.Add(new ReferenceNoteEntity { ReferenceId = id, Text = "Added by the holder" });
+        await holder.SaveChangesAsync();
 
-        var exists = await holder.References.AnyWithRowLockAsync(entity => entity.Id == id, RowLock.KeyShare);
+        await using var waiter = fixture.CreateContext();
+        await using var waiterTransaction = await waiter.Database.BeginTransactionAsync();
+        var waiting = waiter.References.LockRowsAsync(entity => entity.Id == id);
+        await WaitForALockWaiterAsync();
+        await holderTransaction.CommitAsync();
+        await waiting;
+        var loaded = await waiter.References.Include(entity => entity.Notes).SingleAsync(entity => entity.Id == id);
 
-        Assert.True(exists);
-        await AssertLockTimeoutAsync(() => DeleteWithoutWaitingAsync(id));
-    }
-
-    [Fact]
-    public async Task AnyWithRowLockAsync_NoMatchingRow_IsFalse()
-    {
-        await using var context = fixture.CreateContext();
-        await using var transaction = await context.Database.BeginTransactionAsync();
-
-        var exists = await context.References.AnyWithRowLockAsync(entity => entity.Id == -1);
-
-        Assert.False(exists);
+        Assert.Single(loaded.Notes);
     }
 
     #endregion
@@ -202,6 +176,16 @@ public sealed class RowLockTests : IAsyncLifetime
 
         var postgres = Assert.IsType<PostgresException>(failure as PostgresException ?? failure?.InnerException);
         Assert.Equal(PostgresErrorCodes.LockNotAvailable, postgres.SqlState);
+    }
+
+    private async Task WaitForALockWaiterAsync()
+    {
+        await using var observer = fixture.CreateContext();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (await observer.Database
+                   .SqlQuery<int>($"SELECT COUNT(*)::int AS \"Value\" FROM pg_stat_activity WHERE wait_event_type = 'Lock'")
+                   .SingleAsync(timeout.Token) == 0)
+            await Task.Delay(25, timeout.Token);
     }
 
     private enum TestLock
