@@ -1,8 +1,7 @@
 # Concertable platform (.NET)
 
 The domain-neutral .NET platform every Concertable service builds on, and the sole publisher of its
-package ids. Extracted from the `Concertable/concertable` monorepo with `git filter-repo`, preserving
-authorship and history; the archived monorepo remains the authoritative map from pre-filter SHAs.
+package ids. The extraction preserved authorship and history with `git filter-repo`.
 
 ## Layout
 
@@ -38,8 +37,7 @@ dotnet test Concertable.Platform.slnx --configuration Release
 
 ## Versioning
 
-Repository-local MinVer on tags prefixed `v`, floored at `0.2`. The monorepo published these same
-package ids as `0.1.0-alpha.0.<height>` and continues to until checkpoint 7B, so this train starts
-above that mark rather than merely being new here. `eng/published-baseline.json` records the mark per
-id; `python eng/check-version.py` refuses to publish a version that does not advance it or that the
-feed already has.
+Repository-local MinVer on tags prefixed `v`, floored at `0.2`. The preceding package train published
+these ids as `0.1.0-alpha.0.<height>`, so this train starts above that mark. `eng/published-baseline.json`
+records the mark per id; `python eng/check-version.py` refuses to publish a version that does not advance
+it or that the feed already has.
