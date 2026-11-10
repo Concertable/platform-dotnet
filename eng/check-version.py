@@ -1,7 +1,7 @@
 """Refuse to publish a version that already exists, or that does not advance the recorded baseline.
 
-The monorepo still publishes these package ids while checkpoint 7B is outstanding, so this
-repository's train has to clear that train's high-water mark rather than merely be new here. A
+The prior package train published these package ids, so this repository's train has to clear that
+train's high-water mark rather than merely be new here. A
 duplicate version is not a no-op: `dotnet nuget push --skip-duplicate` accepts it silently and
 leaves the stale binaries on the feed.
 
