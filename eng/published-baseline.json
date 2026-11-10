@@ -1,7 +1,7 @@
 {
   "recordedUtc": "2026-09-09",
   "source": "https://nuget.pkg.github.com/Concertable - every published version of every id below, all pages",
-  "producer": "Concertable/concertable (monorepo, still publishing this train until checkpoint 7B)",
+  "producer": "Archived pre-extraction package train",
   "trainHighWaterMark": "0.1.0-alpha.0.1358",
   "bootstrapTag": "v0.2.0-alpha.0",
   "bootstrapVersion": "0.2.0-alpha.0",
