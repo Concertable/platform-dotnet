@@ -35,6 +35,17 @@ dotnet build Concertable.Platform.slnx --configuration Release
 dotnet test Concertable.Platform.slnx --configuration Release
 ```
 
+## PostGIS data retention
+
+`AddPostgresContainer().WithPostGis()` uses PostGIS 17 and mounts the checkout's named volume at
+`/var/lib/postgresql/data`. `WithPostGis()` also retargets an existing PostgreSQL 18 parent-directory
+mount while preserving its source and access mode. Apply it after configuring the PostgreSQL volume.
+
+For an existing container, inspect both `SHOW data_directory` and Docker's mounts before recreating it.
+An anonymous volume at the effective data directory can contain the database even when a named volume
+is mounted at its parent. Keep that container and both volumes until a backup has been restored and
+verified against the expected database contents; changing the mount does not transfer existing data.
+
 ## Versioning
 
 Repository-local MinVer on tags prefixed `v`, floored at `0.2`. The preceding package train published
