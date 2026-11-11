@@ -89,6 +89,23 @@ public sealed class PostgresContainerResourceTests
         var postgres = builder.AddPostgresContainer().WithPostGis();
 
         Assert.StartsWith("concertable-postgres-data-", VolumeName(postgres), StringComparison.Ordinal);
+        Assert.Equal("/var/lib/postgresql/data", Assert.Single(postgres.Resource.Annotations.OfType<ContainerMountAnnotation>()).Target);
+    }
+
+    [Fact]
+    public void WithPostGis_AfterPostgreSql18Volume_MountsThePostgreSql17DataDirectory()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        var postgres = builder.AddPostgres("postgres")
+            .WithVolume("retained-data", "/var/lib/postgresql");
+
+        postgres.WithPostGis();
+
+        var mount = Assert.Single(postgres.Resource.Annotations.OfType<ContainerMountAnnotation>());
+        Assert.Equal("retained-data", mount.Source);
+        Assert.Equal("/var/lib/postgresql/data", mount.Target);
+        Assert.Equal(ContainerMountType.Volume, mount.Type);
+        Assert.False(mount.IsReadOnly);
     }
 
     #endregion
