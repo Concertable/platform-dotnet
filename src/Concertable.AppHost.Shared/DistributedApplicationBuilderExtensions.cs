@@ -43,8 +43,20 @@ public static class DistributedApplicationBuilderExtensions
 
     extension(IResourceBuilder<PostgresServerResource> postgres)
     {
-        public IResourceBuilder<PostgresServerResource> WithPostGis() =>
+        public IResourceBuilder<PostgresServerResource> WithPostGis()
+        {
             postgres.WithImage(PostgisImage, PostgisTag);
+            var mounts = postgres.Resource.Annotations.OfType<ContainerMountAnnotation>()
+                .Where(mount => mount.Target == "/var/lib/postgresql")
+                .ToArray();
+            foreach (var mount in mounts)
+            {
+                postgres.Resource.Annotations.Remove(mount);
+                postgres.Resource.Annotations.Add(new ContainerMountAnnotation(
+                    mount.Source, "/var/lib/postgresql/data", mount.Type, mount.IsReadOnly));
+            }
+            return postgres;
+        }
     }
 
     extension(IResourceBuilder<AzureServiceBusResource> asb)
