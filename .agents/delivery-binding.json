@@ -1,0 +1,31 @@
+{
+  "authorization_resolution": {
+    "standing": "absent",
+    "stopped_by": {
+      "class": "no-recorded-authorization"
+    }
+  },
+  "auto_merge": false,
+  "bound_at": "2026-11-10T21:30:59.540829+00:00",
+  "branch": "Chore/RetireArchivedMonorepo",
+  "changed_path_count": 3,
+  "completion_condition": "the bound PR reaches MERGED, or a recorded terminal ends this delivery",
+  "head": "4f830debcffd9fadb76bc4388e172b2d9b3eeed7",
+  "merge_authorization": {
+    "instruction": null,
+    "mode": "absent"
+  },
+  "pending_evidence": [],
+  "pr": 92,
+  "pr_url": "https://github.com/Concertable/platform-dotnet/pull/92",
+  "repo": "Concertable/platform-dotnet",
+  "review": {
+    "reviewed_sha": "4f830debcffd9fadb76bc4388e172b2d9b3eeed7",
+    "work_order": "C:\\Users\\TommySeery\\source\\repos\\Concertable\\platform-dotnet\\.git\\agent-workflow\\reviews\\f8e31e2fefb1a5b4d1db381ddc4c86d4d8ed900e11ee9f0965199043bf257fc4\\work-order.md",
+    "work_order_order": [
+      "full"
+    ]
+  },
+  "schema_version": 1,
+  "worktree": "C:\\Users\\TommySeery\\source\\repos\\Concertable\\platform-dotnet\\platform-dotnet.worktrees\\Chore-RetireArchivedMonorepo"
+}
