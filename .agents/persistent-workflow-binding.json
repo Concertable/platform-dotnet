@@ -1,0 +1,49 @@
+{
+  "authorization_resolution": {
+    "standing": "absent",
+    "stopped_by": null
+  },
+  "auto_merge": false,
+  "bound_at": "2026-10-21T22:56:02.762083+00:00",
+  "branch": "Docs/MigratePlanTrackers",
+  "changed_path_count": 2,
+  "completion_condition": "Reviewed provider declarations and plan links merged, remote main read back and supported provider route verified",
+  "head": "c569ab45b7890a181adbc6154c87f182e6848ca6",
+  "merge_authorization": {
+    "instruction": "right shall we do that now then?",
+    "mode": "merge"
+  },
+  "pending_evidence": [
+    {
+      "check_id": "119533491569",
+      "head_sha": "c569ab45b7890a181adbc6154c87f182e6848ca6",
+      "run_id": "39689984315"
+    },
+    {
+      "check_id": "119533491308",
+      "head_sha": "c569ab45b7890a181adbc6154c87f182e6848ca6",
+      "run_id": "39689984315"
+    }
+  ],
+  "pr": 70,
+  "pr_url": "https://github.com/Concertable/platform-dotnet/pull/70",
+  "repo": "Concertable/platform-dotnet",
+  "review": {
+    "reviewed_sha": "c569ab45b7890a181adbc6154c87f182e6848ca6",
+    "work_order": "C:\\Users\\TommySeery\\source\\repos\\Concertable\\platform-dotnet\\.git\\agent-workflow\\reviews\\0c35179cd4e802ccdc250e0b03aad2455bb9e36de741c419c71da4f05445775d\\work-order.md",
+    "work_order_order": [
+      "full"
+    ]
+  },
+  "schema_version": 1,
+  "scoped_approval": {
+    "branch": "Docs/MigratePlanTrackers",
+    "instruction": "right shall we do that now then?",
+    "mode": "merge",
+    "pr_number": 70,
+    "repository": "Concertable/platform-dotnet",
+    "source": "User authorization for the unfinished-plan migration and its normal source/config delivery, recorded in tj-agents/docs plans/plan-work-item-migration/PLAN.md on 2026-10-21. Scope is this reviewed provider/backlink source slice only.",
+    "worktree": "C:\\Users\\TommySeery\\source\\repos\\Concertable\\platform-dotnet\\.worktrees\\Docs-MigratePlanTrackers"
+  },
+  "worktree": "C:\\Users\\TommySeery\\source\\repos\\Concertable\\platform-dotnet\\.worktrees\\Docs-MigratePlanTrackers"
+}
