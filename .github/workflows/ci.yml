@@ -14,7 +14,7 @@ permissions:
 jobs:
   verify:
     name: Build and test
-    uses: Concertable/pipeline/.github/workflows/dotnet-ci.yml@bc16cc0609dfeb923bd8e1a97f88b9890380f6f2
+    uses: Concertable/pipeline/.github/workflows/dotnet-ci.yml@5b9b992219c6a5c84a699f158ed15a349c32c895
     with:
       solution: Concertable.Platform.slnx
 
@@ -46,6 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {}
     steps:
-      - uses: Concertable/pipeline/.github/actions/require-jobs-green@13e26afd6f35855a78d3c554e097522e8476c04e
+      - uses: Concertable/pipeline/.github/actions/require-jobs-green@2a9f256320c95601160f33570fa753c483d3d945
         with:
           results: ${{ join(needs.*.result, ' ') }}
